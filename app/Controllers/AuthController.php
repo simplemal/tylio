@@ -10,6 +10,15 @@ use Tylio\Services\UserTwoFactorAuth;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * Session-cookie authentication: `/api/auth/login` (with optional TOTP
+ * step at `/api/auth/login/2fa`), `/api/auth/me`, `/api/auth/logout`.
+ *
+ * **Extendable by design.** Non-`final` and exposes its dependencies as
+ * `protected` so an overlay (e.g. the multi-tenant SaaS) can subclass
+ * with a tenant-aware `Auth` service. Public method signatures are
+ * stable across minor versions.
+ */
 class AuthController
 {
     public function __construct(

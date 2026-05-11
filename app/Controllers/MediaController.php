@@ -10,6 +10,15 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 
+/**
+ * Image upload + delete for the media library. Validates MIME against
+ * the `UPLOAD_ALLOWED_MIME` whitelist (SVG NOT allowed by default —
+ * XSS risk via inline `<script>`) and writes to `uploads/`.
+ *
+ * **Extendable by design.** Non-`final`; sub-classes can scope queries
+ * by `tenant_id` and write to a per-tenant subdirectory (the platform
+ * uses `uploads/<slug>/` for this).
+ */
 class MediaController
 {
     public function __construct(protected DB $db, protected Config $config, protected I18n $i18n) {}

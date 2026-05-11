@@ -8,6 +8,16 @@ use Tylio\Services\I18n;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * Settings CRUD (`site.*`, `seo.*`, `contact.*`) + stats aggregate
+ * (`visits`, `submissions`) for the admin dashboard. Server-side
+ * validation runs in `validateSettings()` (protected — sub-classes
+ * inherit it).
+ *
+ * **Extendable by design.** Non-`final`; the multi-tenant overlay
+ * subclasses to scope every settings read/write by `tenant_id`,
+ * reusing the validation pipeline as-is.
+ */
 class SettingsController
 {
     public function __construct(protected DB $db, protected I18n $i18n) {}

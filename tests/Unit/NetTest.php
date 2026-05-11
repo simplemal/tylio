@@ -21,10 +21,12 @@ final class NetTest extends TestCase
 
     public function test_ipv4_cidr_match(): void
     {
-        $this->assertTrue(Net::ipInRanges('10.55.15.17', ['10.55.15.0/24']));
-        $this->assertTrue(Net::ipInRanges('10.55.15.255', ['10.55.15.0/24']));
-        $this->assertFalse(Net::ipInRanges('10.55.16.1', ['10.55.15.0/24']));
-        $this->assertFalse(Net::ipInRanges('10.0.0.1', ['10.55.15.0/24']));
+        // Uses 192.0.2.0/24 (TEST-NET-1, RFC 5737) — reserved
+        // documentation address range, never assigned in the wild.
+        $this->assertTrue(Net::ipInRanges('192.0.2.17', ['192.0.2.0/24']));
+        $this->assertTrue(Net::ipInRanges('192.0.2.255', ['192.0.2.0/24']));
+        $this->assertFalse(Net::ipInRanges('192.0.3.1', ['192.0.2.0/24']));
+        $this->assertFalse(Net::ipInRanges('10.0.0.1', ['192.0.2.0/24']));
     }
 
     public function test_ipv4_large_cidr(): void

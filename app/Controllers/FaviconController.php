@@ -9,6 +9,15 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
 
+/**
+ * Favicon upload + removal. Generates 32/180/192/512 PNGs from any
+ * input (PNG/JPG/WebP/SVG), stores them under `favicons/` and bumps
+ * the `seo.favicon` setting so the public layout busts the CDN cache.
+ *
+ * **Extendable by design.** Non-`final`; sub-classes can override the
+ * output directory (e.g. per-tenant `favicons/<slug>/`) without
+ * re-implementing the resize pipeline.
+ */
 class FaviconController
 {
     /** Sizes generated from the upload (PNG output regardless of input format). */

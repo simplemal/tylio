@@ -4,6 +4,22 @@
   "type": "project",
   "license": "MIT",
   "homepage": "https://tylio.app",
+  "keywords": [
+    "personal-page",
+    "link-in-bio",
+    "linktree-alternative",
+    "self-hosted",
+    "single-user",
+    "slim-framework",
+    "sqlite",
+    "vue3",
+    "mosaic",
+    "static-export"
+  ],
+  "support": {
+    "issues": "https://github.com/simplemal/tylio/issues",
+    "source": "https://github.com/simplemal/tylio"
+  },
   "authors": [
     {"name": "Maurizio Natali", "homepage": "https://maurizionatali.it"}
   ],

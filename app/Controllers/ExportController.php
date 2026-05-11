@@ -9,8 +9,14 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 /**
- * API endpoint to download the public page as a self-contained static HTML.
- * Requires admin authentication (= the site owner).
+ * API endpoint to download the public page as a self-contained static
+ * HTML — either a multi-file ZIP (`download()`) or a single inline-
+ * everything `index.html` (`downloadInline()`). Requires admin
+ * authentication (= the site owner).
+ *
+ * **Extendable by design.** Non-`final` and exposes `$exporter` /
+ * `$db` as `protected` so a sub-class can plug in a tenant-aware
+ * exporter without rewriting the response framing.
  */
 class ExportController
 {

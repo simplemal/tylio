@@ -9,6 +9,16 @@ use Tylio\Services\Renderer;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * Public-facing routes: home page, sitemap, robots, manifest, click
+ * tracking, plus the admin SPA shell at `/admin`. Reads pages through
+ * the `Renderer` service (which sub-classes can swap to a tenant-aware
+ * variant).
+ *
+ * **Extendable by design.** Non-`final` and `protected` dependencies
+ * so the multi-tenant overlay can render per-tenant pages by overriding
+ * `home()`/`preview()` with tenant-scoped data loading.
+ */
 class PageController
 {
     public function __construct(

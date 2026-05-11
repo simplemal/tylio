@@ -8,6 +8,14 @@ use Tylio\Services\Renderer;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * Theme palette / font / tile-style / background CRUD. The full theme
+ * object is a single JSON column on the `theme` table.
+ *
+ * **Extendable by design.** Non-`final`; sub-classes (multi-tenant
+ * overlay) can swap the storage scope from a single global row to a
+ * `tenant_id`-keyed row.
+ */
 class ThemeController
 {
     public function __construct(protected DB $db, protected Renderer $renderer) {}

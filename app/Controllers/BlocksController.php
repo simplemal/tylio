@@ -9,6 +9,16 @@ use Tylio\Services\I18n;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
+/**
+ * CRUD for the tiles ("blocks") that compose the public home page. The
+ * registry-driven schema means new tile types only need a row in
+ * `BlockRegistry::definitions()` plus a template under
+ * `Templates/blocks/` — no controller code change.
+ *
+ * **Extendable by design.** Non-`final` and `protected` dependencies so
+ * sub-classes (e.g. the multi-tenant overlay) can scope every query by
+ * `tenant_id` while reusing the registry / default-data / audit logic.
+ */
 class BlocksController
 {
     public function __construct(
