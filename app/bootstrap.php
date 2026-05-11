@@ -57,7 +57,6 @@ return static function (): \Slim\App {
     $container->set(I18n::class, fn() => new I18n($config));
     $container->set(Mailer::class, fn(Container $c) => new Mailer(
         $config,
-        $c->get(DB::class),
         $c->get(I18n::class),
     ));
     $container->set(Renderer::class, fn(Container $c) => new Renderer(

@@ -34,7 +34,7 @@
 
 ```bash
 # 1. Clone
-git clone https://github.com/tylio/tylio.git my-site
+git clone https://github.com/simplemal/tylio.git my-site
 cd my-site
 
 # 2. PHP dependencies

@@ -21,11 +21,19 @@ use Symfony\Component\Mime\Address;
  *   - SMTP errors are logged but NOT thrown: signup must not fail if the
  *     welcome mail can't be delivered. Callers can read ::lastError().
  *
- * Localization: every user-facing string (subject, plain-text body, HTML
- * body, <title>, lang="…") is fetched through `I18n` under the `mail.*`
- * namespace. The active locale is resolved per send() from
- * `settings.site.locale` (site owner's choice in the admin) — emails go
- * out in the site owner's language regardless of who triggered the send.
+ * Localization: every user-facing string (subject, body, HTML, lang="…")
+ * is fetched through `I18n` under the `mail.*` namespace. The caller
+ * passes an explicit `$locale` to each `send*` method (typically the
+ * site owner's `settings.site.locale`). When omitted, the Mailer falls
+ * back to whatever locale the shared `I18n` instance is currently
+ * tracking — which on a fresh boot is the configured default.
+ *
+ * The Mailer DOES NOT read locale from the DB itself: doing so would
+ * make the service couple to a `settings` table schema (single-row in
+ * OSS, tenant-scoped in the SaaS overlay), which is exactly the kind of
+ * assumption that breaks when the same code is reused under a different
+ * data shape. Keeping locale resolution at the call site is the cleanest
+ * way to make the Mailer reusable across deployment topologies.
  */
 final class Mailer
 {
@@ -34,7 +42,6 @@ final class Mailer
 
     public function __construct(
         private Config $config,
-        private DB $db,
         private I18n $i18n,
     ) {}
 
@@ -69,21 +76,16 @@ final class Mailer
     }
 
     /**
-     * Resolve the locale for outgoing mail from `settings.site.locale`.
-     * Values in the `settings` table are JSON-encoded scalars, so we
-     * decode before consuming. Falls back to the I18n default locale.
+     * Apply the caller-supplied locale to the shared I18n instance for
+     * the duration of this send. Empty/null/unsupported values fall back
+     * to the I18n default locale, so callers can always pass the raw
+     * `settings.site.locale` string without sanitizing it themselves.
      */
-    private function resolveLocale(): string
+    private function applyLocale(?string $locale): void
     {
-        $row = $this->db->one("SELECT value FROM settings WHERE key = 'site.locale' LIMIT 1");
-        $locale = '';
-        if ($row !== null && isset($row['value'])) {
-            $decoded = json_decode((string)$row['value'], true);
-            if (is_string($decoded)) {
-                $locale = $decoded;
-            }
+        if ($locale !== null && $locale !== '') {
+            $this->i18n->setLocale($locale);
         }
-        return $locale !== '' ? $locale : $this->i18n->defaultLocale();
     }
 
     /**
@@ -131,9 +133,9 @@ final class Mailer
      * Table-based HTML body with 100% inline styles (email clients ignore
      * external CSS and <style> in head for compat). Dracula palette.
      */
-    public function sendInvite(string $to, string $slug, string $username, string $tempPassword): bool
+    public function sendInvite(string $to, string $slug, string $username, string $tempPassword, ?string $locale = null): bool
     {
-        $this->i18n->setLocale($this->resolveLocale());
+        $this->applyLocale($locale);
 
         $url = "https://{$slug}.tylio.app";
         $adminUrl = "{$url}/admin";
@@ -199,6 +201,7 @@ final class Mailer
         array $payload,
         ?string $ip,
         int $blockId,
+        ?string $locale = null,
     ): string {
         if ($notifyTo === '') {
             $this->logToFile('contact:no_recipient', '(none)', "form #{$blockId}", '');
@@ -209,7 +212,7 @@ final class Mailer
             return 'no_dsn';
         }
 
-        $this->i18n->setLocale($this->resolveLocale());
+        $this->applyLocale($locale);
 
         $hostLabel = $siteHost ?: 'tylio';
         $subject = $this->i18n->t('mail.contact_notification.subject', ['host' => $hostLabel]);
@@ -345,9 +348,9 @@ final class Mailer
         ]);
     }
 
-    public function sendPasswordReset(string $to, string $slug, string $username, string $resetUrl, int $expiresMinutes): bool
+    public function sendPasswordReset(string $to, string $slug, string $username, string $resetUrl, int $expiresMinutes, ?string $locale = null): bool
     {
-        $this->i18n->setLocale($this->resolveLocale());
+        $this->applyLocale($locale);
 
         $subject = $this->i18n->t('mail.password_reset.subject');
         $body = $this->i18n->t('mail.password_reset.body_text', [

@@ -237,12 +237,34 @@ class SubmissionsController
         array $payload,
         string $ip,
     ): array {
-        $row = $this->db->one("SELECT value FROM settings WHERE key = 'contact.notify_email' LIMIT 1");
-        $notify = $row ? (string)json_decode((string)$row['value'], true) : '';
+        $notify = $this->resolveSetting('contact.notify_email', $request);
+        $locale = $this->resolveSetting('site.locale', $request);
         $host = $request->getUri()->getHost();
-        $status = $this->mailer->sendContactNotification($notify, $host, $payload, $ip, $blockId);
+        $status = $this->mailer->sendContactNotification(
+            $notify, $host, $payload, $ip, $blockId, $locale !== '' ? $locale : null,
+        );
         $error = str_starts_with($status, 'error:') ? trim(substr($status, 6)) : null;
         $statusKey = $error ? 'error' : $status;
         return [$statusKey, $error];
+    }
+
+    /**
+     * Read a single value out of the `settings` table, JSON-decoded.
+     *
+     * The `$request` argument is unused in this default implementation
+     * — `settings` is a flat table in the OSS schema. It exists in the
+     * signature so a sub-class can extract tenant context from the
+     * request and scope the lookup accordingly (the multi-tenant SaaS
+     * overlay does exactly that).
+     *
+     * **Extensible:** `protected` so a sub-class can override the lookup
+     * without having to copy the surrounding `forwardByEmail` logic.
+     */
+    protected function resolveSetting(string $key, ?ServerRequestInterface $request = null): string
+    {
+        $row = $this->db->one('SELECT value FROM settings WHERE key = ? LIMIT 1', [$key]);
+        if ($row === null) return '';
+        $decoded = json_decode((string)($row['value'] ?? ''), true);
+        return is_string($decoded) ? $decoded : '';
     }
 }

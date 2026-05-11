@@ -1,5 +1,5 @@
 {
-  "name": "tylio/tylio",
+  "name": "tylio/core",
   "description": "Self-hosted single-user mosaic-tile personal page builder. PHP / Slim / SQLite / Vue 3 admin SPA.",
   "type": "project",
   "license": "MIT",

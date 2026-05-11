@@ -39,6 +39,10 @@ versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `pending_2fa` sessions are rejected by `AuthMiddleware` / `loadFromRequest` — fixes a critical bypass where password alone (step 1) granted full access.
 - Social tile: URLs without `https://` are now auto-prefixed instead of silently dropped. For `platform=website`, the label shows the domain rather than the generic "Website" — useful when there are several site links.
 
+### Changed
+
+- **Composer package renamed** from `tylio/tylio` to `tylio/core` for clarity: the OSS package can now coexist with future siblings under the `tylio/*` vendor namespace (e.g. `tylio/cli`, `tylio/platform`). Migration for self-hosters: `composer remove tylio/tylio && composer require tylio/core` — or, if you depend on it from another project's `composer.json`, just replace the package name in `require`. No PHP namespace changed (`Tylio\…` stays the same).
+
 ### Fixed
 
 - **Clone-readiness**: admin SPA build target moved from `public/admin/` to `admin/` so a fresh `npm run build` from `admin-src/` lands where the front controller actually looks for the SPA shell (`<root>/admin/index.html`). Fixes a 503 on `/admin` on freshly cloned checkouts.
@@ -61,5 +65,5 @@ First public release.
 - Auth, CSRF, rate limit, audit log
 - Auto-migrations on bootstrap, install via `/install` web or `scripts/seed.php`
 
-[Unreleased]: https://github.com/tylio/tylio/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/tylio/tylio/releases/tag/v0.1.0
+[Unreleased]: https://github.com/simplemal/tylio/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/simplemal/tylio/releases/tag/v0.1.0

@@ -64,10 +64,14 @@ class SettingsController
      * in sync. Only the fields listed here are validated; the rest (site
      * title, description, …) are free-form text.
      *
+     * **Extensible:** `protected` so sub-classes that override `update()`
+     * (e.g. the multi-tenant SaaS overlay) can reuse the validation
+     * pipeline without copy-pasting the regexes.
+     *
      * @param array<string,mixed> $settings
      * @return array<string,string>
      */
-    private function validateSettings(array $settings): array
+    protected function validateSettings(array $settings): array
     {
         $errors = [];
 
