@@ -35,7 +35,17 @@ final class Config
 
     public function dbPath(): string
     {
-        return $this->path((string)$this->get('DATABASE_PATH', 'data/db.sqlite'));
+        $path = (string)$this->get('DATABASE_PATH', 'data/db.sqlite');
+        // Special-case the SQLite in-memory pseudo-path: it must reach
+        // PDO untouched, otherwise our root-prefix logic turns it into
+        // `<rootPath>/:memory:` which SQLite treats as a real file —
+        // surprise: every "isolated" connection ends up writing to the
+        // same on-disk file. Same goes for any other path that already
+        // looks absolute or carries a scheme.
+        if ($path === '' || $path === ':memory:' || $path[0] === '/' || str_contains($path, '://')) {
+            return $path === '' ? $this->path('data/db.sqlite') : $path;
+        }
+        return $this->path($path);
     }
 
     public function adminPath(): string
