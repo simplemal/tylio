@@ -57,7 +57,7 @@ final class Mailer
 
     public function fromAddress(): string
     {
-        return (string)$this->config->get('MAIL_FROM_ADDRESS', 'hello@tylio.app');
+        return (string)$this->config->get('MAIL_FROM_ADDRESS', 'hello@example.com');
     }
 
     public function fromName(): string
@@ -76,6 +76,18 @@ final class Mailer
     }
 
     /**
+     * Brand label displayed in transactional emails (subject / footer /
+     * "powered by …"). Reads `APP_NAME` so a fork rebranding the
+     * deployment (`APP_NAME=mosaicio`) automatically rebrands every
+     * email. Falls back to a neutral `tylio` when unset.
+     */
+    public function brand(): string
+    {
+        $name = trim((string)$this->config->get('APP_NAME', ''));
+        return $name !== '' ? $name : 'tylio';
+    }
+
+    /**
      * Apply the caller-supplied locale to the shared I18n instance for
      * the duration of this send. Empty/null/unsupported values fall back
      * to the I18n default locale, so callers can always pass the raw
@@ -86,6 +98,18 @@ final class Mailer
         if ($locale !== null && $locale !== '') {
             $this->i18n->setLocale($locale);
         }
+    }
+
+    /**
+     * Augments every email-template parameter set with the shared
+     * `{brand}` placeholder so locale strings stay deploy-neutral.
+     *
+     * @param array<string,string> $params
+     * @return array<string,string>
+     */
+    private function withBrand(array $params): array
+    {
+        return ['brand' => $this->brand()] + $params;
     }
 
     /**
@@ -130,31 +154,49 @@ final class Mailer
      * user to change it on first login (must_change_password=1 on the
      * users row).
      *
+     * The caller owns the URL shape: in the SaaS this is
+     * `https://<slug>.<apex>`, in the OSS clone it's `APP_URL`. We never
+     * derive the URL from the slug here — that would couple the OSS
+     * service to a SaaS deploy convention.
+     *
+     * `$siteLabel` is the human-readable form of the URL (e.g.
+     * `foo.tylio.app` or `example.com`) shown in the email body; if
+     * empty, defaults to the host part of `$url`.
+     *
      * Table-based HTML body with 100% inline styles (email clients ignore
      * external CSS and <style> in head for compat). Dracula palette.
      */
-    public function sendInvite(string $to, string $slug, string $username, string $tempPassword, ?string $locale = null): bool
-    {
+    public function sendInvite(
+        string $to,
+        string $url,
+        string $adminUrl,
+        string $username,
+        string $tempPassword,
+        ?string $siteLabel = null,
+        ?string $locale = null,
+    ): bool {
         $this->applyLocale($locale);
 
-        $url = "https://{$slug}.tylio.app";
-        $adminUrl = "{$url}/admin";
+        $label = $siteLabel !== null && $siteLabel !== ''
+            ? $siteLabel
+            : (string)(parse_url($url, PHP_URL_HOST) ?: $url);
 
-        $subject = $this->i18n->t('mail.invite.subject');
-        $text = $this->i18n->t('mail.invite.body_text', [
+        $subject = $this->i18n->t('mail.invite.subject', $this->withBrand([]));
+        $text = $this->i18n->t('mail.invite.body_text', $this->withBrand([
             'url' => $url,
             'admin_url' => $adminUrl,
             'username' => $username,
             'temp_password' => $tempPassword,
+            'site_label' => $label,
             'support' => $this->supportAddress(),
             'privacy' => $this->privacyAddress(),
-        ]);
+        ]));
 
-        $html = $this->renderInviteHtml($slug, $username, $tempPassword, $url, $adminUrl);
+        $html = $this->renderInviteHtml($label, $username, $tempPassword, $url, $adminUrl);
         return $this->send($to, $subject, $text, $html);
     }
 
-    private function renderInviteHtml(string $slug, string $username, string $tempPwd, string $url, string $adminUrl): string
+    private function renderInviteHtml(string $siteLabel, string $username, string $tempPwd, string $url, string $adminUrl): string
     {
         $esc = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
@@ -162,21 +204,21 @@ final class Mailer
         $eAdmin = $esc($adminUrl);
         $eUser = $esc($username);
         $ePwd = $esc($tempPwd);
-        $eSlug = $esc($slug);
+        $eLabel = $esc($siteLabel);
         $eSupport = $esc($this->supportAddress());
         $ePrivacy = $esc($this->privacyAddress());
         $lang = $esc($this->i18n->currentLocale());
 
-        return $this->i18n->t('mail.invite.body_html', [
+        return $this->i18n->t('mail.invite.body_html', $this->withBrand([
             'lang' => $lang,
             'url' => $eUrl,
             'admin_url' => $eAdmin,
             'username' => $eUser,
             'temp_password' => $ePwd,
-            'slug' => $eSlug,
+            'site_label' => $eLabel,
             'support' => $eSupport,
             'privacy' => $ePrivacy,
-        ]);
+        ]));
     }
 
     /**
@@ -214,8 +256,8 @@ final class Mailer
 
         $this->applyLocale($locale);
 
-        $hostLabel = $siteHost ?: 'tylio';
-        $subject = $this->i18n->t('mail.contact_notification.subject', ['host' => $hostLabel]);
+        $hostLabel = $siteHost ?: $this->brand();
+        $subject = $this->i18n->t('mail.contact_notification.subject', $this->withBrand(['host' => $hostLabel]));
 
         $lines = [];
         foreach ($payload as $k => $v) {
@@ -224,12 +266,12 @@ final class Mailer
             $lines[] = "{$label}: {$val}";
         }
         $ipLine = $ip ? $this->i18n->t('mail.contact_notification.ip_line', ['ip' => $ip]) : '';
-        $textBody = $this->i18n->t('mail.contact_notification.body_text', [
+        $textBody = $this->i18n->t('mail.contact_notification.body_text', $this->withBrand([
             'host' => $hostLabel,
             'fields' => implode("\n", $lines),
             'ip_line' => $ipLine,
             'block_id' => (string)$blockId,
-        ]);
+        ]));
 
         $replyTo = null;
         foreach ($payload as $k => $v) {
@@ -330,7 +372,7 @@ final class Mailer
             ? '<div style="color:' . $muted . ';font-size:12px;margin-top:4px;">' . $esc($this->i18n->t('mail.contact_notification.ip_label', ['ip' => $esc($ip)])) . '</div>'
             : '';
 
-        return $this->i18n->t('mail.contact_notification.body_html', [
+        return $this->i18n->t('mail.contact_notification.body_html', $this->withBrand([
             'lang' => $lang,
             'host' => $eHost,
             'support' => $eSupport,
@@ -345,20 +387,32 @@ final class Mailer
             'muted' => $muted,
             'accent' => $accent,
             'border' => $border,
-        ]);
+        ]));
     }
 
-    public function sendPasswordReset(string $to, string $slug, string $username, string $resetUrl, int $expiresMinutes, ?string $locale = null): bool
-    {
+    /**
+     * Password-reset email. `$siteUrl` is the canonical URL of the site
+     * the user is recovering access for — caller-supplied to avoid
+     * coupling the OSS service to a SaaS deploy convention (see
+     * {@see sendInvite} for the same rationale).
+     */
+    public function sendPasswordReset(
+        string $to,
+        string $siteUrl,
+        string $username,
+        string $resetUrl,
+        int $expiresMinutes,
+        ?string $locale = null,
+    ): bool {
         $this->applyLocale($locale);
 
-        $subject = $this->i18n->t('mail.password_reset.subject');
-        $body = $this->i18n->t('mail.password_reset.body_text', [
-            'slug' => $slug,
+        $subject = $this->i18n->t('mail.password_reset.subject', $this->withBrand([]));
+        $body = $this->i18n->t('mail.password_reset.body_text', $this->withBrand([
+            'site_url' => $siteUrl,
             'username' => $username,
             'reset_url' => $resetUrl,
             'expires_minutes' => (string)$expiresMinutes,
-        ]);
+        ]));
 
         return $this->send($to, $subject, $body);
     }

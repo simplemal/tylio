@@ -73,10 +73,15 @@ async function submit() {
       window.location.href = changeUrl
       return
     } else if (e instanceof ApiError && e.status === 404 && e.data.error === 'no_tenant') {
-      // The user is loading the admin SPA on the wrong domain (platform
-      // host instead of a tenant subdomain). Redirect to the lookup.
+      // The user is loading the admin SPA on a deleted/unmapped subdomain.
+      // The server tells us where the canonical platform lookup lives
+      // (`lookup_url`) — that key is set by the platform overlay and
+      // absent on plain OSS deploys, where we just show the message.
       error.value = t('login.errors.wrongDomain')
-      window.location.href = 'https://tylio.app/login'
+      const lookup = typeof e.data.lookup_url === 'string' ? e.data.lookup_url : ''
+      if (lookup) {
+        window.location.href = lookup
+      }
       return
     } else {
       error.value = t('login.errors.generic')

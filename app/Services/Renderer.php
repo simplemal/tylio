@@ -157,8 +157,14 @@ class Renderer
 
     /**
      * Whether the block has enough content to be shown publicly.
-     * Hero, divider, and footer are always considered "visible" even with
-     * minimal data.
+     *
+     * `hero`, `divider`, `footer` and any "structural" type fall through
+     * to `default: return true` (they make sense even with minimal data).
+     *
+     * **Adding a new block type?** Add a `case` here when the block has
+     * required content. If the block is structural (always shown), the
+     * default branch covers you. The `tests/Unit/BlockRegistryCoverageTest`
+     * watches for new block types that lack a case here and flags them.
      */
     public function blockHasContent(array $block): bool
     {
@@ -201,6 +207,28 @@ class Renderer
                 return !empty($data['body']);
             case 'contact':
                 return !empty($data['fields']);
+            case 'quote':
+                // Either the quote text itself or the title is enough.
+                return !empty($data['text']) || !empty($data['title']);
+            case 'stats':
+                foreach (($data['items'] ?? []) as $it) {
+                    if (!empty($it['value']) || !empty($it['label'])) return true;
+                }
+                return false;
+            case 'cta':
+                // CTA is useful only if there's an action: button URL is
+                // the strict requirement; a title alone would be a banner.
+                return !empty($data['button_url']);
+            case 'faq':
+                foreach (($data['items'] ?? []) as $it) {
+                    if (!empty($it['question'])) return true;
+                }
+                return false;
+            case 'timeline':
+                foreach (($data['items'] ?? []) as $it) {
+                    if (!empty($it['title']) || !empty($it['date'])) return true;
+                }
+                return false;
             // hero, divider, footer: always visible
             default:
                 return true;
@@ -481,17 +509,32 @@ class Renderer
 
     public function themeCssVars(array $theme): string
     {
+        // Defense-in-depth: the ThemeController already sanitizes at the
+        // boundary (see `ThemeController::sanitizeTheme()`), but we
+        // re-validate here so legacy DB rows (saved before the sanitizer
+        // existed) cannot inject CSS into the <style> block. Each value
+        // that lands inside the `:root{…}` rule is validated against a
+        // strict char-class before interpolation.
         $palette = $theme['palette'] ?? [];
         $tile = $theme['tile'] ?? [];
         $font = $theme['font'] ?? [];
         $bg = $theme['background'] ?? [];
 
-        $patternColor = $palette['text_muted'] ?? '#9c8e7c';
-        $patternImage = !empty($bg['image']) ? "url('" . str_replace("'", "%27", (string)$bg['image']) . "')" : 'none';
+        $safeColor = static fn(?string $v, string $fallback): string =>
+            ($v !== null && \Tylio\Controllers\ThemeController::isValidCssColor((string)$v)) ? (string)$v : $fallback;
+        $safeFont = static fn(?string $v, string $fallback): string =>
+            ($v !== null && \Tylio\Controllers\ThemeController::isValidFontFamily((string)$v)) ? (string)$v : $fallback;
 
-        $surface = $palette['surface'] ?? '#1a1612';
-        $accent = $palette['accent'] ?? '#d4a574';
-        $accentAlt = $palette['accent_alt'] ?? '#e8c598';
+        $patternColor = $safeColor($palette['text_muted'] ?? null, '#9c8e7c');
+        // Strip quotes/parentheses defensively before wrapping in url('…').
+        $bgImageSafe = is_string($bg['image'] ?? null)
+            ? (preg_replace('/["\\\'()]/', '', $bg['image']) ?? '')
+            : '';
+        $patternImage = $bgImageSafe !== '' ? "url('" . $bgImageSafe . "')" : 'none';
+
+        $surface = $safeColor($palette['surface'] ?? null, '#1a1612');
+        $accent = $safeColor($palette['accent'] ?? null, '#d4a574');
+        $accentAlt = $safeColor($palette['accent_alt'] ?? null, '#e8c598');
 
         // ===== Derived solid colors =====
         // Server-side, computed as SOLID hex: the apparent color no longer
@@ -523,25 +566,32 @@ class Renderer
             ? $palette['accent_alt_fg']
             : $this->contrastFg($accentAlt);
 
+        // Cast all numeric/range-bounded values explicitly to avoid
+        // injecting arbitrary text via the JSON column.
+        $clampInt = static fn(mixed $v, int $min, int $max, int $default): int =>
+            is_numeric($v) ? max($min, min($max, (int)$v)) : $default;
+        $clampFloat = static fn(mixed $v, float $min, float $max, float $default): float =>
+            is_numeric($v) ? max($min, min($max, (float)$v)) : $default;
+
         $vars = [
-            '--bg' => $palette['bg'] ?? '#0f0d0a',
+            '--bg' => $safeColor($palette['bg'] ?? null, '#0f0d0a'),
             '--surface' => $surface,
-            '--surface-alt' => $palette['surface_alt'] ?? '#221c17',
-            '--text' => $palette['text'] ?? '#f4ede1',
-            '--text-muted' => $palette['text_muted'] ?? '#9c8e7c',
+            '--surface-alt' => $safeColor($palette['surface_alt'] ?? null, '#221c17'),
+            '--text' => $safeColor($palette['text'] ?? null, '#f4ede1'),
+            '--text-muted' => $safeColor($palette['text_muted'] ?? null, '#9c8e7c'),
             '--accent' => $accent,
             '--accent-alt' => $accentAlt,
             '--accent-soft' => $accentSoft,
             '--accent-fg' => $accentFg,
             '--accent-alt-fg' => $accentAltFg,
-            '--border' => $palette['border'] ?? 'rgba(244,237,225,0.08)',
-            '--tile-radius' => ($tile['radius'] ?? 18) . 'px',
-            '--tile-gap' => ($tile['gap'] ?? 14) . 'px',
-            '--tile-border' => ($tile['border'] ?? 1) . 'px',
-            '--tile-opacity' => (string)($tile['opacity'] ?? 0.7),
-            '--font-heading' => '"' . ($font['heading'] ?? 'Fraunces') . '", serif',
-            '--font-body' => '"' . ($font['body'] ?? 'Inter') . '", system-ui, sans-serif',
-            '--bg-pattern-intensity' => (string)($bg['intensity'] ?? 0.12),
+            '--border' => $safeColor($palette['border'] ?? null, 'rgba(244,237,225,0.08)'),
+            '--tile-radius' => $clampInt($tile['radius'] ?? null, 0, 100, 18) . 'px',
+            '--tile-gap' => $clampInt($tile['gap'] ?? null, 0, 100, 14) . 'px',
+            '--tile-border' => $clampInt($tile['border'] ?? null, 0, 20, 1) . 'px',
+            '--tile-opacity' => (string)$clampFloat($tile['opacity'] ?? null, 0.0, 1.0, 0.7),
+            '--font-heading' => '"' . $safeFont($font['heading'] ?? null, 'Fraunces') . '", serif',
+            '--font-body' => '"' . $safeFont($font['body'] ?? null, 'Inter') . '", system-ui, sans-serif',
+            '--bg-pattern-intensity' => (string)$clampFloat($bg['intensity'] ?? null, 0.0, 1.0, 0.12),
             '--bg-pattern-color' => $patternColor,
             '--bg-pattern-image' => $patternImage,
         ];

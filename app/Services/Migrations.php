@@ -67,10 +67,30 @@ final class Migrations
      * Apply all pending migrations. Returns the names of those applied in
      * this run. Idempotent: calling it twice in a row reapplies nothing.
      *
+     * **Fast path.** Migrations are run on every HTTP request (the
+     * default bootstrap calls `$migrations->run()`), but in the steady
+     * state the work is zero — `pending()` does a `glob()` + a
+     * `SELECT name FROM migrations` + a set diff. To save the few ms
+     * those two I/O calls cost, we cache a fingerprint of the migration
+     * files (`name|mtime|name|mtime…`) in `data/.migrations-stamp`. As
+     * long as no file has been added/touched since the last successful
+     * run, we skip the DB roundtrip entirely. The stamp is invalidated
+     * automatically when:
+     *   - a new migration file appears (its name joins the fingerprint),
+     *   - an existing file's mtime changes (e.g. composer update pulled
+     *     a new tylio/core release).
+     * The DB-tracking table (`migrations`) remains the source of truth;
+     * the stamp is a pure perf optimization that can be deleted at any
+     * time without breaking correctness.
+     *
      * @return list<string>
      */
     public function run(): array
     {
+        $fingerprint = $this->computeFingerprint();
+        if ($fingerprint !== '' && $this->fingerprintMatchesStamp($fingerprint)) {
+            return [];
+        }
         $this->ensureMigrationsTable();
         $applied = [];
         foreach ($this->pending() as $name => $file) {
@@ -80,7 +100,43 @@ final class Migrations
             });
             $applied[] = $name;
         }
+        if ($fingerprint !== '') $this->writeStamp($fingerprint);
         return $applied;
+    }
+
+    /**
+     * Build a deterministic fingerprint from the discovered migration
+     * files. Returns '' if there's no discoverable file (no fast path).
+     */
+    private function computeFingerprint(): string
+    {
+        $files = $this->scanMigrationFiles();
+        if ($files === []) return '';
+        $parts = [];
+        foreach ($files as $name => $path) {
+            $parts[] = $name . '|' . (string)@filemtime($path);
+        }
+        return hash('sha256', implode("\n", $parts));
+    }
+
+    private function stampPath(): string
+    {
+        return $this->config->path('data/.migrations-stamp');
+    }
+
+    private function fingerprintMatchesStamp(string $fingerprint): bool
+    {
+        $stamp = $this->stampPath();
+        if (!is_file($stamp)) return false;
+        return trim((string)@file_get_contents($stamp)) === $fingerprint;
+    }
+
+    private function writeStamp(string $fingerprint): void
+    {
+        $stamp = $this->stampPath();
+        $dir = dirname($stamp);
+        if (!is_dir($dir)) @mkdir($dir, 0770, true);
+        @file_put_contents($stamp, $fingerprint, LOCK_EX);
     }
 
     /**

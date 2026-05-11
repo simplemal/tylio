@@ -36,6 +36,16 @@ namespace Tylio\Services;
  */
 final class BlockRegistry
 {
+    /**
+     * Memoized output of `definitions()` for the lifetime of this
+     * instance (one per request, bound as singleton in the DI
+     * container). The data is pure and ~600 lines — recomputing it on
+     * every `get()`/`all()` was a free no-op tax.
+     *
+     * @var array<string,array<string,mixed>>|null
+     */
+    private ?array $cache = null;
+
     public function all(): array { return $this->definitions(); }
 
     public function get(string $type): ?array
@@ -91,7 +101,8 @@ final class BlockRegistry
 
     private function definitions(): array
     {
-        return [
+        if ($this->cache !== null) return $this->cache;
+        return $this->cache = [
             'hero' => [
                 'id' => 'hero',
                 'label' => 'blocks.hero.label',

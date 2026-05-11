@@ -5,6 +5,11 @@ import type { Block, BlockType } from '../types'
 const { t } = useI18n()
 defineProps<{ block: Block; type?: BlockType | null }>()
 
+// Brand label for the "powered by …" footer hint. Falls back to "tylio"
+// so the OSS preview keeps making sense; a fork that rebrands the
+// install can swap this via a Vite env variable.
+const brand = (import.meta as { env?: { VITE_APP_NAME?: string } }).env?.VITE_APP_NAME || 'tylio'
+
 function trunc(s: unknown, n = 140): string {
   const str = String(s ?? '')
     .replace(/\s+/g, ' ')
@@ -72,7 +77,7 @@ function embedIcon(provider: unknown): string {
         <span v-if="it.badge" class="bp-badge">{{ it.badge }}</span>
       </li>
       <li v-if="(block.data.items?.length || 0) > 4" class="bp-more">
-        +{{ (block.data.items?.length ?? 0) - 4 }} altri
+        {{ t('blockPreview.links.othersMore', { n: (block.data.items?.length ?? 0) - 4 }) }}
       </li>
     </ul>
 
@@ -94,7 +99,7 @@ function embedIcon(provider: unknown): string {
     <!-- BIO -->
     <div v-else-if="block.type === 'bio'">
       <div v-if="block.data.title" class="bp-section-title">{{ block.data.title }}</div>
-      <p class="bp-text">{{ trunc(block.data.body, 240) || '(testo vuoto)' }}</p>
+      <p class="bp-text">{{ trunc(block.data.body, 240) || t('blockPreview.empty.text') }}</p>
     </div>
 
     <!-- SOCIAL -->
@@ -123,7 +128,7 @@ function embedIcon(provider: unknown): string {
       <iconify-icon :icon="embedIcon(block.data.provider)" width="22" class="text-ink-100"></iconify-icon>
       <div class="min-w-0 flex-1">
         <div v-if="block.data.title" class="bp-text">{{ block.data.title }}</div>
-        <div class="text-xs text-ink-300 truncate">{{ block.data.url || '(nessun URL)' }}</div>
+        <div class="text-xs text-ink-300 truncate">{{ block.data.url || t('blockPreview.empty.url') }}</div>
       </div>
     </div>
 
@@ -133,9 +138,9 @@ function embedIcon(provider: unknown): string {
       <div class="min-w-0 flex-1">
         <div v-if="block.data.title" class="bp-text">{{ block.data.title }}</div>
         <div class="text-xs text-ink-300 truncate">
-          {{ block.data.source_url || '(URL canale/playlist mancante)' }}
-          <span v-if="block.data.mode === 'playlist'" class="opacity-60">· playlist</span>
-          <span v-else class="opacity-60">· ultimo video</span>
+          {{ block.data.source_url || t('blockPreview.empty.youtube') }}
+          <span v-if="block.data.mode === 'playlist'" class="opacity-60">· {{ t('blockPreview.youtube.playlist') }}</span>
+          <span v-else class="opacity-60">· {{ t('blockPreview.youtube.latestVideo') }}</span>
         </div>
       </div>
     </div>
@@ -229,6 +234,81 @@ function embedIcon(provider: unknown): string {
       >
     </div>
 
+    <!-- QUOTE: short preview with author + truncated text -->
+    <div v-else-if="block.type === 'quote'">
+      <div v-if="block.data.title" class="bp-section-title">{{ block.data.title }}</div>
+      <p v-if="block.data.text" class="bp-text">“{{ trunc(block.data.text, 180) }}”</p>
+      <p v-else class="bp-empty">{{ t('blockPreview.empty.quote') }}</p>
+      <p v-if="block.data.author" class="text-xs text-ink-300 mt-1">
+        — {{ block.data.author }}<span v-if="block.data.role" class="opacity-70"> · {{ block.data.role }}</span>
+      </p>
+    </div>
+
+    <!-- STATS: chips with value + label, max 4 visible -->
+    <div v-else-if="block.type === 'stats'">
+      <div v-if="block.data.title" class="bp-section-title">{{ block.data.title }}</div>
+      <div class="bp-pills">
+        <span v-if="!block.data.items?.length" class="bp-empty">{{ t('blockPreview.empty.stats') }}</span>
+        <span v-for="(it, i) in (block.data.items || []).slice(0, 4)" :key="i" class="bp-pill">
+          <iconify-icon v-if="it.icon" :icon="it.icon" width="11"></iconify-icon>
+          <strong>{{ it.value || '—' }}</strong>
+          <span v-if="it.label" class="opacity-70">{{ it.label }}</span>
+        </span>
+        <span v-if="(block.data.items?.length || 0) > 4" class="bp-more bp-more--inline">
+          +{{ (block.data.items?.length ?? 0) - 4 }}
+        </span>
+      </div>
+    </div>
+
+    <!-- CTA: title + button label preview -->
+    <div v-else-if="block.type === 'cta'">
+      <div v-if="block.data.title" class="bp-section-title">{{ block.data.title }}</div>
+      <p v-if="block.data.subtitle" class="bp-text">{{ trunc(block.data.subtitle, 160) }}</p>
+      <div class="bp-pills">
+        <span v-if="!block.data.button_url" class="bp-empty">{{ t('blockPreview.empty.cta') }}</span>
+        <span v-else class="bp-pill">
+          <iconify-icon :icon="block.data.icon || 'lucide:arrow-right'" width="11"></iconify-icon>
+          {{ block.data.button_label || block.data.button_url }}
+        </span>
+      </div>
+    </div>
+
+    <!-- FAQ: question count + first 2 questions truncated -->
+    <div v-else-if="block.type === 'faq'">
+      <div v-if="block.data.title" class="bp-section-title">{{ block.data.title }}</div>
+      <p v-if="!block.data.items?.length" class="bp-empty">{{ t('blockPreview.empty.faq') }}</p>
+      <ul v-else class="bp-list">
+        <li v-for="(it, i) in (block.data.items || []).slice(0, 2)" :key="i" class="bp-link">
+          <span class="bp-link__icon">
+            <iconify-icon icon="lucide:circle-help" width="14"></iconify-icon>
+          </span>
+          <span class="bp-link__label">{{ trunc(it.question, 80) || '—' }}</span>
+        </li>
+        <li v-if="(block.data.items?.length || 0) > 2" class="bp-more">
+          {{ t('blockPreview.faq.questionCount', { n: block.data.items?.length ?? 0 }) }}
+        </li>
+      </ul>
+    </div>
+
+    <!-- TIMELINE: first 2 events + count -->
+    <div v-else-if="block.type === 'timeline'">
+      <div v-if="block.data.title" class="bp-section-title">{{ block.data.title }}</div>
+      <p v-if="!block.data.items?.length" class="bp-empty">{{ t('blockPreview.empty.timeline') }}</p>
+      <ul v-else class="bp-list">
+        <li v-for="(it, i) in (block.data.items || []).slice(0, 2)" :key="i" class="bp-link">
+          <span class="bp-link__icon">
+            <iconify-icon :icon="it.icon || 'lucide:timer'" width="14"></iconify-icon>
+          </span>
+          <span class="bp-link__label">
+            <span v-if="it.date" class="opacity-70">{{ it.date }} · </span>{{ it.title || '—' }}
+          </span>
+        </li>
+        <li v-if="(block.data.items?.length || 0) > 2" class="bp-more">
+          {{ t('blockPreview.timeline.eventCount', { n: block.data.items?.length ?? 0 }) }}
+        </li>
+      </ul>
+    </div>
+
     <!-- DIVIDER -->
     <div v-else-if="block.type === 'divider'" class="bp-divider">
       <span class="bp-divider__scale"></span>
@@ -239,12 +319,12 @@ function embedIcon(provider: unknown): string {
 
     <!-- FOOTER -->
     <div v-else-if="block.type === 'footer'" class="bp-footer">
-      <span class="bp-text">{{ block.data.text || '(nessun testo)' }}</span>
+      <span class="bp-text">{{ block.data.text || t('blockPreview.empty.footerText') }}</span>
       <span v-if="block.data.links?.length" class="text-xs text-ink-300"
         >· {{ block.data.links.length }} link</span
       >
       <span v-if="block.data.show_powered_by" class="text-xs text-ink-300"
-        >· "powered by tylio"</span
+        >· {{ t('blockPreview.footer.poweredBy', { brand: brand }) }}</span
       >
     </div>
 

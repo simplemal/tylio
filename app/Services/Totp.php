@@ -21,7 +21,14 @@ final class Totp
 {
     public const PERIOD = 30;
     public const DIGITS = 6;
-    public const ISSUER = 'tylio.app';
+    /**
+     * Default issuer label shown in the authenticator app entry.
+     * Brand-neutral so the OSS clone doesn't advertise a SaaS domain.
+     * Callers should pass the actual `APP_NAME` (or equivalent) via the
+     * `$issuer` argument of {@see provisioningUri()} — this default is
+     * used only as a last-resort fallback (e.g. unit tests).
+     */
+    public const ISSUER = 'tylio';
 
     /**
      * Generate a fresh TOTP secret: 20 random bytes encoded in base32.

@@ -115,6 +115,9 @@
     "countProfiles": "{n} profiles",
     "countProducts": "{n} products",
     "countSkills": "{n} skills",
+    "countStats": "{n} stats",
+    "countFaq": "{n} questions",
+    "countTimeline": "{n} events",
     "podcastPlatformSite": "Site"
   },
   "addBlock": {
@@ -598,7 +601,16 @@
       "social": "No socials.",
       "gallery": "No images.",
       "products": "No products.",
-      "skills": "No skills."
+      "skills": "No skills.",
+      "text": "(empty text)",
+      "url": "(no URL)",
+      "youtube": "(missing channel/playlist URL)",
+      "footerText": "(no text)",
+      "quote": "No quote.",
+      "stats": "No stats.",
+      "cta": "No call-to-action.",
+      "faq": "No questions.",
+      "timeline": "No events."
     },
     "podcast": {
       "site": "Site",
@@ -606,6 +618,22 @@
     },
     "divider": {
       "style": "style: {style}"
+    },
+    "links": {
+      "othersMore": "+{n} more"
+    },
+    "youtube": {
+      "playlist": "playlist",
+      "latestVideo": "latest video"
+    },
+    "footer": {
+      "poweredBy": "\"powered by {brand}\""
+    },
+    "faq": {
+      "questionCount": "{n} questions"
+    },
+    "timeline": {
+      "eventCount": "{n} events"
     }
   },
   "field": {
@@ -671,27 +699,5 @@
   },
   "confirmDialog": {
     "defaultTitle": "Confirm?"
-  },
-  "blockPreview": {
-    "noBio": "No bio.",
-    "noLinks": "No links.",
-    "noProjects": "No projects.",
-    "emptyText": "(empty text)",
-    "noSocial": "No social.",
-    "noImages": "No images.",
-    "noUrl": "(no URL)",
-    "missingYoutube": "(missing channel/playlist URL)",
-    "playlist": "playlist",
-    "latestVideo": "latest video",
-    "podcastSite": "Site",
-    "podcastAddLink": "Add at least one link",
-    "noProducts": "No products.",
-    "noSkills": "No skills.",
-    "dividerStylePrefix": "style:",
-    "dividerStyleDefault": "tile",
-    "footerNoText": "(no text)",
-    "footerLinkCount": "{n} link",
-    "footerPoweredBy": "\"powered by tylio\"",
-    "othersMore": "{n} more"
   }
 }

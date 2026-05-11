@@ -115,6 +115,9 @@
     "countProfiles": "{n} profili",
     "countProducts": "{n} prodotti",
     "countSkills": "{n} competenze",
+    "countStats": "{n} dati",
+    "countFaq": "{n} domande",
+    "countTimeline": "{n} eventi",
     "podcastPlatformSite": "Sito"
   },
   "addBlock": {
@@ -598,7 +601,16 @@
       "social": "Nessun social.",
       "gallery": "Nessuna immagine.",
       "products": "Nessun prodotto.",
-      "skills": "Nessuna competenza."
+      "skills": "Nessuna competenza.",
+      "text": "(testo vuoto)",
+      "url": "(nessun URL)",
+      "youtube": "(URL canale/playlist mancante)",
+      "footerText": "(nessun testo)",
+      "quote": "Nessuna citazione.",
+      "stats": "Nessun dato.",
+      "cta": "Nessuna call-to-action.",
+      "faq": "Nessuna domanda.",
+      "timeline": "Nessun evento."
     },
     "podcast": {
       "site": "Sito",
@@ -606,6 +618,22 @@
     },
     "divider": {
       "style": "stile: {style}"
+    },
+    "links": {
+      "othersMore": "+{n} altri"
+    },
+    "youtube": {
+      "playlist": "playlist",
+      "latestVideo": "ultimo video"
+    },
+    "footer": {
+      "poweredBy": "\"powered by {brand}\""
+    },
+    "faq": {
+      "questionCount": "{n} domande"
+    },
+    "timeline": {
+      "eventCount": "{n} eventi"
     }
   },
   "field": {
@@ -671,27 +699,5 @@
   },
   "confirmDialog": {
     "defaultTitle": "Confermi?"
-  },
-  "blockPreview": {
-    "noBio": "Nessuna bio.",
-    "noLinks": "Nessun link.",
-    "noProjects": "Nessun progetto.",
-    "emptyText": "(testo vuoto)",
-    "noSocial": "Nessun social.",
-    "noImages": "Nessuna immagine.",
-    "noUrl": "(nessun URL)",
-    "missingYoutube": "(URL canale/playlist mancante)",
-    "playlist": "playlist",
-    "latestVideo": "ultimo video",
-    "podcastSite": "Sito",
-    "podcastAddLink": "Aggiungi almeno un link",
-    "noProducts": "Nessun prodotto.",
-    "noSkills": "Nessuna competenza.",
-    "dividerStylePrefix": "stile:",
-    "dividerStyleDefault": "tessera",
-    "footerNoText": "(nessun testo)",
-    "footerLinkCount": "{n} link",
-    "footerPoweredBy": "\"powered by tylio\"",
-    "othersMore": "{n} altri"
   }
 }

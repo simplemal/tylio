@@ -162,6 +162,16 @@ function blockSummary(b: Block): string {
       return b.data.title || ty.description
     case 'skills':
       return b.data.items?.length ? t('dashboard.countSkills', { n: b.data.items.length }) : ty.description
+    case 'quote':
+      return (b.data.text || b.data.title || ty.description).slice(0, 60).replace(/\n/g, ' ')
+    case 'stats':
+      return b.data.items?.length ? t('dashboard.countStats', { n: b.data.items.length }) : ty.description
+    case 'cta':
+      return b.data.title || b.data.button_label || ty.description
+    case 'faq':
+      return b.data.items?.length ? t('dashboard.countFaq', { n: b.data.items.length }) : ty.description
+    case 'timeline':
+      return b.data.items?.length ? t('dashboard.countTimeline', { n: b.data.items.length }) : ty.description
     case 'divider':
     case 'footer':
       return ty.description

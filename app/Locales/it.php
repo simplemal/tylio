@@ -91,11 +91,11 @@ return [
     // la palette Dracula inline tramite placeholder per non sporcare la
     // copia con valori esadecimali ripetuti.
     // -----------------------------------------------------------------
-    'mail.invite.subject' => 'Il tuo nuovo sito su tylio.app è pronto',
+    'mail.invite.subject' => 'Il tuo nuovo sito su {brand} è pronto',
     'mail.invite.body_text' => <<<TXT
     Ciao,
 
-    ti è stato creato un sito personale su tylio.app:
+    ti è stato creato un sito personale su {brand}:
       {url}
 
     Per accedere al pannello admin:
@@ -121,7 +121,7 @@ return [
     Per supporto: {support}
     Privacy/dati: {privacy}
 
-    — tylio
+    — {brand}
     TXT,
     'mail.invite.body_html' => <<<HTML
     <!doctype html>
@@ -130,7 +130,7 @@ return [
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <meta name="x-apple-disable-message-reformatting">
-      <title>Il tuo sito su tylio.app è pronto</title>
+      <title>Il tuo sito su {brand} è pronto</title>
     </head>
     <body style="margin:0;padding:0;background:#1a1c25;color:#f8f8f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a1c25;padding:32px 12px;">
@@ -139,12 +139,12 @@ return [
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#282a36;border-radius:14px;border:1px solid rgba(248,248,242,0.12);overflow:hidden;">
               <tr>
                 <td style="padding:28px 32px 8px;">
-                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#97a3c2;margin-bottom:6px;">tylio.app</div>
+                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#97a3c2;margin-bottom:6px;">{brand}</div>
                   <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:600;font-size:26px;line-height:1.2;color:#f8f8f2;">
                     Il tuo sito è pronto
                   </h1>
                   <p style="margin:10px 0 0;color:#97a3c2;font-size:15px;line-height:1.5;">
-                    Ciao, abbiamo creato per te <a href="{url}" style="color:#bd93f9;text-decoration:none;font-weight:600;">{slug}.tylio.app</a>.
+                    Ciao, abbiamo creato per te <a href="{url}" style="color:#bd93f9;text-decoration:none;font-weight:600;">{site_label}</a>.
                   </p>
                 </td>
               </tr>
@@ -211,12 +211,12 @@ return [
                     &nbsp;·&nbsp;
                     Privacy: <a href="mailto:{privacy}" style="color:#bd93f9;text-decoration:none;">{privacy}</a>
                   </p>
-                  <p style="margin:8px 0 0;color:#97a3c2;font-size:12px;">— tylio</p>
+                  <p style="margin:8px 0 0;color:#97a3c2;font-size:12px;">— {brand}</p>
                 </td>
               </tr>
             </table>
             <p style="max-width:560px;margin:14px auto 0;color:#97a3c2;font-size:11px;line-height:1.5;text-align:center;">
-              Hai ricevuto questa email perché qualcuno ha creato il sito {slug}.tylio.app indicando il tuo indirizzo. Se non eri tu, ignora questa email — senza la password temporanea non si può accedere al pannello.
+              Hai ricevuto questa email perché qualcuno ha creato il sito {site_label} indicando il tuo indirizzo. Se non eri tu, ignora questa email — senza la password temporanea non si può accedere al pannello.
             </p>
           </td>
         </tr>
@@ -257,7 +257,7 @@ return [
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:{surface};border-radius:14px;border:1px solid {border};overflow:hidden;">
               <tr>
                 <td style="padding:28px 32px 8px;">
-                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:{muted};margin-bottom:6px;">tylio.app</div>
+                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:{muted};margin-bottom:6px;">{brand}</div>
                   <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:600;font-size:26px;line-height:1.2;color:{text};">
                     Nuovo messaggio
                   </h1>
@@ -284,12 +284,12 @@ return [
                     &nbsp;·&nbsp;
                     Privacy: <a href="mailto:{privacy}" style="color:{accent};text-decoration:none;">{privacy}</a>
                   </p>
-                  <p style="margin:8px 0 0;color:{muted};font-size:12px;">— tylio</p>
+                  <p style="margin:8px 0 0;color:{muted};font-size:12px;">— {brand}</p>
                 </td>
               </tr>
             </table>
             <p style="max-width:560px;margin:14px auto 0;color:{muted};font-size:11px;line-height:1.5;text-align:center;">
-              Ricevi questa email perché qualcuno ha compilato il form contatti del sito {host}. Il messaggio è anche salvato nell'admin di tylio (sezione Messaggi).
+              Ricevi questa email perché qualcuno ha compilato il form contatti del sito {host}. Il messaggio è anche salvato nell'admin di {brand} (sezione Messaggi).
             </p>
           </td>
         </tr>
@@ -298,12 +298,12 @@ return [
     </html>
     HTML,
 
-    'mail.password_reset.subject' => 'Reimposta la password del tuo sito tylio',
+    'mail.password_reset.subject' => 'Reimposta la password del tuo sito {brand}',
     'mail.password_reset.body_text' => <<<TXT
     Ciao,
 
     Hai richiesto di reimpostare la password per:
-      sito: https://{slug}.tylio.app
+      sito: {site_url}
       username: {username}
 
     Apri questo link entro {expires_minutes} minuti per scegliere una nuova password:
@@ -312,7 +312,7 @@ return [
     Se non hai richiesto tu il reset puoi ignorare questa mail. Il link
     scade da solo e il tuo account rimane invariato.
 
-    — tylio
+    — {brand}
     TXT,
 
     // -----------------------------------------------------------------

@@ -41,37 +41,22 @@ No auto-formatters in the pipeline right now (no prettier). Try to match the exi
 
 ## Adding a new tile
 
-Example: a `quote` tile.
+See the canonical guide: **[docs/EXTENDING-BLOCKS.md](docs/EXTENDING-BLOCKS.md)**.
 
-1. **Schema** in `app/Services/BlockRegistry.php`:
+The short version is six files:
 
-   ```php
-   'quote' => [
-       'id' => 'quote',
-       'label' => 'Quote',
-       'category' => 'Text',
-       'icon' => 'lucide:quote',
-       'description' => 'A highlighted quote with author.',
-       'span' => 'full',
-       'fields' => [
-           ['key' => 'text', 'label' => 'Text', 'type' => 'textarea', 'required' => true],
-           ['key' => 'author', 'label' => 'Author', 'type' => 'text'],
-       ],
-   ],
-   ```
+1. `app/Services/BlockRegistry.php` — schema
+2. `app/Locales/{en,it}.php` — i18n keys under `blocks.<type>.*`
+3. `app/Templates/blocks/<type>.php` — server-side HTML output
+4. `app/Services/Renderer.php` — `blockHasContent()` case
+5. `admin-src/src/types.ts` — `BlockKind`, `<Type>Data`, `Block`, `BlockDataMap`
+6. `admin-src/src/components/BlockPreview.vue` — dashboard preview (optional)
 
-2. **Template** in `app/Templates/blocks/quote.php` — server-side HTML output.
-
-3. **Content filter** in `Renderer::blockHasContent()` so empty tiles don't render publicly:
-
-   ```php
-   case 'quote':
-       return !empty($data['text']);
-   ```
-
-4. **CSS** in `app/Templates/public.css` if you need new classes.
-
-The admin SPA reads the schema from the backend at runtime — no SPA rebuild is needed for new blocks that use existing field types.
+Steps 1–4 are required; 5–6 are recommended (without them the SPA
+falls back to a generic preview and `tsc` narrows the tile's `data`
+to `unknown`). The admin form-editor is data-driven, so **no Vue
+component is needed** to make the block editable — the registry
+schema is enough.
 
 ## Migrations
 

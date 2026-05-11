@@ -64,6 +64,8 @@
     "migrate:version": "php scripts/migrate.php version",
     "make:migration": "php scripts/make-migration.php",
     "seed": "php scripts/seed.php",
+    "cleanup": "php scripts/cleanup.php",
+    "cleanup:dry-run": "php scripts/cleanup.php --dry-run",
     "analyse": "phpstan analyse --memory-limit=512M",
     "test": "phpunit",
     "check": ["@analyse", "@test"]
@@ -74,6 +76,8 @@
     "migrate:version": "Name of the last applied migration",
     "make:migration": "Generate a new migration: composer make:migration -- slug_name [--php]",
     "seed": "Install CLI: create the admin user + example tiles",
+    "cleanup": "Purge expired sessions + old login_attempts/audit_log/visits (cron-friendly)",
+    "cleanup:dry-run": "Show what `cleanup` would delete, without actually deleting",
     "analyse": "Run PHPStan (level 5)",
     "test": "Run PHPUnit",
     "check": "PHPStan + PHPUnit together (used by CI)"

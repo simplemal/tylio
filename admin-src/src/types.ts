@@ -62,6 +62,11 @@ export type BlockKind =
   | 'apps'
   | 'bio'
   | 'products'
+  | 'quote'
+  | 'stats'
+  | 'cta'
+  | 'faq'
+  | 'timeline'
   | 'social'
   | 'gallery'
   | 'embed'
@@ -264,6 +269,57 @@ export interface ContactData {
   fields?: ContactField[]
 }
 
+export interface QuoteData {
+  title?: string
+  text?: string
+  author?: string
+  role?: string
+  avatar?: string
+  style?: 'card' | 'minimal' | 'highlight'
+  text_size?: 'sm' | 'md' | 'lg'
+  line_height?: 'compact' | 'normal' | 'relaxed'
+}
+
+export interface StatItem {
+  value?: string
+  label?: string
+  icon?: string
+}
+export interface StatsData {
+  title?: string
+  items?: StatItem[]
+}
+
+export interface CtaData {
+  title?: string
+  subtitle?: string
+  button_label?: string
+  button_url?: string
+  icon?: string
+  style?: 'gradient' | 'solid' | 'outline' | 'minimal'
+}
+
+export interface FaqItem {
+  question?: string
+  answer?: string
+}
+export interface FaqData {
+  title?: string
+  items?: FaqItem[]
+}
+
+export interface TimelineItem {
+  date?: string
+  title?: string
+  description?: string
+  icon?: string
+  highlight?: boolean
+}
+export interface TimelineData {
+  title?: string
+  items?: TimelineItem[]
+}
+
 export interface SkillItem {
   name?: string
   level?: string
@@ -298,6 +354,11 @@ export type Block =
   | (BaseBlock & { type: 'apps'; data: AppsData })
   | (BaseBlock & { type: 'bio'; data: BioData })
   | (BaseBlock & { type: 'products'; data: ProductsData })
+  | (BaseBlock & { type: 'quote'; data: QuoteData })
+  | (BaseBlock & { type: 'stats'; data: StatsData })
+  | (BaseBlock & { type: 'cta'; data: CtaData })
+  | (BaseBlock & { type: 'faq'; data: FaqData })
+  | (BaseBlock & { type: 'timeline'; data: TimelineData })
   | (BaseBlock & { type: 'social'; data: SocialData })
   | (BaseBlock & { type: 'gallery'; data: GalleryData })
   | (BaseBlock & { type: 'embed'; data: EmbedData })
@@ -323,6 +384,11 @@ export interface BlockDataMap {
   apps: AppsData
   bio: BioData
   products: ProductsData
+  quote: QuoteData
+  stats: StatsData
+  cta: CtaData
+  faq: FaqData
+  timeline: TimelineData
   social: SocialData
   gallery: GalleryData
   embed: EmbedData

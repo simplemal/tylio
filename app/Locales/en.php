@@ -94,11 +94,11 @@ return [
     // Dracula palette via placeholders so the visual identity stays
     // identical across languages.
     // -----------------------------------------------------------------
-    'mail.invite.subject' => 'Your new site on tylio.app is ready',
+    'mail.invite.subject' => 'Your new site on {brand} is ready',
     'mail.invite.body_text' => <<<TXT
     Hi,
 
-    a personal site has been created for you on tylio.app:
+    a personal site has been created for you on {brand}:
       {url}
 
     To access the admin panel:
@@ -124,7 +124,7 @@ return [
     Support: {support}
     Privacy/data: {privacy}
 
-    — tylio
+    — {brand}
     TXT,
     'mail.invite.body_html' => <<<HTML
     <!doctype html>
@@ -133,7 +133,7 @@ return [
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       <meta name="x-apple-disable-message-reformatting">
-      <title>Your site on tylio.app is ready</title>
+      <title>Your site on {brand} is ready</title>
     </head>
     <body style="margin:0;padding:0;background:#1a1c25;color:#f8f8f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a1c25;padding:32px 12px;">
@@ -142,12 +142,12 @@ return [
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#282a36;border-radius:14px;border:1px solid rgba(248,248,242,0.12);overflow:hidden;">
               <tr>
                 <td style="padding:28px 32px 8px;">
-                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#97a3c2;margin-bottom:6px;">tylio.app</div>
+                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#97a3c2;margin-bottom:6px;">{brand}</div>
                   <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:600;font-size:26px;line-height:1.2;color:#f8f8f2;">
                     Your site is ready
                   </h1>
                   <p style="margin:10px 0 0;color:#97a3c2;font-size:15px;line-height:1.5;">
-                    Hi, we have created <a href="{url}" style="color:#bd93f9;text-decoration:none;font-weight:600;">{slug}.tylio.app</a> for you.
+                    Hi, we have created <a href="{url}" style="color:#bd93f9;text-decoration:none;font-weight:600;">{site_label}</a> for you.
                   </p>
                 </td>
               </tr>
@@ -212,12 +212,12 @@ return [
                     &nbsp;·&nbsp;
                     Privacy: <a href="mailto:{privacy}" style="color:#bd93f9;text-decoration:none;">{privacy}</a>
                   </p>
-                  <p style="margin:8px 0 0;color:#97a3c2;font-size:12px;">— tylio</p>
+                  <p style="margin:8px 0 0;color:#97a3c2;font-size:12px;">— {brand}</p>
                 </td>
               </tr>
             </table>
             <p style="max-width:560px;margin:14px auto 0;color:#97a3c2;font-size:11px;line-height:1.5;text-align:center;">
-              You received this email because someone created the site {slug}.tylio.app using your address. If it wasn't you, ignore this email — without the temporary password it's impossible to access the admin panel.
+              You received this email because someone created the site {site_label} using your address. If it wasn't you, ignore this email — without the temporary password it's impossible to access the admin panel.
             </p>
           </td>
         </tr>
@@ -258,7 +258,7 @@ return [
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:{surface};border-radius:14px;border:1px solid {border};overflow:hidden;">
               <tr>
                 <td style="padding:28px 32px 8px;">
-                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:{muted};margin-bottom:6px;">tylio.app</div>
+                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:{muted};margin-bottom:6px;">{brand}</div>
                   <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:600;font-size:26px;line-height:1.2;color:{text};">
                     New message
                   </h1>
@@ -285,12 +285,12 @@ return [
                     &nbsp;·&nbsp;
                     Privacy: <a href="mailto:{privacy}" style="color:{accent};text-decoration:none;">{privacy}</a>
                   </p>
-                  <p style="margin:8px 0 0;color:{muted};font-size:12px;">— tylio</p>
+                  <p style="margin:8px 0 0;color:{muted};font-size:12px;">— {brand}</p>
                 </td>
               </tr>
             </table>
             <p style="max-width:560px;margin:14px auto 0;color:{muted};font-size:11px;line-height:1.5;text-align:center;">
-              You're receiving this email because someone submitted the contact form on site {host}. The message is also saved in the tylio admin (Messages section).
+              You're receiving this email because someone submitted the contact form on site {host}. The message is also saved in the {brand} admin (Messages section).
             </p>
           </td>
         </tr>
@@ -299,12 +299,12 @@ return [
     </html>
     HTML,
 
-    'mail.password_reset.subject' => 'Reset the password for your tylio site',
+    'mail.password_reset.subject' => 'Reset the password for your {brand} site',
     'mail.password_reset.body_text' => <<<TXT
     Hi,
 
     You requested a password reset for:
-      site: https://{slug}.tylio.app
+      site: {site_url}
       username: {username}
 
     Open this link within {expires_minutes} minutes to choose a new password:
@@ -313,7 +313,7 @@ return [
     If you didn't request the reset you can ignore this email. The link
     expires on its own and your account stays unchanged.
 
-    — tylio
+    — {brand}
     TXT,
 
     // -----------------------------------------------------------------

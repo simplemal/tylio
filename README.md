@@ -175,10 +175,16 @@ access to the project root, or to those subdirs once they exist).
 
 ## Adding a new tile
 
-1. Add an entry in `app/Services/BlockRegistry.php` (declares the field schema)
-2. Create `app/Templates/blocks/<type>.php` (server-side rendering)
-3. Add a case in `Renderer::blockHasContent()` (so empty tiles get filtered out of the public page)
-4. Add CSS in `app/Templates/public.css` if needed
+See the dedicated guide: **[docs/EXTENDING-BLOCKS.md](docs/EXTENDING-BLOCKS.md)**.
+
+At a glance, six files:
+
+1. `app/Services/BlockRegistry.php` (field schema)
+2. `app/Locales/{en,it}.php` (i18n keys under `blocks.<type>.*`)
+3. `app/Templates/blocks/<type>.php` (server-side HTML)
+4. `Renderer::blockHasContent()` (empty-tile filter)
+5. `admin-src/src/types.ts` (TypeScript types — recommended)
+6. `admin-src/src/components/BlockPreview.vue` (dashboard preview — optional)
 
 The admin SPA reads the schema from `/api/types` at runtime — no SPA rebuild is needed for new blocks that use existing field types.
 

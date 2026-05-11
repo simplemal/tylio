@@ -342,7 +342,7 @@ final class YouTubeFeed
                 CURLOPT_MAXREDIRS => 3,
                 CURLOPT_CONNECTTIMEOUT => self::FETCH_TIMEOUT,
                 CURLOPT_TIMEOUT => self::FETCH_TIMEOUT,
-                CURLOPT_USERAGENT => 'tylio.app/1.0 (+https://tylio.app)',
+                CURLOPT_USERAGENT => self::userAgent(),
                 CURLOPT_FAILONERROR => true,
                 CURLOPT_SSL_VERIFYPEER => true,
             ]);
@@ -358,11 +358,28 @@ final class YouTubeFeed
         // Fallback without curl
         $ctx = stream_context_create(['http' => [
             'timeout' => self::FETCH_TIMEOUT,
-            'header' => "User-Agent: tylio.app/1.0\r\n",
+            'header' => 'User-Agent: ' . self::userAgent() . "\r\n",
             'follow_location' => 1,
             'max_redirects' => 3,
         ]]);
         $body = @file_get_contents($url, false, $ctx);
         return $body === false ? null : $body;
+    }
+
+    /**
+     * User-Agent used when fetching the YouTube RSS feed. Honors APP_NAME
+     * + APP_URL so a fork rebranding the project also rebrands the UA.
+     * Falls back to a generic identifier when env vars are unset.
+     */
+    private static function userAgent(): string
+    {
+        $name = getenv('APP_NAME');
+        $url = getenv('APP_URL');
+        $name = is_string($name) && $name !== '' ? $name : 'tylio';
+        $ua = $name . '/1.0';
+        if (is_string($url) && $url !== '') {
+            $ua .= ' (+' . $url . ')';
+        }
+        return $ua;
     }
 }

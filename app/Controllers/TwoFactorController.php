@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Tylio\Controllers;
 
+use Tylio\Config;
 use Tylio\Services\Auth;
 use Tylio\Services\DB;
 use Tylio\Services\Totp;
@@ -31,7 +32,20 @@ class TwoFactorController
         protected Auth $auth,
         protected UserTwoFactorAuth $twoFactor,
         protected DB $db,
+        protected Config $config,
     ) {}
+
+    /**
+     * Issuer string embedded in the otpauth URI / shown by the user's
+     * authenticator app. Reads `APP_NAME` so a fork that rebrands the
+     * install (`APP_NAME=foo`) also rebrands the 2FA entry. Falls back
+     * to {@see Totp::ISSUER} when unset.
+     */
+    protected function totpIssuer(): string
+    {
+        $name = trim((string)$this->config->get('APP_NAME', ''));
+        return $name !== '' ? $name : Totp::ISSUER;
+    }
 
     public function status(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
@@ -56,7 +70,7 @@ class TwoFactorController
         // saved only after setupConfirm succeeds.
         $secret = Totp::generateSecret();
         $username = (string)($user['username'] ?? 'user');
-        $uri = Totp::provisioningUri($username, $secret);
+        $uri = Totp::provisioningUri($username, $secret, $this->totpIssuer());
 
         return AuthController::json($response, [
             'secret' => $secret,
