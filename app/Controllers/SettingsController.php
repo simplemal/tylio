@@ -103,20 +103,49 @@ class SettingsController
         return $errors;
     }
 
+    /**
+     * Stats payload consumed by the admin SPA `Stats.vue` view.
+     *
+     * Shape (matches `Stats` in `admin-src/src/types.ts`):
+     *   - `totals`: aggregate counters
+     *       (total_visits, today_visits, unique_days,
+     *        submissions_total, submissions_unread)
+     *   - `by_day`:   last 30 days of visit counts, ASC by day
+     *   - `by_block`: top 10 most-clicked tiles (clicks per block_id)
+     */
     public function stats(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         $today = date('Y-m-d');
         $thirtyAgo = date('Y-m-d', strtotime('-30 days'));
-        $totalVisits = (int)$this->db->value('SELECT COUNT(*) FROM visits');
-        $today_count = (int)$this->db->value('SELECT COUNT(*) FROM visits WHERE day = ?', [$today]);
+
+        $totals = [
+            'total_visits' => (int)$this->db->value('SELECT COUNT(*) FROM visits'),
+            'today_visits' => (int)$this->db->value('SELECT COUNT(*) FROM visits WHERE day = ?', [$today]),
+            'unique_days' => (int)$this->db->value('SELECT COUNT(DISTINCT day) FROM visits'),
+            'submissions_total' => (int)$this->db->value('SELECT COUNT(*) FROM submissions'),
+            'submissions_unread' => (int)$this->db->value('SELECT COUNT(*) FROM submissions WHERE read_at IS NULL'),
+        ];
+
         $byDay = $this->db->all(
-            'SELECT day, COUNT(*) AS c FROM visits WHERE day >= ? GROUP BY day ORDER BY day',
+            'SELECT day, COUNT(*) AS visits FROM visits
+             WHERE day >= ?
+             GROUP BY day ORDER BY day',
             [$thirtyAgo],
         );
+
+        $byBlock = $this->db->all(
+            'SELECT b.id, b.type, COUNT(v.id) AS clicks
+             FROM blocks b
+             LEFT JOIN visits v ON v.block_id = b.id
+             GROUP BY b.id, b.type
+             HAVING clicks > 0
+             ORDER BY clicks DESC LIMIT 10',
+        );
+
         return AuthController::json($response, [
-            'total_visits' => $totalVisits,
-            'today' => $today_count,
+            'totals' => $totals,
             'by_day' => $byDay,
+            'by_block' => $byBlock,
         ]);
     }
 }
