@@ -1,0 +1,18 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- tylio logo: 10 tiles with SOLID FILLS (no more gradients → no more
+       "shadow" effect on light backgrounds). Colors chosen as the mid-stop
+       of the original gradients, keeping the minimal rainbow vibe. -->
+  <rect x="150" y="200" width="724" height="140" rx="42" fill="#A85AFF"/>
+
+  <rect x="150" y="370" width="221.333" height="140" rx="42" fill="#54DEB8"/>
+  <rect x="401.333" y="370" width="221.333" height="140" rx="42" fill="#AA65FF"/>
+  <rect x="652.666" y="370" width="221.334" height="140" rx="42" fill="#5AE2BF"/>
+
+  <rect x="150" y="540" width="221.333" height="140" rx="42" fill="#FF5A66"/>
+  <rect x="401.333" y="540" width="221.333" height="140" rx="42" fill="#9A5DFF"/>
+  <rect x="652.666" y="540" width="221.334" height="140" rx="42" fill="#FF6B70"/>
+
+  <rect x="150" y="710" width="221.333" height="140" rx="42" fill="#FFC050"/>
+  <rect x="401.333" y="710" width="221.333" height="140" rx="42" fill="#8F62FF"/>
+  <rect x="652.666" y="710" width="221.334" height="140" rx="42" fill="#FFC450"/>
+</svg>

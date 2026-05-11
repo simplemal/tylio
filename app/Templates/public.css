@@ -1,0 +1,1260 @@
+/* tylio — public site styles. Mobile-first, mosaic-inspired. */
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+/* Dynamic color-scheme: tells the browser whether the site is light or
+   dark so scrollbars (and other native controls) use the right palette.
+   `data-theme-mode` is set by the renderer based on `theme.mode`. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;color-scheme:dark}
+html[data-theme-mode="light"]{color-scheme:light}
+img,svg,video{max-width:100%;display:block}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+a{color:inherit;text-decoration:none}
+
+.m-body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-body);
+  line-height:1.55;
+  min-height:100vh;
+  position:relative;
+  overflow-x:hidden;
+  font-size:16px;
+  letter-spacing:.005em;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+
+/* Background: atmospheric gradient + theme-selectable pattern */
+.m-bg{
+  position:fixed;inset:0;z-index:0;pointer-events:none;
+  color:var(--text);
+  background:
+    radial-gradient(800px 600px at 80% -10%, color-mix(in oklab, var(--accent) 18%, transparent), transparent 60%),
+    radial-gradient(700px 600px at -10% 110%, color-mix(in oklab, var(--accent-alt) 14%, transparent), transparent 60%),
+    var(--bg);
+}
+.m-bg__pattern{
+  position:absolute;inset:0;
+  opacity:var(--bg-pattern-intensity, 0.12);
+  background-color:transparent;
+  background-repeat:repeat;
+}
+
+/* Pattern variants — the body has data-bg-pattern="..." */
+[data-bg-pattern="none"] .m-bg__pattern{display:none}
+
+[data-bg-pattern="dots"] .m-bg__pattern{
+  background-image: radial-gradient(circle, var(--bg-pattern-color) 1px, transparent 1.6px);
+  background-size: 18px 18px;
+}
+
+[data-bg-pattern="lines-thin"] .m-bg__pattern{
+  background-image: repeating-linear-gradient(45deg,
+    transparent 0 11px,
+    var(--bg-pattern-color) 11px 12px);
+}
+
+[data-bg-pattern="lines-thick"] .m-bg__pattern{
+  background-image: repeating-linear-gradient(45deg,
+    transparent 0 14px,
+    var(--bg-pattern-color) 14px 18px);
+}
+
+[data-bg-pattern="grid"] .m-bg__pattern{
+  background-image:
+    linear-gradient(to right, var(--bg-pattern-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--bg-pattern-color) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+[data-bg-pattern="mosaic"] .m-bg__pattern{
+  /* Fish-scales: overlapping semicircles in staggered rows. A classic
+   * decorative pattern (Roman/Byzantine mosaics, stained glass), with
+   * organic curves that distinguish it clearly from the rigid angles
+   * of cubes/hexagons. 48×24 tile, radius 12, 1.2px lines so scales
+   * stay visible even behind a glass tile (blur 4px). */
+  background-color: var(--bg-pattern-color);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'><g fill='none' stroke='black' stroke-width='1.2'><path d='M0 24 A12 12 0 0 1 24 24 M24 24 A12 12 0 0 1 48 24 M-12 12 A12 12 0 0 1 12 12 M12 12 A12 12 0 0 1 36 12 M36 12 A12 12 0 0 1 60 12'/></g></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='24' viewBox='0 0 48 24'><g fill='none' stroke='black' stroke-width='1.2'><path d='M0 24 A12 12 0 0 1 24 24 M24 24 A12 12 0 0 1 48 24 M-12 12 A12 12 0 0 1 12 12 M12 12 A12 12 0 0 1 36 12 M36 12 A12 12 0 0 1 60 12'/></g></svg>");
+  -webkit-mask-size: 48px 24px; mask-size: 48px 24px;
+  -webkit-mask-repeat: repeat; mask-repeat: repeat;
+}
+
+[data-bg-pattern="cubes"] .m-bg__pattern{
+  /* 3D isometric cubes (Escher effect): hexagon split into 3 rhombi
+   * that represent the top + left + right faces. Center is (30,26);
+   * the 3 inner lines run to 3 alternating vertices of the pointy-top
+   * hexagon. */
+  background-color: var(--bg-pattern-color);
+  -webkit-mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='52' viewBox='0 0 60 52'><g fill='none' stroke='black' stroke-width='0.8' stroke-linejoin='round'><polygon points='30,0 60,15 60,37 30,52 0,37 0,15'/><path d='M30 26 L60 15 M30 26 L60 37 M30 26 L30 52'/></g></svg>");
+  mask-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='52' viewBox='0 0 60 52'><g fill='none' stroke='black' stroke-width='0.8' stroke-linejoin='round'><polygon points='30,0 60,15 60,37 30,52 0,37 0,15'/><path d='M30 26 L60 15 M30 26 L60 37 M30 26 L30 52'/></g></svg>");
+  -webkit-mask-size: 60px 52px; mask-size: 60px 52px;
+  -webkit-mask-repeat: repeat; mask-repeat: repeat;
+}
+
+[data-bg-pattern="image"] .m-bg__pattern{
+  background-image: var(--bg-pattern-image);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Mosaic grid */
+.m-mosaic{
+  position:relative;z-index:1;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:var(--tile-gap);
+  max-width:680px;
+  margin:0 auto;
+  padding:max(20px, env(safe-area-inset-top)) 16px 80px;
+}
+@media (min-width:780px){
+  .m-mosaic{
+    grid-template-columns:repeat(2, 1fr);
+    max-width:1040px;
+    padding:48px 28px 96px;
+    gap:var(--tile-gap);
+  }
+  .m-tile--span2{grid-column:span 2}
+  /* "Orphan" half-tile (not paired with another half): takes the whole row
+     so it doesn't leave a visible gap next to it. Computed server-side by the Renderer. */
+  .m-tile--orphan{grid-column:span 2}
+}
+@media (min-width:1280px){
+  .m-mosaic{max-width:1180px}
+}
+
+/* Tile base — the background depends on [data-tile-style] on the body (see below). */
+.m-tile{
+  position:relative;
+  background:linear-gradient(180deg, color-mix(in oklab, var(--surface) 96%, white 4%), var(--surface));
+  border:var(--tile-border) solid var(--border);
+  border-radius:var(--tile-radius);
+  padding:24px 22px;
+  box-shadow:
+    0 1px 0 color-mix(in oklab, white 4%, transparent) inset,
+    0 30px 60px -40px rgba(0,0,0,.6);
+  transition:transform .35s cubic-bezier(.2,.7,.2,1), opacity .35s ease, box-shadow .35s ease, background .25s ease;
+  opacity:0;
+  transform:translateY(8px);
+  overflow:hidden;
+}
+
+
+/* Tile style: solid (default), transparent with slider, glass (frosted) */
+[data-tile-style="solid"] .m-tile {
+  /* default — already set above */
+}
+[data-tile-style="transparent"] .m-tile {
+  background: color-mix(in oklab,
+    var(--surface) calc(var(--tile-opacity, 0.7) * 100%),
+    transparent);
+  /* shadow and border SCALED with opacity: at 0 they vanish with the tile */
+  box-shadow:
+    0 1px 0 color-mix(in oklab, white calc(4% * var(--tile-opacity, 0.7)), transparent) inset,
+    0 18px 40px -28px color-mix(in oklab, black calc(40% * var(--tile-opacity, 0.7)), transparent);
+  border-color: color-mix(in oklab,
+    var(--border) calc(var(--tile-opacity, 0.7) * 100%),
+    transparent);
+}
+[data-tile-style="glass"] .m-tile {
+  /* diagonal sheen (reflection) + semi-transparent bg with a slight accent tint */
+  background:
+    linear-gradient(135deg,
+      color-mix(in oklab, var(--text) 6%, transparent) 0%,
+      transparent 28%,
+      transparent 72%,
+      color-mix(in oklab, var(--accent) 5%, transparent) 100%),
+    color-mix(in oklab, var(--surface) 55%, transparent);
+  /* DEFAULT blur: high. Suited for photos (cinematic smear) and flat backgrounds. */
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  backdrop-filter: blur(16px) saturate(170%);
+  /* Border: respects the --tile-border variable like every other style.
+     When the user picks 0, the border disappears and the glass effect stays
+     visible anyway thanks to the inset shadows (light/dark rim). The border
+     color is slightly lighter than usual to give contrast to the glass
+     when active. */
+  border-color: color-mix(in oklab, var(--text) 18%, var(--border));
+  /* Double rim: light on top (light hitting it), dark at the bottom (inner shadow).
+     At border 0, THIS is what makes the tile recognizable. */
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--text) 22%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, var(--text) 6%, transparent),
+    inset 1px 0 0 color-mix(in oklab, var(--text) 8%, transparent),
+    0 26px 50px -30px rgba(0,0,0,.5);
+}
+
+/* When a decorative pattern is behind the tile (any except `none` and
+   `image`), lower the blur so the pattern stays RECOGNIZABLE but
+   distorted = visible glass effect. With blur 16px (default tile-glass)
+   a pattern gets erased; with 4px it looks like seeing dots/lines/
+   triangles through frosted glass.
+   Exclusions:
+   - `none`: no pattern behind, high blur doesn't matter
+   - `image`: full-screen photo, we want cinematic high blur */
+[data-bg-pattern][data-tile-style="glass"]:not([data-bg-pattern="none"]):not([data-bg-pattern="image"]) .m-tile {
+  -webkit-backdrop-filter: blur(4px) saturate(150%);
+  backdrop-filter: blur(4px) saturate(150%);
+  /* Much more transparent than default glass: default is 55% surface,
+   * here we drop to 38% so the pattern behind stays visible through the
+   * transparency (filtered by 4px blur = frosted glass over the pattern). */
+  background:
+    linear-gradient(135deg,
+      color-mix(in oklab, var(--text) 6%, transparent) 0%,
+      transparent 28%,
+      transparent 72%,
+      color-mix(in oklab, var(--accent) 5%, transparent) 100%),
+    color-mix(in oklab, var(--surface) 38%, transparent);
+}
+
+/* "Flush" (gap = 0): tiles appear as a continuous surface.
+   Compound selector + position AFTER the tile-style rules → wins the cascade. */
+[data-tile-flush="1"][data-tile-style] .m-tile,
+[data-tile-flush="1"] .m-tile {
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;   /* no inner corners → tiles truly stuck together */
+}
+
+/* When tiles are flush AND visually opaque (data-tile-card=1, derived
+   server-side from style + opacity), the whole mosaic becomes a "single card"
+   with a perimeter shadow and outer radius. */
+[data-tile-flush="1"][data-tile-card="1"] .m-mosaic {
+  padding: 0;
+  margin-top: 24px;
+  margin-bottom: 80px;
+  border-radius: var(--tile-radius);
+  overflow: hidden;
+  box-shadow: 0 30px 60px -32px rgba(0,0,0,.5);
+}
+@media (min-width: 780px) {
+  [data-tile-flush="1"][data-tile-card="1"] .m-mosaic {
+    margin-top: 48px;
+    margin-bottom: 96px;
+    box-shadow: 0 50px 90px -45px rgba(0,0,0,.5);
+  }
+}
+
+.m-tile.is-revealed{opacity:1;transform:none}
+.m-tile.is-disabled{opacity:.45}
+
+/* ============= TILE OVERRIDE: no background =============
+ * Set per-block (block.style.no_bg = true) → the tile ignores the global
+ * tile-style and renders "transparent": no bg/border/shadow/blur.
+ * Horizontal padding zeroed so the content goes edge-to-edge. !important
+ * to beat the more specific rules from [data-tile-style="..."] and
+ * [data-bg-pattern]...:not(...):not(...) (specificity 0,5,0). */
+.m-tile.m-tile--no-bg{
+  background:transparent !important;
+  border:0 !important;
+  box-shadow:none !important;
+  -webkit-backdrop-filter:none !important;
+  backdrop-filter:none !important;
+  padding-left:0;
+  padding-right:0;
+}
+
+/* ============= MOBILE GEOMETRY: "save space" mode =============
+ * When the user picks data-mobile-spacing="minimal" in the theme, on
+ * mobile (≤779px) tiles lose their visual chrome: no background, no
+ * border, no border-radius, no box-shadow. Horizontal padding goes too,
+ * so text reaches the mosaic edge (16px safe-area). Vertical space
+ * between blocks stays (mosaic gap + tile padding-y).
+ *
+ * On desktop (≥780px) NOTHING applies: "minimal" is mobile-only by
+ * design.
+ *
+ * Compound selector: wins over [data-tile-style="..."] because it's
+ * declared LATER in the cascade (same specificity). */
+@media (max-width: 779px) {
+  /* `!important` forced because in "save space" mode the tile MUST be
+     invisible, and the plain `[data-mobile-spacing] .m-tile` selector
+     (specificity 0,2,0) loses to more specific rules like
+     `[data-bg-pattern][data-tile-style="glass"]:not(...):not(...) .m-tile`
+     (0,5,0) that apply blur, gradients and bg on the tile when the
+     site has pattern + glass tile. Explicit override here avoids a
+     specificity race. */
+  [data-mobile-spacing="minimal"] .m-tile {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    padding-left: 0;
+    padding-right: 0;
+  }
+  [data-mobile-spacing="minimal"] .m-mosaic {
+    /* Shrink the mosaic padding to the safe-area minimum: text stays
+       readable but the user recovers ~24px of usable width. */
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
+
+/* Headings */
+.m-h{font-family:var(--font-heading);font-weight:600;letter-spacing:-.01em;margin:0 0 12px}
+.m-h-1{font-size:clamp(28px,5vw,44px);line-height:1.1}
+.m-h-2{font-size:clamp(22px,3.5vw,30px);line-height:1.15}
+.m-h-3{font-size:18px}
+/* Three standard sizes for the tile section titles
+   (links/social/apps/products/gallery/embed/contact/bio/timeline/faq/stats):
+   - sm: compact size (e.g. short links list)
+   - std: default (~ contact "Write to me")
+   - lg: prominent title for important sections (e.g. recent projects)
+   They replace the old mix of m-h-2/m-h-3/custom used block-by-block. */
+.m-h-sm{font-size:18px;line-height:1.2}
+.m-h-std{font-size:24px;line-height:1.2}
+.m-h-lg{font-size:clamp(22px,3.5vw,30px);line-height:1.15}
+.m-muted{color:var(--text-muted)}
+.m-eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--text-muted);margin-bottom:8px;display:inline-block}
+
+/* HERO — mobile: CENTERED vertical stack; desktop: horizontal split (large avatar left + texts right) */
+.m-tile--hero{padding:30px 26px;overflow:visible /* allow the avatar/shadow to escape the box */}
+.m-tile--hero .m-hero{
+  display:grid;
+  grid-template-columns:1fr;
+  align-items:center;
+  justify-items:center;     /* mobile: everything centered (Linktree style) */
+  text-align:center;
+  gap:18px;
+}
+.m-tile--hero .m-hero__avatar{
+  width:104px;height:104px;border-radius:50%;object-fit:cover;
+  border:2px solid color-mix(in oklab, var(--accent) 60%, var(--border));
+  box-shadow:
+    0 6px 14px -6px rgba(0,0,0,.30),
+    0 0 0 3px color-mix(in oklab, var(--accent) 6%, transparent);
+}
+.m-tile--hero .m-hero__texts{display:flex;flex-direction:column;gap:8px;min-width:0;align-items:center}
+.m-tile--hero .m-hero__title{font-family:var(--font-heading);font-size:clamp(28px,4.4vw,42px);line-height:1.05;margin:0;letter-spacing:-.015em}
+/* "Graphic title" variant: the h1 contains an <img> instead of text.
+   Resets the h1 style and handles image sizing: max-height tuned to
+   match the large text height (~64px desktop, ~52px mobile) so it does
+   not blow up the tile layout, but still large enough to be readable
+   as a "title". The image can be ANY aspect ratio: width:auto +
+   max-width:100% handles wide horizontals (banner logos) without overflow. */
+.m-tile--hero .m-hero__title--image{
+  font-size:0;line-height:0;letter-spacing:0;
+  display:block;
+}
+.m-tile--hero .m-hero__title--image img{
+  display:block;width:auto;height:auto;
+  max-width:100%;max-height:64px;
+  object-fit:contain;
+}
+@media (max-width:779px){
+  .m-tile--hero .m-hero__title--image img{max-height:52px}
+}
+.m-tile--hero .m-hero__subtitle{margin:0;color:var(--text-muted);font-size:clamp(15px,1.8vw,17px);line-height:1.45;max-width:60ch}
+/* Hero subtitle is an .m-md (markdown) container — targeted overrides
+   for a "short bio" look: compact paragraphs, no h2/h3 margins (rarely
+   used here), accent-colored links. */
+.m-tile--hero .m-md p{margin:0 0 .5em}
+.m-tile--hero .m-md p:last-child{margin:0}
+.m-tile--hero .m-md ul,.m-tile--hero .m-md ol{margin:0 0 .5em}
+.m-tile--hero .m-md blockquote{margin:.5em 0;padding:.4em .8em}
+
+/* Desktop split: larger avatar on the left, text on the right, left-aligned */
+@media (min-width:780px){
+  .m-tile--hero{padding:42px}
+  .m-tile--hero .m-hero{
+    grid-template-columns:auto 1fr;
+    gap:32px;
+    align-items:center;
+    justify-items:start;
+    text-align:left;
+  }
+  .m-tile--hero .m-hero__texts{align-items:flex-start}
+  .m-tile--hero .m-hero__avatar{
+    width:180px;height:180px;
+    box-shadow:
+      0 10px 22px -10px rgba(0,0,0,.32),
+      0 0 0 4px color-mix(in oklab, var(--accent) 7%, transparent);
+  }
+  .m-tile--hero .m-hero__title{font-size:clamp(36px,4.5vw,52px)}
+}
+.m-tile--hero .m-cta{
+  display:inline-flex;align-items:center;gap:10px;margin-top:8px;
+  background:var(--accent);color:var(--accent-soft);font-weight:600;
+  padding:11px 18px;border-radius:999px;
+  transition:transform .15s ease, background .2s ease;
+}
+.m-tile--hero .m-cta:hover{background:var(--accent-alt);transform:translateY(-1px)}
+/* The hero no longer has per-block decorations: its background is
+   inherited from the global tile-style (solid/transparent/glass) and
+   the page pattern from the theme. See BlockRegistry::hero for the
+   remaining fields. */
+
+/* LINKS */
+.m-tile--links .m-links{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.m-link{
+  display:flex;align-items:center;gap:12px;
+  padding:13px 14px;
+  border-radius:calc(var(--tile-radius) - 8px);
+  background:color-mix(in oklab, var(--surface-alt) 80%, transparent);
+  border:1px solid var(--border);
+  transition:transform .15s ease, background .2s ease, border-color .2s ease;
+}
+.m-link:hover{transform:translateY(-1px);background:var(--surface-alt);border-color:color-mix(in oklab, var(--accent) 40%, var(--border))}
+.m-link__icon{
+  width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);
+  flex-shrink:0;font-size:18px;
+}
+.m-link__icon svg{width:20px;height:20px}
+.m-link__body{flex:1;min-width:0}
+/* Title + badge: flex with `wrap-reverse`. When they fit on the same line
+   the badge appears to the right of the title (DOM order). When they DON'T,
+   `wrap-reverse` stacks rows bottom-to-top: the title (1st item, first
+   line) ends up at the bottom and the badge (2nd item, second line) goes
+   ABOVE the title. Required behavior: the badge is never squished under
+   the title; on squeeze it goes above at full available width. The title
+   truncates with ellipsis when it is really really long. */
+.m-link__label{
+  display:flex;flex-wrap:wrap-reverse;align-items:center;
+  gap:4px 8px;font-weight:500;min-width:0;
+}
+.m-link__title{
+  flex:0 1 auto;min-width:0;max-width:100%;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.m-link__desc{color:var(--text-muted);font-size:13px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Badge — pill for tags/labels in links.
+   ROLE: uses accent-alt as the load-bearing color. Changing `accent_alt` in
+   the palette only changes the badges (and nothing else). The bg is SOLID
+   (no opacity) so the appearance doesn't depend on the underlying tile bg.
+   The text color is auto-derived to guarantee sufficient WCAG contrast on the bg. */
+.m-badge{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:999px;background:var(--accent-alt);color:var(--accent-alt-fg);flex:0 0 auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-link__chev{color:var(--text-muted);font-size:18px}
+
+/* APPS — the strong "mosaic" piece */
+.m-tile--apps{padding:24px}
+.m-apps__head{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:16px}
+.m-apps__head h2{margin:0}
+/* Column count computed by the browser based on the space available IN
+   the tile (not in the viewport): if the tile is full on desktop 3 cards
+   fit, if it's half 2 fit, on mobile always 1. minmax(min(100%, 240px), 1fr)
+   guarantees min 240px per card and no overflow on narrow containers. */
+.m-apps__grid{
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+}
+.m-app{
+  --app-accent:var(--accent);
+  --app-accent-fg:#ffffff;
+  position:relative;display:flex;flex-direction:column;gap:10px;
+  padding:18px;border-radius:calc(var(--tile-radius) - 4px);
+  /* Bg: light but recognizable project tint. 35%→14% gives a softly
+     "color-tinted" card where the hue reads clearly but the surface
+     stays dominant (so the title and description have more room to
+     breathe). */
+  background:
+    linear-gradient(160deg,
+      color-mix(in oklab, var(--app-accent) 35%, var(--surface-alt)) 0%,
+      color-mix(in oklab, var(--app-accent) 14%, var(--surface-alt)) 65%);
+  border:1px solid color-mix(in oklab, var(--app-accent) 50%, var(--border));
+  overflow:hidden;
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+/* Accent strip on top: product flag */
+.m-app::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg, var(--app-accent), color-mix(in oklab, var(--app-accent) 50%, transparent));
+  z-index:2;
+}
+.m-app:hover{
+  transform:translateY(-3px);
+  border-color:color-mix(in oklab, var(--app-accent) 75%, var(--border));
+  box-shadow:0 28px 56px -28px color-mix(in oklab, var(--app-accent) 65%, transparent);
+}
+.m-app__cover{position:absolute;inset:0;z-index:0;opacity:.18;object-fit:cover;width:100%;height:100%}
+.m-app__inner{position:relative;z-index:1;display:flex;flex-direction:column;gap:10px;height:100%}
+.m-app__head{display:flex;align-items:center;gap:12px}
+.m-app__icon{
+  width:44px;height:44px;border-radius:11px;object-fit:cover;
+  background:color-mix(in oklab, var(--app-accent) 30%, var(--surface));
+  border:1px solid color-mix(in oklab, var(--app-accent) 40%, var(--border));
+}
+/* Project title: uses --app-accent (per-project color if the user set
+   one; otherwise = --accent, default from .m-app). This way if the card
+   has a specific project color, the name reflects it too. */
+.m-app__name{font-family:var(--font-heading);font-size:18px;margin:0;font-weight:600;color:var(--app-accent)}
+.m-app__tagline{color:var(--text-muted);font-size:13px;margin:0}
+.m-app__desc{color:var(--text);font-size:14px;margin:0;line-height:1.5}
+/* Multi-tag container: the first tag inherits the card's "accent" style,
+   subsequent ones are in a neutral style so they don't compete visually. */
+.m-app__tags{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start}
+.m-app__tag{
+  display:inline-block;
+  background:var(--app-accent);
+  color:var(--app-accent-fg);
+  padding:4px 10px;border-radius:999px;
+  font-size:11px;font-weight:600;
+  text-transform:uppercase;letter-spacing:.08em;
+  box-shadow:0 4px 14px -6px color-mix(in oklab, var(--app-accent) 70%, transparent);
+}
+.m-app__tag ~ .m-app__tag{
+  background:color-mix(in oklab, var(--surface) 70%, transparent);
+  color:var(--text-muted);
+  box-shadow:none;
+  border:1px solid var(--border);
+}
+.m-app__stores{display:flex;gap:8px;margin-top:auto;flex-wrap:wrap}
+.m-store{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 12px;border-radius:10px;
+  background:rgba(0,0,0,.35);border:1px solid var(--border);
+  font-size:12px;color:var(--text);
+  transition:background .2s ease, border-color .2s ease;
+}
+.m-store:hover{background:rgba(0,0,0,.5);border-color:color-mix(in oklab, var(--app-accent) 50%, var(--border))}
+.m-store svg{width:18px;height:18px}
+
+/* BIO */
+/* Generic markdown rendering (`.m-md`). Explicit color map:
+   - base + <strong>/<em> + blockquote → text-muted ("literary" text,
+     doesn't shout)
+   - <a> link and <h1>..<h6> → text (primary, pop)
+   strong/em distinction handed to font-weight/font-style, not color. */
+.m-md{color:var(--text-muted)}
+.m-md p{margin:0 0 1em}
+.m-md p:last-child{margin-bottom:0}
+.m-md a{color:var(--text);border-bottom:1px solid color-mix(in oklab, var(--text) 40%, transparent);text-decoration:none;transition:border-color .15s}
+.m-md a:hover{border-bottom-color:var(--text)}
+.m-md strong{font-weight:600;color:var(--text-muted)}
+.m-md em{font-style:italic;color:var(--text-muted)}
+.m-md ul,.m-md ol{padding-left:1.2em;margin:0 0 1em}
+.m-md ul:last-child,.m-md ol:last-child{margin-bottom:0}
+.m-md li{margin:.25em 0}
+.m-md blockquote{margin:1em 0;padding:.6em 1em;border-left:3px solid var(--text-muted);color:var(--text-muted);font-style:italic}
+.m-md code{background:color-mix(in oklab, var(--surface-alt) 70%, transparent);padding:1px 6px;border-radius:6px;font-size:.92em;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.m-md pre{background:color-mix(in oklab, var(--surface-alt) 90%, transparent);padding:14px;border-radius:10px;overflow:auto;margin:1em 0}
+.m-md pre code{background:transparent;padding:0;border-radius:0}
+.m-md h1,.m-md h2,.m-md h3,.m-md h4,.m-md h5,.m-md h6{font-family:var(--font-heading);color:var(--text);margin:1.5em 0 .5em;letter-spacing:-.01em}
+.m-md hr{border:0;border-top:1px solid var(--border);margin:1.5em 0}
+
+/* Bio tile: same markdown but larger font for long-form text. */
+.m-tile--bio .m-md{font-size:16px;line-height:1.7}
+
+/* SOCIAL */
+.m-tile--social{display:flex;flex-direction:column;gap:14px}
+.m-tile--social h3{margin:0 0 12px}
+/* Wrapper for alignment (left/center). Default is left = matches the
+   historical behavior, so no override needed for `data-align="left"`. */
+.m-social-wrap{display:flex;flex-direction:column;gap:14px}
+.m-social-wrap[data-align="center"]{align-items:center;text-align:center}
+.m-social-wrap[data-align="center"] .m-social{justify-content:center}
+.m-social{display:flex;flex-wrap:wrap;gap:10px}
+/* Social pills. Color map declared and controllable from the palette:
+   bg = accent-soft (primary-family chip), icon = accent-alt (secondary),
+   text = accent (primary). The three roles are independent so the user
+   can build combos like "colored social logo + tinted social name". */
+.m-social__a{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 14px;border-radius:999px;
+  background:var(--accent-soft);border:1px solid var(--border);
+  color:var(--accent);
+  font-size:13px;font-weight:500;
+  transition:transform .15s ease, border-color .15s ease, background .2s ease;
+}
+.m-social__a:hover{transform:translateY(-1px);border-color:color-mix(in oklab, var(--accent) 50%, var(--border));background:color-mix(in oklab, var(--accent) 12%, var(--accent-soft))}
+.m-social__a iconify-icon, .m-social__a svg{color:var(--accent-alt);flex-shrink:0}
+
+/* "Icons only" mode: compact circular pill, no text. */
+.m-social[data-display="icon_only"] .m-social__a{
+  width:42px;height:42px;
+  padding:0;
+  justify-content:center;
+}
+.m-social[data-display="icon_only"] .m-social__a iconify-icon{width:20px;height:20px}
+
+/* GALLERY */
+.m-gallery{display:grid;gap:8px}
+.m-gallery[data-layout="mosaic"]{grid-template-columns:repeat(2,1fr)}
+@media(min-width:780px){.m-gallery[data-layout="mosaic"]{grid-template-columns:repeat(3,1fr)}}
+.m-gallery[data-layout="grid"]{grid-template-columns:repeat(2,1fr)}
+@media(min-width:780px){.m-gallery[data-layout="grid"]{grid-template-columns:repeat(4,1fr)}}
+.m-gallery[data-layout="carousel"]{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:10px;padding-bottom:8px}
+.m-gallery[data-layout="carousel"] .m-gallery__item{flex:0 0 75%;scroll-snap-align:start;aspect-ratio:4/5}
+.m-gallery__item{
+  position:relative;border-radius:calc(var(--tile-radius) - 6px);overflow:hidden;
+  aspect-ratio:1/1;background:var(--surface-alt);border:1px solid var(--border);
+}
+.m-gallery[data-layout="mosaic"] .m-gallery__item:nth-child(7n+1){aspect-ratio:1/1.3}
+.m-gallery[data-layout="mosaic"] .m-gallery__item:nth-child(5n+3){aspect-ratio:1.5/1}
+.m-gallery__item img{width:100%;height:100%;object-fit:cover;transition:transform .4s ease}
+.m-gallery__item:hover img{transform:scale(1.04)}
+.m-gallery__caption{
+  position:absolute;left:0;right:0;bottom:0;padding:8px 10px;font-size:12px;
+  background:linear-gradient(0deg, rgba(0,0,0,.55), transparent);color:#fff;
+}
+
+/* EMBED */
+.m-tile--embed h3{margin:0 0 12px;font-family:var(--font-heading)}
+.m-embed{position:relative;border-radius:calc(var(--tile-radius) - 6px);overflow:hidden;background:#000}
+.m-embed iframe{width:100%;height:100%;display:block;border:0}
+
+/* ===========================================================
+ *  Podcast tile — Spotify/Apple embed or link card for other platforms
+ *  =========================================================== */
+.m-podcast{display:block;width:100%}
+.m-podcast__subtitle{margin:0 0 10px;color:var(--text-muted)}
+/* Embed iframe: fixed height per platform (Spotify and Apple recommend
+   precise dimensions for their players). */
+.m-podcast--embed{
+  border-radius:calc(var(--tile-radius) - 6px);
+  overflow:hidden;background:#000;
+}
+.m-podcast--embed iframe{width:100%;display:block;border:0}
+/* Podcast player heights: Spotify and Apple widgets have FIXED, non-responsive
+   aspect-ratios — generous heights are needed or the episodes on the right
+   get cut off. Values recommended by their respective embed tools:
+     Spotify episode = 232, show = 352
+     Apple   episode = 175, show = 450 (shows ~3 episodes of the list) */
+.m-podcast--spotify iframe{height:232px}
+.m-podcast--spotify[data-kind="show"] iframe{height:352px}
+.m-podcast--apple iframe{height:175px}
+.m-podcast--apple[data-kind="show"] iframe{height:450px}
+
+/* Link card (for platforms without embed): platform icon + show name
+   + "→ Open on Platform" label. Clickable, lifts on hover. */
+.m-podcast--card{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 16px;
+  background:color-mix(in oklab, var(--surface-alt) 60%, transparent);
+  border:1px solid var(--border);border-radius:14px;
+  text-decoration:none;color:var(--text);
+  transition:border-color .2s, transform .2s, background-color .2s;
+}
+.m-podcast--card:hover{
+  border-color:color-mix(in oklab, var(--accent) 50%, var(--border));
+  background:color-mix(in oklab, var(--accent) 8%, var(--surface-alt));
+  transform:translateY(-1px);
+}
+.m-podcast__icon{
+  width:48px;height:48px;border-radius:12px;
+  background:color-mix(in oklab, var(--text) 10%, var(--surface));
+  display:grid;place-items:center;flex:0 0 auto;
+  color:var(--text);
+}
+.m-podcast__body{display:flex;flex-direction:column;gap:2px;min-width:0}
+.m-podcast__name{
+  font-family:var(--font-heading);font-weight:600;font-size:16px;
+  color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.m-podcast__platform{font-size:12px;color:var(--text-muted);letter-spacing:.04em}
+.m-podcast__show-name{
+  margin:0 0 10px;font-family:var(--font-heading);font-weight:600;
+  font-size:18px;color:var(--text);
+}
+.m-podcast__desc{margin:10px 0 0;color:var(--text-muted);font-size:14px;line-height:1.5}
+
+/* Podcast platform buttons: a row of pills with icon + name,
+   colorable per platform so they're recognizable at a glance. */
+.m-podcast__buttons{
+  display:flex;flex-wrap:wrap;gap:8px;
+  margin-top:12px;
+}
+.m-podcast-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:8px 14px;border-radius:999px;
+  background:color-mix(in oklab, var(--surface-alt) 70%, transparent);
+  border:1px solid var(--border);
+  font-size:13px;font-weight:500;color:var(--text);text-decoration:none;
+  transition:border-color .15s, background-color .15s, transform .15s;
+}
+.m-podcast-btn:hover{
+  transform:translateY(-1px);
+  border-color:color-mix(in oklab, var(--accent) 50%, var(--border));
+}
+.m-podcast-btn iconify-icon{flex:0 0 auto}
+.m-podcast-btn--apple iconify-icon{color:#9933ff}
+.m-podcast-btn--apple:hover{
+  background:color-mix(in oklab, #9933ff 10%, var(--surface-alt));
+  border-color:color-mix(in oklab, #9933ff 50%, var(--border));
+}
+.m-podcast-btn--spotify iconify-icon{color:#1db954}
+.m-podcast-btn--spotify:hover{
+  background:color-mix(in oklab, #1db954 10%, var(--surface-alt));
+  border-color:color-mix(in oklab, #1db954 50%, var(--border));
+}
+.m-podcast-btn--site iconify-icon{color:var(--text)}
+.m-podcast-btn--site:hover{
+  background:color-mix(in oklab, var(--text) 10%, var(--surface-alt));
+  border-color:color-mix(in oklab, var(--text) 50%, var(--border));
+}
+
+/* YouTube tile: same pattern as .m-embed (responsive full-width player
+   with configurable aspect-ratio), plus subtitle/fallback/header styling. */
+.m-yt{
+  position:relative;border-radius:calc(var(--tile-radius) - 6px);overflow:hidden;
+  background:#000;width:100%;
+}
+.m-yt iframe{width:100%;height:100%;display:block;border:0}
+.m-yt__subtitle{margin:0 0 10px;color:var(--text-muted)}
+.m-yt__fallback{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 14px;border-radius:10px;
+  background:color-mix(in oklab, var(--surface-alt) 70%, transparent);
+  border:1px solid var(--border);font-size:13px;color:var(--text-muted);
+}
+.m-yt__fallback iconify-icon{color:#ff0000;flex:0 0 auto}
+/* Links in YT descriptive text: text (primary) instead of accent.
+   accent can collapse with surface on extreme palettes (Pink Lady · light:
+   accent=#fff on a white tile → invisible link). text is always opposite
+   to surface, so it's always readable. */
+.m-yt__fallback a{color:var(--text);border-bottom:1px solid color-mix(in oklab, var(--text) 40%, transparent)}
+
+/* Pill header: channel avatar + name + link out. Placed BELOW the
+   video (right before the description) — logically belongs to the channel
+   bio, not the tile title. The `--bottom` variant is the only one used
+   today, but we keep the explicit modifier for clarity. */
+.m-yt__header{
+  display:flex;align-items:center;gap:12px;
+  padding:8px 14px 8px 8px;margin:12px 0 0;
+  background:color-mix(in oklab, var(--surface-alt) 60%, transparent);
+  border:1px solid var(--border);border-radius:999px;
+  text-decoration:none;color:var(--text);
+  transition:border-color .15s, background-color .15s, transform .15s;
+  max-width:fit-content;
+}
+.m-yt__header--bottom{margin:14px 0 0}
+.m-yt__header:hover{
+  border-color:color-mix(in oklab, var(--accent) 50%, var(--border));
+  background:color-mix(in oklab, var(--accent) 8%, var(--surface-alt));
+  transform:translateY(-1px);
+}
+.m-yt__avatar{
+  width:40px;height:40px;border-radius:50%;object-fit:cover;
+  flex:0 0 auto;border:1px solid var(--border);background:var(--surface);
+}
+.m-yt__avatar--placeholder{
+  display:grid;place-items:center;color:#ff0000;
+}
+.m-yt__header-text{
+  display:flex;flex-direction:column;gap:1px;line-height:1.2;min-width:0;
+}
+.m-yt__name{
+  font-weight:600;font-size:14px;color:var(--text);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50ch;
+}
+.m-yt__handle{font-size:11.5px;color:var(--text-muted);letter-spacing:.02em}
+.m-yt__header-chev{color:var(--text-muted);flex:0 0 auto;margin-left:4px}
+.m-yt__header:hover .m-yt__header-chev{color:var(--text)}
+
+/* "Latest video" row: clickable title on the left (takes the space,
+   handles text-overflow if too long) + relative date on the right ("3
+   days ago"). WE show the title because the YouTube overlay in the
+   player truncates it when the tile is narrow. */
+.m-yt__last{
+  display:flex;align-items:baseline;gap:12px;
+  margin-top:10px;flex-wrap:wrap;
+}
+.m-yt__last-title{
+  font-weight:600;font-size:14px;color:var(--text);text-decoration:none;
+  flex:1;min-width:0;
+  border-bottom:1px solid transparent;
+  transition:border-color .15s, color .15s;
+}
+.m-yt__last-title:hover{
+  color:var(--text);
+  border-bottom-color:color-mix(in oklab, var(--text) 50%, transparent);
+}
+.m-yt__last-date{
+  font-size:12px;color:var(--text-muted);flex:0 0 auto;
+  letter-spacing:.02em;
+}
+
+/* Channel description below the video — only if the channel has one.
+   Linkify adds <a> for URL/email; styles inherit colors from the theme
+   (text-muted with accent underline on hover). Reduced margin when it
+   follows the channel pill (consistent 12px gap). */
+.m-yt__header + .m-yt__desc{margin-top:10px}
+.m-yt__desc{
+  margin:12px 0 0;color:var(--text-muted);font-size:13.5px;line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;
+  overflow:hidden;
+}
+.m-yt__desc a{
+  color:var(--text);text-decoration:none;
+  border-bottom:1px solid color-mix(in oklab, var(--text) 35%, transparent);
+}
+.m-yt__desc a:hover{border-bottom-color:var(--text)}
+.m-embed[data-aspect="16:9"]{aspect-ratio:16/9}
+.m-embed[data-aspect="4:3"]{aspect-ratio:4/3}
+.m-embed[data-aspect="1:1"]{aspect-ratio:1/1}
+.m-embed[data-aspect="9:16"]{aspect-ratio:9/16;max-width:380px}
+
+/* PRODUCTS — list of recommended products with discount badge */
+.m-tile--products{padding:24px}
+.m-products__head{margin-bottom:16px}
+/* Auto-grid: see the note on .m-apps__grid above. Min 240px per product card. */
+.m-products__grid{
+  display:grid;
+  gap:14px;
+  grid-template-columns:repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+}
+.m-product{
+  display:flex;flex-direction:column;
+  background:color-mix(in oklab, var(--surface-alt) 80%, var(--surface) 20%);
+  border:1px solid var(--border);
+  border-radius:calc(var(--tile-radius) - 4px);
+  overflow:hidden;
+  transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+.m-product:hover{transform:translateY(-2px);border-color:color-mix(in oklab, var(--accent) 40%, var(--border));box-shadow:0 20px 40px -28px rgba(0,0,0,.5)}
+.m-product__image-wrap{position:relative;aspect-ratio:4/3;background:color-mix(in oklab, var(--surface-alt) 70%, transparent);overflow:hidden}
+.m-product__image{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s ease}
+.m-product:hover .m-product__image{transform:scale(1.04)}
+.m-product__discount{
+  position:absolute;top:10px;left:10px;
+  display:inline-flex;align-items:center;gap:4px;
+  padding:5px 10px;border-radius:999px;
+  background:var(--accent);color:var(--accent-soft);
+  font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+  box-shadow:0 4px 14px -6px color-mix(in oklab, var(--accent) 80%, transparent);
+}
+.m-product__body{display:flex;flex-direction:column;gap:8px;padding:14px 16px 16px;flex:1}
+.m-product__name{font-family:var(--font-heading);font-size:17px;font-weight:600;margin:0;letter-spacing:-.005em}
+.m-product__desc{margin:0;font-size:13px;line-height:1.5;color:var(--text-muted)}
+/* Discount code — INVERTED pill: bg=text, content=surface (never white
+   on white even with extreme palettes: text is always opposite to surface).
+   The "copy" icon sits outside the pill, no background, in text-muted. */
+.m-product__code-wrap{
+  align-self:flex-start;
+  display:inline-flex;align-items:center;gap:6px;
+  margin-top:4px;
+  background:transparent;border:0;padding:0;
+  cursor:pointer;
+}
+.m-product__code{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:6px 10px 6px 8px;
+  background:var(--text);
+  border-radius:8px;color:var(--surface);
+  font-size:12px;
+  transition:opacity .15s;
+}
+.m-product__code-wrap:hover .m-product__code{opacity:.85}
+.m-product__code-wrap.is-copied .m-product__code{opacity:1}
+.m-product__code-value{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600;color:var(--surface)}
+.m-product__code-action{
+  display:inline-flex;align-items:center;
+  color:var(--text-muted);
+  transition:color .15s;
+}
+.m-product__code-wrap:hover .m-product__code-action,
+.m-product__code-wrap.is-copied .m-product__code-action{color:var(--text)}
+.m-product__footer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:auto;padding-top:8px}
+.m-product__price{font-family:var(--font-heading);font-weight:600;font-size:15px;color:var(--text)}
+.m-product__cta{
+  display:inline-flex;align-items:center;gap:6px;
+  background:var(--accent);color:var(--accent-soft);
+  padding:8px 14px;border-radius:999px;
+  font-size:13px;font-weight:500;
+  transition:transform .15s ease, background .2s ease;
+}
+/* Buy hover: INVERT bg/fg → bg accent-soft, text accent. Same
+   pattern as .m-cta__btn:hover (Discover CTA). */
+.m-product__cta:hover{background:var(--accent-soft);color:var(--accent);transform:translateY(-1px)}
+
+/* CONTACT */
+.m-tile--contact h3{margin:0 0 4px}
+.m-tile--contact .m-muted{margin:0 0 16px}
+.m-form{display:flex;flex-direction:column;gap:12px}
+.m-form label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--text-muted)}
+.m-form input, .m-form textarea{
+  font:inherit;color:var(--text);background:var(--surface-alt);
+  border:1px solid var(--border);border-radius:12px;padding:12px 14px;
+  transition:border-color .15s ease;width:100%;
+}
+.m-form input:focus, .m-form textarea:focus{outline:none;border-color:var(--text)}
+.m-form textarea{min-height:120px;resize:vertical}
+.m-form .m-honey{position:absolute;left:-9999px}
+.m-form button{
+  align-self:flex-start;background:var(--accent);color:var(--accent-soft);font-weight:600;
+  padding:12px 20px;border-radius:999px;transition:background .15s ease, transform .15s ease;
+}
+.m-form button:hover{background:var(--accent-alt);transform:translateY(-1px)}
+.m-form button:disabled{opacity:.6;cursor:wait}
+.m-form__msg{font-size:14px;color:var(--text);margin-top:6px}
+.m-form__msg[data-state="error"]{color:#ff8a7a}
+/* Row "anti-bot check on the left + Send on the right" — both on mobile
+   and desktop the user sees what's happening inline before they can
+   press Send. */
+.m-form__row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.m-form__row button{align-self:auto;margin-left:auto}
+/* Proof-of-work captcha: spinner + label showing the state of the
+   anti-bot check (auto-completes in ~0.5-1.5s on the first form touch).
+   No interaction required — the box is purely informational. */
+.m-form__pow{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--text-muted);
+  background:var(--surface-alt);border:1px solid var(--border);border-radius:999px;
+  padding:6px 14px;transition:color .2s,border-color .2s}
+.m-form__pow[hidden]{display:none}
+/* OK state = "Verified": uses --text (primary text) instead of accent —
+   always opposite to bg, even in extreme palettes like Pink Lady · light
+   where accent=surface=#fff. The border follows the same color so the pill
+   is well-defined even over surface-alt similar to the bg. */
+.m-form__pow[data-state="ok"]{color:var(--text);border-color:var(--text)}
+.m-form__pow[data-state="error"]{color:#ff8a7a;border-color:#ff8a7a}
+.m-form__pow-spinner{width:12px;height:12px;border-radius:50%;
+  border:2px solid var(--border);border-top-color:var(--text);
+  animation:m-spin .8s linear infinite}
+
+/* Chrome autofill override: the browser forces a yellow bg (#fff8c5) on
+   the auto-filled field, ignoring our --surface-alt. Trick: 1000px inset
+   box-shadow of our color covers the overlay, and -webkit-text-fill-color
+   restores the text to our `--text`. */
+.m-form input:-webkit-autofill,
+.m-form textarea:-webkit-autofill {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-alt) inset;
+          box-shadow: 0 0 0 1000px var(--surface-alt) inset;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  transition: background-color 5000s ease-in-out 0s; /* prevent the initial yellow flash */
+}
+.m-form__pow[data-state="ok"] .m-form__pow-spinner,
+.m-form__pow[data-state="error"] .m-form__pow-spinner{display:none}
+@keyframes m-spin{to{transform:rotate(360deg)}}
+
+/* DIVIDER */
+.m-tile--divider{padding:14px 22px;background:transparent;border:0;box-shadow:none}
+/* ============= SEPARATORS =============
+ * 12 styles total. They all use text-muted (guaranteed contrast on bg
+ * across any palette, no dependency on accent which can collapse).
+ * Line styles can use `var(--border)` when a softer tint is wanted, but
+ * for decorations we prefer text-muted for readability. */
+.m-divider{display:flex;align-items:center;gap:8px;justify-content:center;padding:6px 0}
+
+/* TESSERA — three 45° rhombi (historical default) */
+.m-divider[data-style="tessera"] span{display:inline-block;width:8px;height:8px;background:var(--text-muted);transform:rotate(45deg);opacity:.4}
+.m-divider[data-style="tessera"] span:nth-child(2){width:14px;height:14px;opacity:.6}
+
+/* DOTS — 3 round dots, the middle one larger */
+.m-divider[data-style="dots"] span{display:inline-block;width:6px;height:6px;background:var(--text-muted);border-radius:50%;opacity:.5}
+.m-divider[data-style="dots"] span:nth-child(2){width:9px;height:9px;opacity:.7}
+
+/* LINE — thin solid line */
+.m-divider[data-style="line"]{display:block;border-top:1px solid var(--text-muted);opacity:.3;padding:0;height:0}
+
+/* LINE DOUBLE — two parallel lines */
+.m-divider[data-style="line-double"]{display:block;border-top:1px solid var(--text-muted);border-bottom:1px solid var(--text-muted);height:5px;padding:0;opacity:.35}
+
+/* LINE DASHED — thin dashed */
+.m-divider[data-style="line-dashed"]{display:block;border-top:1px dashed var(--text-muted);opacity:.5;padding:0;height:0}
+
+/* LINE DASHED THICK — thick dashed */
+.m-divider[data-style="line-dashed-thick"]{display:block;border-top:3px dashed var(--text-muted);opacity:.45;padding:0;height:0}
+
+/* DIAGONAL — thin diagonal pattern */
+.m-divider[data-style="diagonal"]{display:block;height:14px;padding:0;
+  background-image:repeating-linear-gradient(45deg,
+    var(--text-muted) 0 1px,
+    transparent 1px 7px);
+  opacity:.45}
+
+/* WAVE — SVG sinusoidal wave */
+.m-divider[data-style="wave"]{display:block;color:var(--text-muted);opacity:.55;padding:0}
+.m-divider[data-style="wave"] svg{width:100%;max-width:280px;height:14px;display:block;margin:0 auto}
+
+/* CHEVRONS — arrowheads in a row (slightly overlapping) */
+.m-divider[data-style="chevrons"]{color:var(--text-muted);opacity:.6}
+.m-divider[data-style="chevrons"] iconify-icon{margin:0 -6px}
+
+/* FLORAL — decorative flowers (the middle one larger) */
+.m-divider[data-style="floral"]{color:var(--text-muted);opacity:.55}
+
+/* STARS — 3 stars (the middle one larger) */
+.m-divider[data-style="stars"]{color:var(--text-muted);opacity:.55}
+
+/* SPACE — vertical space only ("implicit" separator) */
+.m-divider[data-style="space"]{height:24px;border:0;padding:0}
+
+/* FOOTER */
+/* FOOTER: two columns on desktop (left copy + powered, right menu links).
+   Mobile: back to a centered column with more "delicate" menu items
+   (smaller font, low opacity) — respects the minimal footer style
+   without letting it dominate visually. */
+.m-tile--footer{
+  display:flex;flex-direction:column;gap:10px;
+  align-items:center;text-align:center;
+  background:transparent;border:0;box-shadow:none;
+  color:var(--text-muted);
+  padding:18px 22px;
+}
+.m-footer__left{display:flex;flex-direction:column;gap:2px;align-items:center}
+.m-footer__copy{font-size:14px}
+.m-footer__links{
+  display:flex;flex-wrap:wrap;align-items:center;
+  gap:0 14px;justify-content:center;
+  font-size:13px;
+}
+.m-footer__links a{
+  color:var(--text-muted);opacity:.7;
+  transition:color .15s, opacity .15s;
+  position:relative;padding:2px 0;
+}
+.m-footer__links a:hover{color:var(--text);opacity:1}
+/* "|" separator between items, generated via CSS — no extra markup. */
+.m-footer__links a:not(:first-child)::before{
+  content:"|";position:absolute;left:-9px;top:50%;transform:translateY(-50%);
+  color:var(--text-muted);opacity:.35;font-weight:300;
+  pointer-events:none;
+}
+.m-poweredby{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-muted);opacity:.6}
+.m-poweredby a{border-bottom:1px dotted color-mix(in oklab, var(--text-muted) 50%, transparent)}
+
+/* Desktop: row, copy on the left + powered below, menu on the right aligned to end of row. */
+@media (min-width:780px){
+  .m-tile--footer{
+    flex-direction:row;justify-content:space-between;align-items:center;
+    text-align:left;gap:24px;flex-wrap:wrap;
+  }
+  .m-footer__left{align-items:flex-start;gap:4px}
+  .m-footer__links{justify-content:flex-end}
+}
+
+/* Lightbox */
+.m-lightbox{
+  position:fixed;inset:0;background:rgba(8,5,3,.92);
+  display:none;align-items:center;justify-content:center;
+  z-index:9999;padding:30px;
+}
+.m-lightbox.is-open{display:flex}
+.m-lightbox img{max-width:100%;max-height:100%;border-radius:14px}
+.m-lightbox__close{position:absolute;top:14px;right:18px;color:#fff;font-size:32px;line-height:1}
+
+/* Empty state */
+.m-tile--empty{text-align:left}
+.m-tile--empty .m-empty-title{font-family:var(--font-heading);margin:0 0 8px}
+.m-tile--empty .m-empty-msg{color:var(--text-muted);margin:0}
+
+/* Subtitle paragraph in blocks (apps/products/...): reduced margin below the title. */
+.m-block__subtitle{margin:4px 0 0}
+
+/* ===========================================================
+ *  Quote — block
+ * =========================================================== */
+/* Quote: horizontal layout (mark | text | author).
+   - mark: top, aligned with the first line of the text
+   - text: center, fluid (1fr)
+   - author: bottom (user request: anchored at bottom-right even when
+     the text is multi-line, so the avatar doesn't "float" mid-tile). */
+.m-quote{
+  position:relative;margin:0;padding:14px 18px;
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:14px;
+  align-items:stretch;
+}
+/* Decorative quote marks: text-muted (always opposite to surface
+   in any palette). Was accent → invisible on Pink Lady · light
+   where accent=#fff on the white tile. */
+.m-quote__mark{width:22px;height:22px;color:var(--text-muted);flex:0 0 auto;opacity:.7;align-self:start;margin-top:3px}
+.m-quote__text{
+  font-family:var(--font-heading);
+  font-size:clamp(15px,1.9vw,17px);line-height:1.35;font-style:italic;
+  letter-spacing:-.005em;margin:0;color:var(--text);
+  min-width:0;
+}
+/* Override font-size + line-height by data-attr (sm/md/lg, compact/normal/
+   relaxed). They only swap the two base values — the rest (italic,
+   font-family, color) never changes. */
+.m-quote[data-text-size="sm"] .m-quote__text{font-size:clamp(13px,1.6vw,15px)}
+.m-quote[data-text-size="lg"] .m-quote__text{font-size:clamp(17px,2.4vw,21px)}
+.m-quote[data-line-height="compact"] .m-quote__text{line-height:1.2}
+.m-quote[data-line-height="relaxed"] .m-quote__text{line-height:1.65}
+.m-quote__author{
+  display:flex;align-items:center;gap:10px;
+  font-style:normal;flex-shrink:0;
+  align-self:end;  /* anchored to the bottom of the grid cell */
+}
+.m-quote__avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex:0 0 auto;border:1px solid var(--border)}
+.m-quote__author-text{display:flex;flex-direction:column;gap:1px;line-height:1.2;min-width:0}
+.m-quote__name{font-weight:600;font-style:normal;color:var(--text);font-size:13px}
+.m-quote__role{color:var(--text-muted);font-size:11.5px}
+
+/* On half-tile or mobile (≤520px) the author block wraps instead of
+   squeezing the text: 2 rows → mark+text above, author below. */
+@media (max-width:520px){
+  .m-quote{grid-template-columns:auto 1fr;row-gap:8px}
+  .m-quote__author{grid-column:1 / -1;margin-left:34px}
+}
+
+/* Minimal variant: no mark, border-left on the text. The grid becomes
+   2 columns (flex text + author) to keep the author on the right. */
+.m-quote--minimal{grid-template-columns:1fr auto}
+.m-quote--minimal .m-quote__mark{display:none}
+.m-quote--minimal .m-quote__text{border-left:3px solid var(--text-muted);padding-left:14px;font-style:normal;font-family:var(--font-body)}
+@media (max-width:520px){
+  .m-quote--minimal{grid-template-columns:1fr}
+  .m-quote--minimal .m-quote__author{margin-left:14px}
+}
+
+.m-quote--highlight{background:linear-gradient(135deg, color-mix(in oklab, var(--accent) 18%, transparent), color-mix(in oklab, var(--accent-alt) 12%, transparent))}
+
+/* When a section title sits ABOVE the quote, the h2 is outside the
+   grid (it's a sibling of the figure) → only standard margins, no
+   special layout. We just add a small margin-bottom for separation. */
+.m-quote__title{margin-bottom:10px}
+
+/* ===========================================================
+ *  Skills — pills grouped by category
+ *  ===========================================================
+ * Each skill is a compact pill (name + optional small level). Pills are
+ * laid out with flex-wrap: same height, minimal gap, automatic wrap.
+ * When the user assigns a "category" to skills, they are grouped under
+ * a heading (.m-skills__cat). */
+.m-skills{display:flex;flex-direction:column;gap:14px}
+.m-skills__subtitle{margin:-4px 0 4px}
+.m-skills__group{display:flex;flex-direction:column;gap:6px}
+.m-skills__cat{
+  margin:0;font-family:var(--font-heading);font-size:13px;font-weight:600;
+  color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;
+}
+.m-skills__list{
+  list-style:none;padding:0;margin:0;
+  display:flex;flex-wrap:wrap;gap:6px;
+}
+.m-skill{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:5px 12px;border-radius:999px;
+  background:color-mix(in oklab, var(--surface-alt) 70%, transparent);
+  border:1px solid var(--border);
+  font-size:13px;color:var(--text);
+  transition:border-color .15s, background-color .15s, transform .15s;
+}
+.m-skill:hover{
+  border-color:color-mix(in oklab, var(--accent) 50%, var(--border));
+  background:color-mix(in oklab, var(--accent) 10%, var(--surface-alt));
+  transform:translateY(-1px);
+}
+.m-skill__icon{color:var(--text);flex:0 0 auto}
+.m-skill__name{font-weight:500}
+.m-skill__level{
+  font-size:11.5px;color:var(--text-muted);
+  padding-left:6px;border-left:1px solid var(--border);
+}
+
+/* ===========================================================
+ *  Stats — KPI grid
+ * =========================================================== */
+/* Auto-grid for KPIs. Min 140px (these are short numbers, not big cards),
+   so on a half-tile mobile 2 fit side by side without crowding. */
+.m-stats{
+  display:grid;
+  gap:14px;
+  grid-template-columns:repeat(auto-fill, minmax(min(100%, 140px), 1fr));
+}
+.m-stats__item{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:18px 12px;text-align:center;
+  background:color-mix(in oklab, var(--surface-alt) 60%, transparent);
+  border:1px solid var(--border);border-radius:14px;
+  transition:transform .2s ease, border-color .2s ease;
+}
+.m-stats__item:hover{transform:translateY(-2px);border-color:color-mix(in oklab, var(--accent) 35%, var(--border))}
+.m-stats__icon{color:var(--text);margin-bottom:4px}
+.m-stats__value{
+  font-family:var(--font-heading);font-weight:600;
+  font-size:clamp(28px,4vw,38px);line-height:1;letter-spacing:-.02em;
+  background:linear-gradient(135deg,var(--accent),var(--accent-alt));
+  background-clip:text;-webkit-background-clip:text;color:transparent;
+}
+.m-stats__label{color:var(--text-muted);font-size:13px;line-height:1.3}
+
+/* ===========================================================
+ *  CTA — Call to action banner
+ * =========================================================== */
+.m-cta{padding:28px 26px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:10px;border-radius:14px}
+.m-cta__title{font-family:var(--font-heading);font-weight:600;font-size:clamp(22px,3.2vw,28px);line-height:1.2;letter-spacing:-.01em;margin:0}
+.m-cta__sub{color:var(--text-muted);max-width:32rem;margin:0;font-size:15px;line-height:1.5}
+.m-cta__btn{
+  display:inline-flex;align-items:center;gap:8px;padding:11px 20px;
+  background:var(--accent);color:var(--accent-soft);
+  border-radius:999px;font-weight:600;font-size:15px;text-decoration:none;margin-top:6px;
+  transition:transform .15s ease, box-shadow .15s ease, background .15s ease;
+  box-shadow:0 4px 14px color-mix(in oklab, var(--accent) 30%, transparent);
+}
+/* "Discover" CTA hover: INVERT bg/text. bg goes from accent → accent-soft
+   (the "contrast" that was the text becomes the background) and text goes
+   from accent-soft → accent. "Button lights up" effect, much more visible
+   than the previous lift+shadow alone. */
+.m-cta__btn:hover{transform:translateY(-1px);background:var(--accent-soft);color:var(--accent);box-shadow:0 6px 18px color-mix(in oklab, var(--accent) 45%, transparent)}
+.m-cta__arrow{width:16px;height:16px;transition:transform .15s ease}
+.m-cta__btn:hover .m-cta__arrow{transform:translateX(3px)}
+.m-cta__btn--disabled{opacity:.55;cursor:not-allowed;pointer-events:none}
+.m-cta--gradient{background:linear-gradient(135deg, color-mix(in oklab, var(--accent) 22%, transparent), color-mix(in oklab, var(--accent-alt) 16%, transparent))}
+.m-cta--solid{background:var(--accent);color:var(--accent-soft)}
+.m-cta--solid .m-cta__title,.m-cta--solid .m-cta__sub{color:var(--accent-soft)}
+.m-cta--solid .m-cta__btn{background:var(--bg);color:var(--text)}
+.m-cta--outline{border:2px solid var(--text);background:transparent}
+.m-cta--minimal{background:transparent;padding:18px 16px}
+/* Minimal variant: uses text instead of accent — always readable.
+   accent remained invisible on extreme palettes (Pink Lady light accent=#fff). */
+.m-cta--minimal .m-cta__btn{background:transparent;color:var(--text);border:1px solid var(--text);box-shadow:none}
+.m-cta--minimal .m-cta__btn:hover{background:var(--text);color:var(--surface)}
+
+/* ===========================================================
+ *  FAQ — accordion
+ * =========================================================== */
+.m-faq{display:flex;flex-direction:column;gap:6px}
+.m-faq__item{
+  border:1px solid var(--border);border-radius:12px;
+  background:color-mix(in oklab, var(--surface-alt) 50%, transparent);
+  overflow:hidden;transition:border-color .15s ease;
+}
+.m-faq__item[open]{border-color:color-mix(in oklab, var(--text) 35%, var(--border))}
+.m-faq__q{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;font-weight:600;color:var(--text);font-size:15px;line-height:1.35}
+.m-faq__q::-webkit-details-marker{display:none}
+/* FAQ question hover: does NOT change color (was accent → invisible on
+   extreme palettes like Pink Lady · light where accent=surface=#fff).
+   Uses only underline as visual feedback. */
+.m-faq__q:hover{text-decoration:underline;text-underline-offset:3px}
+.m-faq__chev{width:18px;height:18px;flex:0 0 auto;color:var(--text-muted);transition:transform .2s ease, color .2s ease}
+.m-faq__item[open] .m-faq__chev{transform:rotate(180deg);color:var(--text)}
+/* Answer in the SAME box as the question — no border-top that split it
+   into two panels. Just a small top gap to separate it from the question. */
+.m-faq__a{padding:4px 16px 16px;color:var(--text-muted);font-size:14.5px;line-height:1.55}
+.m-faq__a p{margin:0 0 8px}
+.m-faq__a p:last-child{margin-bottom:0}
+.m-faq__a a{color:var(--text)}
+
+/* ===========================================================
+ *  Timeline — chronological events
+ * =========================================================== */
+/* Timeline — uses only text + text-muted (no accent) to guarantee
+   visibility across every palette, even extreme ones like Pink Lady ·
+   light where accent=#fff. */
+.m-timeline{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;position:relative}
+.m-timeline::before{
+  content:"";position:absolute;left:18px;top:8px;bottom:8px;width:2px;
+  background:linear-gradient(to bottom, var(--text-muted), color-mix(in oklab, var(--text-muted) 30%, transparent));
+  border-radius:2px;
+}
+.m-timeline__item{position:relative;padding-left:50px;padding-bottom:22px}
+.m-timeline__item:last-child{padding-bottom:0}
+.m-timeline__marker{
+  position:absolute;left:8px;top:2px;width:22px;height:22px;border-radius:50%;
+  background:var(--surface);border:2px solid var(--text-muted);
+  display:flex;align-items:center;justify-content:center;color:var(--text-muted);z-index:1;
+}
+.m-timeline__dot{width:8px;height:8px;border-radius:50%;background:var(--text-muted)}
+/* Highlighted item: filled marker with text (primary), dot with
+   "cut-out" surface → target effect. */
+.m-timeline__item--hl .m-timeline__marker{background:var(--text);border-color:var(--text);color:var(--surface);box-shadow:0 0 0 4px color-mix(in oklab, var(--text) 25%, transparent)}
+.m-timeline__item--hl .m-timeline__dot{background:var(--surface)}
+.m-timeline__date{display:inline-block;font-size:12px;color:var(--text-muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px}
+.m-timeline__title{font-family:var(--font-heading);font-weight:600;font-size:17px;margin:0 0 4px;color:var(--text);line-height:1.3}
+.m-timeline__desc{margin:0;color:var(--text-muted);font-size:14px;line-height:1.5}
+.m-timeline__item--hl .m-timeline__title{color:var(--text)}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce){
+  .m-tile, .m-link, .m-app, .m-social__a, .m-cta, .m-form button, .m-stats__item {transition:none}
+  .m-tile{opacity:1;transform:none}
+}

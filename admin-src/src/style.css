@@ -1,0 +1,476 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Default palette (earth) — replaced at runtime by src/theme.ts with the
+   public site's palette fetched from /api/theme/public.
+   The variables are RGB triplets ("R G B") so they support Tailwind alpha modifiers. */
+:root {
+  --ink-950-rgb: 15 13 10; /* bg */
+  --ink-900-rgb: 26 22 18; /* surface */
+  --ink-800-rgb: 34 28 23; /* surface_alt */
+  --ink-700-rgb: 42 34 27; /* lighter surface_alt (hover) */
+  --ink-500-rgb: 102 84 73; /* mid */
+  --ink-300-rgb: 156 142 124; /* text_muted */
+  --ink-100-rgb: 244 237 225; /* text */
+  --accent-rgb: 212 165 116;
+  --accent-alt-rgb: 232 197 152;
+  --accent-deep-rgb: 168 122 74;
+  --accent-fg-rgb: 26 20 16; /* foreground for text on accent (auto: white/black) */
+  --bg-glow-1: rgba(212, 165, 116, 0.1);
+  --bg-glow-2: rgba(232, 197, 152, 0.07);
+}
+
+@layer base {
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+  body {
+    font-family: theme('fontFamily.body');
+    background: rgb(var(--ink-950-rgb));
+    color: rgb(var(--ink-100-rgb));
+    transition:
+      background-color 0.25s ease,
+      color 0.25s ease;
+  }
+
+  /* Background "breathes" with the current theme (subtle radial of the accent color). */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(900px 600px at 100% -10%, var(--bg-glow-1), transparent 60%),
+      radial-gradient(700px 500px at -10% 110%, var(--bg-glow-2), transparent 60%);
+    transition: background 0.25s ease;
+  }
+  /* Anti-banding for the main gradients: subtle SVG noise overlay.
+   * 8-bit displays show visible "banding" on long radial gradients
+   * (the eye notices it especially on darker transitions). A
+   * pseudo-random noise at very low opacity breaks the banding without
+   * being perceived as a pattern. Pattern: stitchTiles=stitch
+   * (tileable), high base frequency = fine grain. */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='1'/></svg>");
+    opacity: 0.04;
+    mix-blend-mode: overlay;
+  }
+  #app {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Form controls — adaptive bg: distinct from the container in any theme. */
+  input,
+  textarea,
+  select {
+    background: theme('colors.ink.900');
+    border: 1px solid rgb(var(--ink-300-rgb) / 0.3);
+    border-radius: 12px;
+    padding: 10px 12px;
+    color: theme('colors.ink.100');
+    width: 100%;
+    min-height: 42px;
+    line-height: 1.3;
+    font-size: 14px;
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease;
+    appearance: none;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset;
+  }
+  /* Inside a tile (bg = surface), inputs go to surface_alt → clearly distinct from the bg. */
+  .tile input,
+  .tile textarea,
+  .tile select {
+    background: theme('colors.ink.800');
+  }
+  /* Inside a surface_alt container (e.g. a repeat item), inputs go to surface → flipped. */
+  .bg-ink-800 input,
+  .bg-ink-800 textarea,
+  .bg-ink-800 select,
+  .bg-ink-800 input[type],
+  .bg-ink-800 textarea,
+  .bg-ink-800 select {
+    background: theme('colors.ink.900');
+  }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    box-shadow: 0 0 0 3px rgb(var(--accent-rgb) / 0.18);
+  }
+  /* select arrow consistent with the design */
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238e96a6' stroke-width='2' stroke-linecap='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 34px;
+  }
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+    border-color: theme('colors.accent.DEFAULT');
+  }
+  textarea {
+    min-height: 110px;
+    resize: vertical;
+    line-height: 1.5;
+  }
+  /* checkbox/color/range shouldn't have a large min-height */
+  input[type='checkbox'],
+  input[type='radio'] {
+    min-height: 0;
+    width: auto;
+  }
+  input[type='color'] {
+    min-height: 0;
+    padding: 2px;
+  }
+  /* Range slider: rebuilt from scratch because appearance:none makes it invisible.
+     Track + thumb styled with the current theme's colors. */
+  input[type='range'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    box-shadow: none;
+    width: 100%;
+    height: 28px;
+    cursor: pointer;
+  }
+  input[type='range']::-webkit-slider-runnable-track {
+    height: 6px;
+    background: rgb(var(--ink-700-rgb));
+    border-radius: 999px;
+  }
+  input[type='range']::-moz-range-track {
+    height: 6px;
+    background: rgb(var(--ink-700-rgb));
+    border-radius: 999px;
+  }
+  input[type='range']::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: rgb(var(--accent-rgb));
+    border: 2px solid rgb(var(--accent-fg-rgb));
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    margin-top: -6px; /* center on the 6px track */
+    cursor: grab;
+  }
+  input[type='range']::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: rgb(var(--accent-rgb));
+    border: 2px solid rgb(var(--accent-fg-rgb));
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    cursor: grab;
+  }
+  input[type='range']:active::-webkit-slider-thumb {
+    cursor: grabbing;
+  }
+  input[type='range']:active::-moz-range-thumb {
+    cursor: grabbing;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    color: theme('colors.ink.300');
+    margin-bottom: 6px;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition;
+  }
+  /* Primary button: bg=text, fg=surface — INVERTED. Works in any palette
+     (text and surface are opposites). No accent: in extreme palettes
+     (Pink Lady · light: accent=surface=#fff) a bg-accent would be
+     invisible on the white tile. */
+  .btn-primary {
+    @apply bg-ink-100 text-ink-900 hover:bg-ink-100/90;
+  }
+  .btn-ghost {
+    /* Border ink-100/40 (main text at 40%) — always contrasts with the
+       ink-800 bg, regardless of the palette. Used to be border-white/5
+       (white at 5%) → invisible on a light theme. */
+    @apply bg-ink-800 hover:bg-ink-700 text-ink-100 border border-ink-100/40;
+  }
+  .btn-danger {
+    @apply bg-red-500/15 text-red-300 hover:bg-red-500/25 border border-red-500/20;
+  }
+  .btn-danger:disabled {
+    @apply opacity-50 cursor-not-allowed hover:bg-red-500/15;
+  }
+  /* "Danger zone" tile in Settings.vue: faint red border to mark the
+   * account deletion section as distinct from the rest. */
+  .settings-danger {
+    @apply border border-red-500/30 bg-red-500/[0.03];
+  }
+  .settings-danger h2 {
+    @apply text-red-300;
+  }
+
+  /* Input with inline validation error (Settings.vue): prominent red border. */
+  .input-invalid,
+  .input-invalid:focus {
+    @apply border-red-500/60;
+    box-shadow: 0 0 0 3px rgb(239 68 68 / 0.18);
+  }
+  .btn-icon {
+    @apply w-9 h-9 grid place-items-center rounded-full bg-ink-800 hover:bg-ink-700 text-ink-100 border border-white/5;
+  }
+  /* When vuedraggable is dragging, show grabbing on the whole document */
+  .sortable-chosen,
+  .sortable-chosen *,
+  .sortable-drag,
+  .sortable-drag * {
+    cursor: grabbing !important;
+  }
+  .tile {
+    /* No shadow: in light theme the floating pill clashed with light
+       palettes (Pink Lady) and in general it reduces cleanliness. Border
+       `ink-100/15`: 15% of the text color — always contrasts with `surface`
+       (ink-900) because text and surface are designed as opposites in every palette. */
+    @apply bg-ink-900 border border-ink-100/15 rounded-tile p-5;
+  }
+  .tile-clickable {
+    @apply cursor-pointer hover:border-ink-100/40 transition;
+  }
+  .field {
+    @apply mb-4;
+  }
+  .heading {
+    @apply font-display text-2xl font-semibold tracking-tight;
+  }
+  .eyebrow {
+    @apply text-[11px] uppercase tracking-[0.16em] text-ink-300;
+  }
+
+  /* Drop+library+upload pattern (favicon, OG image, etc.) */
+  .img-uploader {
+    width: 100%;
+  }
+  .img-uploader__drop {
+    width: 100%;
+    border: 2px dashed rgb(var(--ink-700-rgb));
+    background: rgb(var(--ink-800-rgb));
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition:
+      border-color 0.15s,
+      background 0.15s,
+      transform 0.15s;
+    min-height: 140px;
+  }
+  .img-uploader__drop--og {
+    /* No fixed aspect-ratio when there's an image: the box adapts to the
+       image's height (up to 630px max), leaving side bands when the image
+       isn't 1.91:1. The typical upload-box visuals (dashed border + bg
+       ink-800) stay visible in the bands. */
+    min-height: 0;
+    max-height: 630px;
+  }
+  /* Empty state: we use the canonical OG aspect so the placeholder fills
+     a recognizable 1200×630 shape (the user sees the upload area right away). */
+  .img-uploader__drop--og:not(:has(.img-uploader__preview)) {
+    aspect-ratio: 1.91 / 1;
+  }
+  .img-uploader__drop--square {
+    aspect-ratio: 1 / 1;
+    min-height: 0;
+  }
+  .img-uploader__drop--wide {
+    aspect-ratio: 16 / 9;
+    min-height: 0;
+  }
+  .img-uploader__drop:hover,
+  .img-uploader__drop.is-dragover {
+    border-color: rgb(var(--accent-rgb));
+    background: rgb(var(--ink-700-rgb));
+  }
+  .img-uploader__drop.is-dragover {
+    transform: scale(1.01);
+  }
+  .img-uploader__placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    color: rgb(var(--ink-300-rgb));
+    font-size: 13px;
+    text-align: center;
+    padding: 16px;
+  }
+  .img-uploader__preview {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+  .img-uploader__preview--cover {
+    object-fit: cover;
+  }
+  /* "contain" variant: the image always stays whole (no crop), scales
+     while keeping its own aspect ratio up to a MAX of 630px height and
+     100% of the container's width. Centered in the box (the drop already
+     has `place-items: center`). The side bands (when the image doesn't
+     fill the drop's full width) show the upload-box visuals (dashed
+     border + bg ink-800), so the user understands it's still an
+     interactive area. */
+  .img-uploader__preview--contain {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 630px;
+    object-fit: contain;
+    background: transparent;
+  }
+  .img-uploader__preview--square {
+    width: 96px;
+    height: 96px;
+    object-fit: contain;
+    background: white;
+    padding: 6px;
+    border-radius: 12px;
+  }
+  .img-uploader__hint {
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    transform: translateX(-50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgba(8, 11, 16, 0.78);
+    color: #fff;
+    font-size: 11px;
+    backdrop-filter: blur(4px);
+  }
+  .img-uploader__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  /* tylio logo (img). filter/box-shadow forced to none with !important: the
+     logo must NEVER have shadows or filters, under any circumstance, on
+     any theme. `.brand-mark` (the old CSS logo) was also removed. */
+  .brand-logo {
+    display: inline-block;
+    border-radius: 22%;
+    object-fit: contain;
+    filter: none !important;
+    box-shadow: none !important;
+  }
+}
+
+/* ============= Toggle switch (Settings.vue) =============
+ * Pattern: <label> contains a HIDDEN checkbox input + a <span class="track">
+ * with an inner thumb. A click anywhere on the label toggles the
+ * checkbox. 100% custom visuals (appearance:none on the checkbox is
+ * implicit and unnecessary since we hide it with sr-only). */
+.settings-switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 1.5rem;
+  margin-top: 0.15rem;
+  display: inline-block;
+}
+.settings-switch__input {
+  /* sr-only: invisible but clickable via label, focusable for accessibility */
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  min-height: 0 !important;
+}
+.settings-switch__track {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: rgb(var(--ink-300-rgb) / 0.35);
+  border-radius: 999px;
+  transition: background-color 0.18s ease;
+  position: relative;
+}
+.settings-switch__thumb {
+  position: absolute;
+  top: 0.15rem;
+  left: 0.15rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  transition: transform 0.18s ease;
+}
+/* Active toggle: uses ink-100 (main text) instead of accent. accent can
+   collapse with surface in extreme palettes (Pink Lady · light:
+   accent=#fff, sidebar=#fff → active toggle invisible). text is always
+   the opposite of surface in any palette. */
+.settings-switch.is-on .settings-switch__track {
+  background: rgb(var(--ink-100-rgb));
+}
+
+/* "Status green" override for light theme: emerald-300/400 (light Tailwind)
+   are illegible on a pale bg. On data-theme-mode=light we use the 600/700
+   variants which have high contrast on a light background. */
+[data-theme-mode='light'] .text-emerald-300,
+[data-theme-mode='light'] .text-emerald-400 {
+  color: rgb(4 120 87); /* emerald-700 */
+}
+[data-theme-mode='light'] .border-emerald-500\/30 {
+  border-color: rgb(5 150 105 / 0.45); /* more visible emerald-600 */
+}
+[data-theme-mode='light'] .bg-emerald-500\/10 {
+  background-color: rgb(5 150 105 / 0.08);
+}
+.settings-switch.is-on .settings-switch__thumb {
+  transform: translateX(1rem);
+}
+.settings-switch__input:focus-visible + .settings-switch__track {
+  box-shadow: 0 0 0 3px rgb(var(--ink-100-rgb) / 0.35);
+}
+
+/* A11y: respect users who requested reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,18 @@
+parameters:
+    level: 5
+    paths:
+        - app
+        - scripts
+    excludePaths:
+        - app/Templates/blocks/*
+        - app/Templates/layout.php
+    ignoreErrors:
+        # Slim\App ha un type-template TContainerInterface non-covariante. Il nostro
+        # bootstrap.php ritorna un App<ContainerInterface|null> identico all'expected,
+        # ma PHPStan segnala lo stesso per la regola di covarianza. Falso positivo.
+        -
+            message: '#Anonymous function should return Slim\\App<.*> but returns Slim\\App<.*>#'
+            path: app/bootstrap.php
+    tmpDir: ../.phpstan-cache
+    parallel:
+        maximumNumberOfProcesses: 2

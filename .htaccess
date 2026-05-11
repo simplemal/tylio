@@ -1,0 +1,48 @@
+# Forward the Authorization header to PHP (some hosts strip it by default).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Forward Authorization header
+  RewriteCond %{HTTP:Authorization} ^(.+)$
+  RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+  # Block dotfiles/dotdirs (.git, .svn, .DS_Store, .vscode, .idea, .env...) except .well-known
+  # — needed because FilesMatch alone doesn't cover entire directory trees.
+  RewriteRule "(^|/)\.(?!well-known)" - [F,L]
+
+  # Front controller: everything to index.php except real files/dirs
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.php [QSA,L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  # "Moderate" CSP: allows inline style/script for the server-rendered public home
+  # and CDNs for fonts/icons. Tighten as needed.
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data: https:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://code.iconify.design; connect-src 'self' https://api.iconify.design https://api.unisvg.com https://api.simplesvg.com; frame-src https:; base-uri 'self'; form-action 'self'"
+</IfModule>
+
+# Block sensitive config files globally
+<FilesMatch "^(\.env|composer\.(json|lock)|package(-lock)?\.json|tsconfig\..+|vite\.config\..+)$">
+  Require all denied
+</FilesMatch>
+
+# Block backup/dump/log/temp files + development extensions
+<FilesMatch "\.(bak|swp|swo|orig|sql|sqlite|sqlite-journal|log|tmp|backup|sample|dist|inc|cache|map)$">
+  Require all denied
+</FilesMatch>
+
+# No directory listing
+Options -Indexes
+
+# Long cache for static assets built with a hash in the filename
+<IfModule mod_headers.c>
+  <FilesMatch "\.(css|js|woff2|woff|ttf|svg|png|jpg|jpeg|gif|webp|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>

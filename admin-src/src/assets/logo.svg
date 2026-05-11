@@ -1,0 +1,18 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Logo tylio: 10 tessere con FILL SOLIDI (niente più gradient → niente
+       più effetto "shadow" su sfondi chiari). Colori scelti come mid-stop
+       dei gradient originali, mantengono il vibe arcobaleno minimale. -->
+  <rect x="150" y="200" width="724" height="140" rx="42" fill="#A85AFF"/>
+
+  <rect x="150" y="370" width="221.333" height="140" rx="42" fill="#54DEB8"/>
+  <rect x="401.333" y="370" width="221.333" height="140" rx="42" fill="#AA65FF"/>
+  <rect x="652.666" y="370" width="221.334" height="140" rx="42" fill="#5AE2BF"/>
+
+  <rect x="150" y="540" width="221.333" height="140" rx="42" fill="#FF5A66"/>
+  <rect x="401.333" y="540" width="221.333" height="140" rx="42" fill="#9A5DFF"/>
+  <rect x="652.666" y="540" width="221.334" height="140" rx="42" fill="#FF6B70"/>
+
+  <rect x="150" y="710" width="221.333" height="140" rx="42" fill="#FFC050"/>
+  <rect x="401.333" y="710" width="221.333" height="140" rx="42" fill="#8F62FF"/>
+  <rect x="652.666" y="710" width="221.334" height="140" rx="42" fill="#FFC450"/>
+</svg>
