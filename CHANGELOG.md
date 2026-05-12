@@ -9,6 +9,17 @@ versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **`--backend-accent` color cascade for the admin SPA**. The active nav pill, `.btn-primary`, the settings toggle ON state, and the tile-type icons (Dashboard list, AddBlockSheet, EditBlock header) now share a single `--backend-accent` CSS variable computed at runtime from the user's palette by a 3-step cascade:
+  1. `accent` — if it has enough contrast AND is not too neutral (luminance ∈ [0.10, 0.85] and `max(R,G,B) − min(R,G,B) ≥ 10`);
+  2. `accent_soft` — same checks; this is where palette authors put the "contrast on primary accent" when the primary is neutral;
+  3. `text` — guaranteed contrast with `surface`, the fallback the toggle used before this cascade existed.
+  
+  The foreground (`--backend-accent-fg`) is paired with each step (step 1: `accent_soft`; step 2: `accent`; step 3: `surface`) so the on-pill contrast follows the palette author's editorial choice rather than an auto-derived black/white. Driven by `theme.ts` so palette changes from the Theme editor apply live, no reload.
+- **Pre-build `npm run check-i18n` gate** (`admin-src/scripts/check-i18n-syntax.mjs`). Scans every locale JSON for the three vue-i18n message-compiler pitfalls — bare `@` (`INVALID_LINKED_FORMAT`), ASCII apostrophe `'` next to `{placeholder}` (`UNEXPECTED_LEXICAL_ANALYSIS`), and stray `|` in non-plural strings. Wired into `npm run build` so the regression fails CI before reaching the bundle, instead of crashing at runtime with a blank route.
+- **2FA login UX**: when "Use a backup code" is toggled, the screen now explains inline what a backup code is (single-use, 8 hex chars), how it relates to the other codes, and where to check the remaining count after login. Dynamic icon (`shield-check` ↔ `life-buoy`).
+
+### Changed
+
 - **Internationalization (i18n)**.
   - Admin SPA uses [vue-i18n](https://vue-i18n.intlify.dev) v11. Locale auto-detected from `navigator.language` (Italian → `it`, anything else → `en`). User override in Settings → "Language" survives reloads via `localStorage`.
   - Public site / server-rendered pages use a new `Tylio\Services\I18n`. Locale resolved from `settings.site.locale` (admin choice) → `Accept-Language` header → English fallback.
@@ -32,6 +43,10 @@ versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- **Admin hover semantics**: text/icon colors NEVER change on hover. The previous logic shifted between three different tones (`ink-100` default → `ink-300` hover → `--backend-accent-fg` active) and looked broken on themes where the first two tones ended up similar. Now the foreground is locked across hover; hover is signalled by either a faint `ink-100/7%` background tint (non-active items) or by darkening the active bg via `color-mix(in srgb, accent 92%, black)` (active pill, `.btn-primary`).
+- **Theme sanitizer (`ThemeController::sanitizeTheme`) whitelist widened** to preserve all documented `tile.*` and `background.*` fields. Previously the strict whitelist (introduced as CSS-injection hardening) was stripping `tile.style`, `tile.shadow`, `tile.tessellate`, `tile.mobile_spacing`, and `background.pattern` before they hit the DB, so editing them in the Theme tab appeared to "not save". The sanitizer remains strict — values outside the documented enums are still dropped — so the injection protection is intact.
+- **Checkbox + radio appearance restored** in admin. The generic `input, textarea, select { appearance: none; }` rule was inheriting onto `<input type="checkbox">` and `<input type="radio">`, hiding the native checkmark/dot glyph. Now explicitly re-enabled, sized at 18px for visibility, bound to `accent-color: var(--accent)` so it stays on-palette.
+
 - Contact-form tile (`contact` block) is now **excluded from static export** — the submit needs a backend. Explicit notice in the admin.
 - Click tracking script removed from static export (was making silent 404s offline).
 - `inlineAssets()` has size caps: 8 MB per asset, 80 MB total. Oversized assets stay as URLs instead of bloating the export.
@@ -45,6 +60,8 @@ versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- **vue-i18n message-compiler crashes on Italian locale**. Bare `@` in translation strings (e.g. `@username`, `yourname@example.com`) was interpreted as the start of vue-i18n's "linked format" syntax (`@:other.key`), throwing `SyntaxError: 10` (`INVALID_LINKED_FORMAT`) at compile time. Since v11 compiles messages eagerly on the active locale, ONE broken string crashed the whole i18n setup and left every route that uses `t()` rendering blank. Fixed by escaping `@` as `{'@'}` in all locale strings and adding the pre-build `check-i18n` gate above.
+- **ASCII apostrophe vs placeholder interaction in Italian locale**. Strings like `L'anteprima ... {save}` triggered the literal-escape lexer (`'…'` is vue-i18n's escape syntax). Switched every Italian `'` to the typographic `’` (U+2019) — same meaning, zero conflict with the lexer.
 - **Clone-readiness**: admin SPA build target moved from `public/admin/` to `admin/` so a fresh `npm run build` from `admin-src/` lands where the front controller actually looks for the SPA shell (`<root>/admin/index.html`). Fixes a 503 on `/admin` on freshly cloned checkouts.
 - **PHP 8.4 compatibility**: removed the deprecated `E_STRICT` constant from `error_reporting()` in `bootstrap.php`. No more "Constant E_STRICT is deprecated" warnings in PHP 8.4 logs.
 - Initial-seed defaults (`site.tagline`, `site.description`) translated to English in migration `0001`. `site.locale` is now empty by default, letting the visitor's `Accept-Language` drive the language.
