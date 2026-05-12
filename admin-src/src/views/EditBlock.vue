@@ -212,7 +212,7 @@ async function applyDividerToAll() {
       <span
         class="w-10 h-10 rounded-xl bg-ink-100/10 ring-1 ring-ink-100/60 grid place-items-center flex-shrink-0"
       >
-        <iconify-icon :icon="type.icon" width="22" class="text-ink-100"></iconify-icon>
+        <iconify-icon :icon="type.icon" width="22" class="text-backend-accent"></iconify-icon>
       </span>
       <div>
         <p class="eyebrow">{{ type.category }}</p>
