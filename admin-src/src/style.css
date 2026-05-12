@@ -133,15 +133,19 @@
      above turned off — without this, the checkmark (and radio dot)
      never appears, leaving the control visually identical whether
      it's checked or not. `accent-color` ties the check to the active
-     theme's accent so it doesn't clash with the dracula palette. */
+     theme's accent so it doesn't clash with the dracula palette.
+     Sized at 18px (~1.3× the default ~13px) for clearer tap targets
+     and visibility on retina screens. */
   input[type='checkbox'],
   input[type='radio'] {
     appearance: auto;
     -webkit-appearance: auto;
     min-height: 0;
-    width: auto;
+    width: 18px;
+    height: 18px;
     accent-color: rgb(var(--accent-rgb));
     cursor: pointer;
+    flex-shrink: 0;
   }
   input[type='color'] {
     min-height: 0;
