@@ -67,7 +67,7 @@ const groups = computed(() => {
               @click="emit('pick', t.id)"
             >
               <div class="flex items-center gap-3">
-                <iconify-icon :icon="t.icon" width="22" class="text-ink-100"></iconify-icon>
+                <iconify-icon :icon="t.icon" width="22" class="text-backend-accent"></iconify-icon>
                 <div>
                   <div class="font-medium">{{ t.label }}</div>
                   <div class="text-xs text-ink-300 mt-0.5">{{ t.description }}</div>

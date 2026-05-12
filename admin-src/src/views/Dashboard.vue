@@ -287,7 +287,7 @@ function blockSummary(b: Block): string {
           <iconify-icon
             :icon="typeMap[b.type]?.icon || 'lucide:square'"
             width="20"
-            class="text-ink-100 flex-shrink-0"
+            class="text-backend-accent flex-shrink-0"
           ></iconify-icon>
           <!-- Two-line header: eyebrow with the TYPE (always, so the user
                immediately distinguishes link/social/apps/...) + heading

@@ -469,22 +469,30 @@
   background: rgb(var(--backend-accent-rgb));
 }
 
-/* Sidebar nav: active route pill. Same `--backend-accent` cascade as
-   the toggle ON state and `.btn-primary`, so the active item picks up
-   the same vivid accent in every palette (and falls back to the old
-   text-color inversion in extreme cases). The hover override keeps the
-   foreground locked to the accent's companion fg, otherwise the
-   inherited `.nav-item:hover { text-ink-300 }` would dim the active
-   pill on mouseover. */
+/* Sidebar nav: active route pill. Uses `--backend-accent` as bg and
+   its companion fg as text/icon. Colors are STABLE across hover so
+   the contrast we picked in the cascade is the contrast you always
+   see — hover state is signalled with a derived background tint
+   instead (driven by the same accent, so it stays on-palette without
+   adding another color to reason about). */
 .nav-active {
   background: rgb(var(--backend-accent-rgb));
   color: rgb(var(--backend-accent-fg-rgb));
 }
 .nav-active:hover {
   color: rgb(var(--backend-accent-fg-rgb));
+  background: rgb(var(--backend-accent-rgb) / 0.9);
 }
 .nav-active .nav-item__icon {
   color: rgb(var(--backend-accent-fg-rgb));
+}
+
+/* Utility: tint icon (or any text-rendered element) with the backend
+   accent. Used for the tile-type icons in the admin Dashboard and the
+   Add-tile sheet so the user's palette accent shows up where it
+   matters visually (tile identity at a glance). */
+.text-backend-accent {
+  color: rgb(var(--backend-accent-rgb));
 }
 
 /* "Status green" override for light theme: emerald-300/400 (light Tailwind)
