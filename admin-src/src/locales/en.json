@@ -3,6 +3,7 @@
     "save": "Save",
     "saving": "Saving…",
     "saved": "Saved",
+    "discard": "Discard changes",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
@@ -51,6 +52,7 @@
     "submissions": "Inbox",
     "stats": "Stats",
     "settings": "Settings",
+    "maintenance": "Maintenance",
     "logout": "Sign out",
     "openSite": "Open site"
   },
@@ -345,8 +347,7 @@
     "groups": {
       "identity": "Identity",
       "seoIndexing": "SEO and indexing",
-      "communications": "Communications",
-      "maintenance": "Maintenance"
+      "communications": "Communications"
     },
     "errors": {
       "invalidFields": "Some fields are invalid. Fix them and try again.",
@@ -377,25 +378,7 @@
       "siteLocale": "Language",
       "siteLocalePlaceholder": "it",
       "siteLocaleHelp": "ISO code of the main language (e.g. it, en, fr). HTML lang attribute — useful for accessibility and automatic translation.",
-      "siteLocaleHint": "Enter 2 letters (e.g. \"it\") or 2-2 (e.g. \"it-IT\").",
-      "maintenance": "Maintenance mode",
-      "maintenanceHelp": "When on, visitors see a maintenance page instead of your site. You — logged in as admin — keep seeing the site normally so you can preview it.",
-      "maintenanceMessage": "Maintenance message",
-      "maintenanceMessagePlaceholder": "E.g. We're updating some content, back in a few minutes.",
-      "maintenanceMessageHelp": "Text shown on the maintenance page (max 500 chars). Leave empty to use a default message in the visitor's language."
-    },
-    "maintenance": {
-      "title": "Maintenance mode",
-      "help": "Show a maintenance page to public visitors. You — logged in as admin — keep seeing and editing the site normally.",
-      "statusOn": "ACTIVE",
-      "toggleLabel": "Site under maintenance",
-      "toggleHint": "When on, visitors see the maintenance page (HTTP 503). You — logged in — see the site normally.",
-      "messageLabel": "Message for visitors",
-      "messageHelp": "Text shown on the maintenance page (max 500 chars). Leave empty to use a default message in the visitor's language.",
-      "messagePlaceholder": "E.g. We're updating some content, back in a few minutes.",
-      "footerOff": "Saves independently from the rest of the settings.",
-      "footerOn": "Site is under maintenance. Visitors see the stop page.",
-      "saveButton": "Save"
+      "siteLocaleHint": "Enter 2 letters (e.g. \"it\") or 2-2 (e.g. \"it-IT\")."
     },
     "seo": {
       "canonicalUrl": "Canonical URL",
@@ -564,6 +547,23 @@
       "deliveryErrorPrefix": "Forwarding error: ",
       "deliveryErrorUnknown": "unknown"
     }
+  },
+  "maintenance": {
+    "eyebrow": "maintenance",
+    "title": "Maintenance mode",
+    "statusOn": "ACTIVE",
+    "toggleLabel": "Site under maintenance",
+    "toggleHint": "When on, visitors see the maintenance page (HTTP 503). You — logged in as admin — keep seeing the site normally so you can test it.",
+    "messageLabel": "Message for visitors",
+    "messageHelp": "Custom text shown on the maintenance page (max 500 chars). Leave empty to use a default message in the visitor's language.",
+    "messagePlaceholder": "E.g. We're updating some content, back in a few minutes.",
+    "footerOff": "Site is online. Flip the toggle to take it offline for visitors.",
+    "footerOn": "Site under maintenance. Visitors see the stop page, you see everything normally.",
+    "savedFlash": "Saved",
+    "aboutTitle": "How it works",
+    "aboutPoint1": "When the toggle is ACTIVE, every anonymous visitor gets a maintenance page with HTTP 503 and a Retry-After header. Search engines understand it's temporary and won't penalize the site.",
+    "aboutPoint2": "You — logged in as admin — keep seeing the site normally, useful for testing changes before bringing the site back online. You'll see a banner at the top of the site reminding you of the state.",
+    "aboutPoint3": "The message for visitors is optional: if you leave it empty, a default text is shown in the visitor's language (Italian or English)."
   },
   "stats": {
     "title": "Stats",

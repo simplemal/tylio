@@ -241,58 +241,12 @@ const known: FieldDef[] = [
     inputType: 'email',
   },
 ]
-
-// Maintenance mode is intentionally OUTSIDE the `known` array: it lives
-// in its own prominent standalone card at the very top of the page so
-// the user can find it immediately when the site is offline-ish. The
-// card has its own save button (just for this section) so flipping the
-// switch doesn't require scrolling to the global Save at the top of
-// Settings — which is the typical "I need to ship a maintenance window
-// NOW" UX.
-const maintenanceSaving = ref(false)
-const maintenanceSaveError = ref('')
-
-function setMaintenanceFlag(v: boolean): void {
-  settings.value['site.maintenance'] = v
-}
-function setMaintenanceMessage(v: string): void {
-  settings.value['site.maintenance_message'] = v
-}
-function getMaintenanceFlag(): boolean {
-  return Boolean(settings.value['site.maintenance'])
-}
-function getMaintenanceMessage(): string {
-  const v = settings.value['site.maintenance_message']
-  return typeof v === 'string' ? v : ''
-}
-
-async function saveMaintenance(): Promise<void> {
-  if (maintenanceSaving.value) return
-  maintenanceSaving.value = true
-  maintenanceSaveError.value = ''
-  try {
-    // We send a partial payload that only carries the maintenance keys.
-    // The SettingsController's PUT endpoint upserts per-key, so the
-    // rest of the form's unsaved edits stay untouched in the DB.
-    const payload = {
-      'site.maintenance': getMaintenanceFlag(),
-      'site.maintenance_message': getMaintenanceMessage(),
-    } as Settings
-    const r = await api.updateSettings(payload)
-    // Re-sync the local copy with whatever the server stored
-    // (sanitizer may have trimmed long messages, etc.)
-    settings.value['site.maintenance'] = r.settings['site.maintenance']
-    settings.value['site.maintenance_message'] = r.settings['site.maintenance_message']
-    site.setFromSettings(settings.value as Record<string, unknown>)
-  } catch (e: unknown) {
-    maintenanceSaveError.value =
-      e instanceof ApiError
-        ? t('settings.errors.errorWithStatus', { status: e.status })
-        : t('settings.errors.networkError')
-  } finally {
-    maintenanceSaving.value = false
-  }
-}
+// NOTE: maintenance mode used to live here in earlier iterations
+// (first inside `known` as a regular field group, then as a
+// standalone card at the top of this view). It now has its own
+// dedicated route at /maintenance with its own sidebar nav item —
+// flipping the switch is a one-purpose, urgent action and shouldn't
+// share UI real estate with the rest of the settings.
 
 onMounted(async () => {
   settings.value = (await api.getSettings()).settings
@@ -566,116 +520,6 @@ async function performDelete() {
   <p v-if="saveError" class="text-sm text-red-300 mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30">
     {{ saveError }}
   </p>
-
-  <!-- ===== Maintenance mode (standalone card at the top) =====
-       Pulled OUT of the main settings form so the user can find it
-       immediately. Visual treatment varies by state:
-         - OFF: neutral tile, subtle wrench glyph
-         - ON:  amber border + glow, "live" pulse dot, urgent feel
-       Has its own Save button so flipping the toggle is a one-action
-       commit, no need to scroll back up to the global Save. -->
-  <section
-    id="maintenance"
-    class="tile mb-5 scroll-mt-24"
-    :class="getMaintenanceFlag()
-      ? 'border-amber-400/40 bg-amber-400/[0.06] shadow-[0_0_0_1px_rgba(251,191,36,0.18)_inset]'
-      : ''"
-    aria-labelledby="maintenance-title"
-  >
-    <div class="flex items-start gap-3 mb-4">
-      <span
-        class="shrink-0 w-10 h-10 rounded-xl grid place-items-center"
-        :class="getMaintenanceFlag()
-          ? 'bg-amber-400/20 text-amber-200'
-          : 'bg-ink-100/[0.06] text-ink-300'"
-        aria-hidden="true"
-      >
-        <iconify-icon icon="lucide:wrench" width="22"></iconify-icon>
-      </span>
-      <div class="flex-1 min-w-0">
-        <h2 id="maintenance-title" class="font-display text-xl leading-tight">
-          {{ t('settings.maintenance.title') }}
-        </h2>
-        <p class="text-xs text-ink-300 mt-1 leading-relaxed">
-          {{ t('settings.maintenance.help') }}
-        </p>
-      </div>
-      <span
-        v-if="getMaintenanceFlag()"
-        class="shrink-0 text-xs font-medium text-amber-200 inline-flex items-center gap-1.5 pt-1.5"
-      >
-        <span class="relative inline-flex">
-          <span class="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-60"></span>
-          <span class="relative w-2 h-2 rounded-full bg-amber-400"></span>
-        </span>
-        {{ t('settings.maintenance.statusOn') }}
-      </span>
-    </div>
-
-    <label class="!flex items-start gap-3 cursor-pointer !mb-4">
-      <span class="settings-switch" :class="{ 'is-on': getMaintenanceFlag() }">
-        <input
-          type="checkbox"
-          class="settings-switch__input"
-          :checked="getMaintenanceFlag()"
-          @change="setMaintenanceFlag(($event.target as HTMLInputElement).checked)"
-        />
-        <span class="settings-switch__track" aria-hidden="true">
-          <span class="settings-switch__thumb"></span>
-        </span>
-      </span>
-      <span class="flex-1 min-w-0">
-        <span class="block !text-ink-100 !text-sm !font-medium">
-          {{ t('settings.maintenance.toggleLabel') }}
-        </span>
-        <span class="block text-xs text-ink-300 mt-1 leading-relaxed">
-          {{ t('settings.maintenance.toggleHint') }}
-        </span>
-      </span>
-    </label>
-
-    <div class="field">
-      <label for="maintenance-message" class="!mb-1 !text-ink-100 !text-sm !font-medium">
-        {{ t('settings.maintenance.messageLabel') }}
-      </label>
-      <p class="text-xs text-ink-300 mb-2 leading-relaxed">
-        {{ t('settings.maintenance.messageHelp') }}
-      </p>
-      <textarea
-        id="maintenance-message"
-        :value="getMaintenanceMessage()"
-        :placeholder="t('settings.maintenance.messagePlaceholder')"
-        maxlength="500"
-        rows="3"
-        @input="setMaintenanceMessage(($event.target as HTMLTextAreaElement).value)"
-      ></textarea>
-    </div>
-
-    <div class="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-white/10">
-      <p
-        v-if="maintenanceSaveError"
-        class="text-xs text-red-300 m-0"
-      >
-        {{ maintenanceSaveError }}
-      </p>
-      <p v-else class="text-xs text-ink-300 m-0">
-        {{ getMaintenanceFlag() ? t('settings.maintenance.footerOn') : t('settings.maintenance.footerOff') }}
-      </p>
-      <button
-        class="btn"
-        :class="getMaintenanceFlag() ? 'btn-warning' : 'btn-primary'"
-        :disabled="maintenanceSaving"
-        @click="saveMaintenance"
-      >
-        <iconify-icon
-          :icon="maintenanceSaving ? 'lucide:loader-circle' : 'lucide:check'"
-          width="16"
-          :class="maintenanceSaving ? 'animate-spin' : ''"
-        ></iconify-icon>
-        {{ maintenanceSaving ? t('common.saving') : t('settings.maintenance.saveButton') }}
-      </button>
-    </div>
-  </section>
 
   <div class="tile space-y-5">
     <template v-for="(f, i) in known" :key="f.key">

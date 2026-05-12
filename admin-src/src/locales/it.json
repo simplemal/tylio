@@ -3,6 +3,7 @@
     "save": "Salva",
     "saving": "Salvataggio…",
     "saved": "Salvato",
+    "discard": "Annulla modifiche",
     "cancel": "Annulla",
     "delete": "Elimina",
     "edit": "Modifica",
@@ -51,6 +52,7 @@
     "submissions": "Messaggi",
     "stats": "Statistiche",
     "settings": "Impostazioni",
+    "maintenance": "Manutenzione",
     "logout": "Esci",
     "openSite": "Apri sito"
   },
@@ -345,8 +347,7 @@
     "groups": {
       "identity": "Identità",
       "seoIndexing": "SEO e indicizzazione",
-      "communications": "Comunicazioni",
-      "maintenance": "Manutenzione"
+      "communications": "Comunicazioni"
     },
     "errors": {
       "invalidFields": "Alcuni campi non sono validi. Correggili e riprova.",
@@ -377,25 +378,7 @@
       "siteLocale": "Lingua",
       "siteLocalePlaceholder": "it",
       "siteLocaleHelp": "Codice ISO della lingua principale (es. it, en, fr). Attributo lang dell’HTML — utile per accessibilità e traduzione automatica.",
-      "siteLocaleHint": "Inserisci 2 lettere (es. \"it\") oppure 2-2 (es. \"it-IT\").",
-      "maintenance": "Modalità manutenzione",
-      "maintenanceHelp": "Quando attiva, i visitatori vedono una pagina di manutenzione invece del tuo sito. Tu, da loggato in admin, continui a vedere il sito normalmente per testarlo.",
-      "maintenanceMessage": "Messaggio di manutenzione",
-      "maintenanceMessagePlaceholder": "Es. Stiamo aggiornando alcuni contenuti, torniamo tra qualche minuto.",
-      "maintenanceMessageHelp": "Testo mostrato sulla pagina di manutenzione (max 500 caratteri). Se lo lasci vuoto, viene usato un messaggio predefinito nella lingua del visitatore."
-    },
-    "maintenance": {
-      "title": "Modalità manutenzione",
-      "help": "Mostra una pagina di manutenzione ai visitatori del sito pubblico. Tu, da loggato in admin, continui a vedere e modificare il sito normalmente.",
-      "statusOn": "ATTIVA",
-      "toggleLabel": "Sito in manutenzione",
-      "toggleHint": "Quando attiva, i visitatori vedono la pagina di manutenzione (HTTP 503). Tu, da loggato, vedi il sito normalmente.",
-      "messageLabel": "Messaggio per i visitatori",
-      "messageHelp": "Testo mostrato sulla pagina di manutenzione (max 500 caratteri). Se vuoto, viene usato un messaggio predefinito nella lingua del visitatore.",
-      "messagePlaceholder": "Es. Stiamo aggiornando alcuni contenuti, torniamo tra qualche minuto.",
-      "footerOff": "Salvataggio indipendente dal resto delle impostazioni.",
-      "footerOn": "Il sito è in manutenzione. I visitatori vedono la pagina di stop.",
-      "saveButton": "Salva"
+      "siteLocaleHint": "Inserisci 2 lettere (es. \"it\") oppure 2-2 (es. \"it-IT\")."
     },
     "seo": {
       "canonicalUrl": "URL canonico",
@@ -564,6 +547,23 @@
       "deliveryErrorPrefix": "Errore nell’inoltro: ",
       "deliveryErrorUnknown": "sconosciuto"
     }
+  },
+  "maintenance": {
+    "eyebrow": "manutenzione",
+    "title": "Modalità manutenzione",
+    "statusOn": "ATTIVA",
+    "toggleLabel": "Sito in manutenzione",
+    "toggleHint": "Quando attiva, i visitatori vedono la pagina di manutenzione (HTTP 503). Tu, da loggato in admin, continui a vedere il sito normalmente per testarlo.",
+    "messageLabel": "Messaggio per i visitatori",
+    "messageHelp": "Testo personalizzato mostrato sulla pagina di manutenzione (max 500 caratteri). Se vuoto, viene usato un messaggio predefinito nella lingua del visitatore.",
+    "messagePlaceholder": "Es. Stiamo aggiornando alcuni contenuti, torniamo tra qualche minuto.",
+    "footerOff": "Sito online normalmente. Attiva il toggle per metterlo in manutenzione.",
+    "footerOn": "Sito in manutenzione. I visitatori vedono la pagina di stop, tu vedi tutto normalmente.",
+    "savedFlash": "Salvato",
+    "aboutTitle": "Come funziona",
+    "aboutPoint1": "Quando il toggle è ATTIVO, ogni visitatore anonimo riceve una pagina di manutenzione con HTTP 503 e header Retry-After. I motori di ricerca capiscono che è temporaneo e non penalizzano il sito.",
+    "aboutPoint2": "Tu, da loggato in admin, continui a vedere il sito normalmente: utile per testare modifiche prima di rimettere il sito online. Nella parte alta del sito vedrai un banner che ti ricorda lo stato.",
+    "aboutPoint3": "Il messaggio per i visitatori è opzionale: se lo lasci vuoto, viene mostrato un testo predefinito nella lingua del visitatore (italiano o inglese)."
   },
   "stats": {
     "title": "Statistiche",

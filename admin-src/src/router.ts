@@ -7,6 +7,7 @@ const Dashboard = () => import('./views/Dashboard.vue')
 const EditBlock = () => import('./views/EditBlock.vue')
 const Theme = () => import('./views/Theme.vue')
 const Settings = () => import('./views/Settings.vue')
+const Maintenance = () => import('./views/Maintenance.vue')
 const Media = () => import('./views/Media.vue')
 const Stats = () => import('./views/Stats.vue')
 const Submissions = () => import('./views/Submissions.vue')
@@ -24,6 +25,7 @@ export const router = createRouter({
     },
     { path: '/theme', name: 'theme', component: Theme, meta: { auth: true } },
     { path: '/settings', name: 'settings', component: Settings, meta: { auth: true } },
+    { path: '/maintenance', name: 'maintenance', component: Maintenance, meta: { auth: true } },
     { path: '/media', name: 'media', component: Media, meta: { auth: true } },
     { path: '/stats', name: 'stats', component: Stats, meta: { auth: true } },
     { path: '/submissions', name: 'submissions', component: Submissions, meta: { auth: true } },

@@ -31,6 +31,17 @@ const nav = computed(() => [
   { to: '/theme', label: t('nav.theme'), icon: 'lucide:palette' },
   { to: '/media', label: t('nav.media'), icon: 'lucide:image' },
   { to: '/settings', label: t('nav.settings'), icon: 'lucide:settings' },
+  // Maintenance: placed right under Settings since it's "site
+  // configuration" too, but on its own row (and with the `badge:
+  // 'maintenance'` flag) so the user notices the amber dot when the
+  // site is offline. Discoverable + non-destructive distance from
+  // the main flow.
+  {
+    to: '/maintenance',
+    label: t('nav.maintenance'),
+    icon: 'lucide:wrench',
+    badge: 'maintenance' as const,
+  },
   { to: '/submissions', label: t('nav.submissions'), icon: 'lucide:mail', badge: 'inbox' as const },
   { to: '/stats', label: t('nav.stats'), icon: 'lucide:trending-up' },
 ])
@@ -134,6 +145,16 @@ router.afterEach(() => refreshShellState())
                   :title="t('shell.unreadCountTitle', { n: inbox.unread })"
                   :aria-label="t('shell.unreadCountAria')"
                 ></span>
+                <!-- "Site under maintenance" dot: fixed amber (semantic
+                     "warning/attention"), pulsing so the eye catches it
+                     even on a quick glance at the sidebar. Mirror of the
+                     rose-500 pattern above. -->
+                <span
+                  v-if="n.badge === 'maintenance' && site.maintenance"
+                  class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-ink-900 animate-pulse"
+                  :title="t('shell.maintenanceTitle')"
+                  :aria-label="t('shell.maintenanceTitle')"
+                ></span>
               </span>
               <span class="text-sm">{{ n.label }}</span>
             </router-link>
@@ -181,7 +202,7 @@ router.afterEach(() => refreshShellState())
           <p class="text-amber-200/80 mt-0.5">{{ t('shell.maintenanceBody') }}</p>
         </div>
         <router-link
-          to="/settings#maintenance"
+          to="/maintenance"
           class="ml-auto self-center text-xs underline-offset-2 hover:underline whitespace-nowrap"
         >
           {{ t('shell.maintenanceManage') }}

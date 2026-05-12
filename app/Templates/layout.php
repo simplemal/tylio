@@ -170,7 +170,7 @@ $tileCard = (
         <strong><?= $renderer->escape($renderer->t('public.maintenance_banner.title')) ?></strong>
         <span><?= $renderer->escape($renderer->t('public.maintenance_banner.body')) ?></span>
       </div>
-      <a class="m-admin-maint-banner__action" href="/admin/#/settings">
+      <a class="m-admin-maint-banner__action" href="/admin/#/maintenance">
         <?= $renderer->escape($renderer->t('public.maintenance_banner.action')) ?>
       </a>
     </div>
