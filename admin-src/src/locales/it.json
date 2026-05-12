@@ -387,12 +387,12 @@
       "favicon": "Favicon",
       "faviconHelp": "L’icona piccola che appare nella tab del browser e nei segnalibri. Carica un’immagine quadrata (PNG, JPG o WEBP) — generiamo automaticamente tutte le dimensioni necessarie. Ideale 512×512 o più per evitare bordi sgranati su dispositivi grandi.",
       "twitterHandle": "Handle Twitter / X",
-      "twitterHandlePlaceholder": "@nomeutente",
-      "twitterHandleHelp": "Il tuo username su X (con o senza @). Usato in twitter:site/twitter:creator quando il link viene condiviso, per attribuirlo a te nel preview."
+      "twitterHandlePlaceholder": "{'@'}nomeutente",
+      "twitterHandleHelp": "Il tuo username su X (con o senza {'@'}). Usato in twitter:site/twitter:creator quando il link viene condiviso, per attribuirlo a te nel preview."
     },
     "contact": {
       "notifyEmail": "Email per i messaggi",
-      "notifyEmailPlaceholder": "es. tuonome@esempio.it",
+      "notifyEmailPlaceholder": "es. tuonome{'@'}esempio.it",
       "notifyEmailHelp": "Se compilata, ogni messaggio inviato dal form Contatti ti viene inoltrato anche via email (oltre a essere salvato in \"Messaggi\"). Lascia vuoto per ricevere solo nell’admin. Per essere sicuro di ricevere i messaggi, aggiungi nei tuoi contatti accettati l’indirizzo configurato come MAIL_FROM_ADDRESS sul server.",
       "notifyEmailHint": "Dove ricevere i messaggi inviati dal form contatti."
     },

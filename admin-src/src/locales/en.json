@@ -387,12 +387,12 @@
       "favicon": "Favicon",
       "faviconHelp": "The small icon that appears in the browser tab and bookmarks. Upload a square image (PNG, JPG or WEBP) — we automatically generate every needed size. Ideally 512×512 or larger to avoid blurry edges on large devices.",
       "twitterHandle": "Twitter / X handle",
-      "twitterHandlePlaceholder": "@username",
-      "twitterHandleHelp": "Your username on X (with or without @). Used in twitter:site/twitter:creator when the link is shared, to attribute it to you in the preview."
+      "twitterHandlePlaceholder": "{'@'}username",
+      "twitterHandleHelp": "Your username on X (with or without {'@'}). Used in twitter:site/twitter:creator when the link is shared, to attribute it to you in the preview."
     },
     "contact": {
       "notifyEmail": "Email for messages",
-      "notifyEmailPlaceholder": "e.g. yourname@example.com",
+      "notifyEmailPlaceholder": "e.g. yourname{'@'}example.com",
       "notifyEmailHelp": "If filled in, every message sent from the Contacts form is also forwarded to you via email (in addition to being saved in \"Messages\"). Leave empty to receive only in the admin. To make sure messages reach you, whitelist the address configured as MAIL_FROM_ADDRESS on this server in your accepted contacts.",
       "notifyEmailHint": "Where contact-form submissions are forwarded."
     },
