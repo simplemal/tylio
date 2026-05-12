@@ -85,6 +85,19 @@ class ThemeController
             $palette = [];
             foreach ($theme['palette'] as $k => $v) {
                 if (!is_string($k) || !preg_match('/^[a-z_][a-z0-9_]*$/i', $k)) continue;
+                // `name` is a preset identifier (e.g. `nordic-dark`,
+                // `pink-lady-light`), NOT a CSS color — validate it as a
+                // slug so `isValidCssColor` doesn't drop hyphenated ids
+                // like `nordic-dark` (its named-color regex
+                // `^[a-zA-Z]{3,30}$` rejects the hyphen). When the name
+                // was dropped, the admin SPA couldn't highlight the
+                // active preset on page load until the user clicked it.
+                if ($k === 'name') {
+                    if (is_string($v) && preg_match('/^[a-z][a-z0-9_-]{0,40}$/i', $v)) {
+                        $palette[$k] = $v;
+                    }
+                    continue;
+                }
                 $color = is_string($v) ? trim($v) : '';
                 if ($color === '' || self::isValidCssColor($color)) {
                     $palette[$k] = $color;
