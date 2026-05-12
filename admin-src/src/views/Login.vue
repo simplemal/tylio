@@ -173,9 +173,16 @@ function backToPassword() {
       </form>
 
       <form v-else class="tile" @submit.prevent="submit2fa">
-        <p class="text-ink-300 text-sm mb-4 text-center">
-          <iconify-icon icon="lucide:shield-check" width="18" class="align-middle"></iconify-icon>
-          {{ t('login.twoFactor.hint') }}
+        <!-- Dynamic hint: TOTP mode shows the short authenticator hint;
+             backup mode shows the longer single-use explanation so the
+             user understands what to paste in and what happens after. -->
+        <p class="text-ink-300 text-sm mb-4 text-center leading-snug">
+          <iconify-icon
+            :icon="useBackupCode ? 'lucide:life-buoy' : 'lucide:shield-check'"
+            width="18"
+            class="align-middle mr-1"
+          ></iconify-icon>
+          {{ useBackupCode ? t('login.twoFactor.hintBackup') : t('login.twoFactor.hint') }}
         </p>
         <div class="field">
           <label for="otp">{{
@@ -197,6 +204,9 @@ function backToPassword() {
             autofocus
             required
           />
+          <p v-if="useBackupCode" class="text-ink-300 text-xs mt-2 leading-snug">
+            {{ t('login.twoFactor.backupHelpFooter') }}
+          </p>
         </div>
         <label class="text-ink-300 text-xs mb-3 flex items-center gap-2 cursor-pointer">
           <input v-model="useBackupCode" type="checkbox" />

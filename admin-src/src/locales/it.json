@@ -62,15 +62,17 @@
     "twoFactor": {
       "title": "Verifica in due passaggi",
       "hint": "Inserisci il codice 2FA dell'app authenticator.",
+      "hintBackup": "Inserisci uno qualunque dei codici di emergenza che hai salvato al setup del 2FA (8 caratteri hex). Sono monouso: dopo aver usato un codice quello non vale più, ma gli altri restano validi.",
+      "backupHelpFooter": "Non sai quanti te ne restano? Una volta dentro, vai su Impostazioni → Sicurezza per vedere il conteggio e rigenerarli.",
       "code": "Codice (6 cifre)",
       "codePlaceholder": "000000",
-      "backup": "Usa un backup code (se hai perso il device)",
+      "backup": "Usa un backup code (se hai perso l'app authenticator)",
       "submit": "Verifica",
       "submitting": "Verifico…",
       "backToCode": "Torna al codice dell'app",
       "backToPassword": "Torna indietro",
       "backupCode": "Backup code",
-      "backupCodePlaceholder": "8 caratteri esadecimali"
+      "backupCodePlaceholder": "es. a3f7b2c9"
     },
     "errors": {
       "missing": "Inserisci nome utente e password.",

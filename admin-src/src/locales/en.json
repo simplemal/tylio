@@ -62,15 +62,17 @@
     "twoFactor": {
       "title": "Two-factor verification",
       "hint": "Enter the 2FA code from your authenticator app.",
+      "hintBackup": "Enter any one of the emergency codes you saved when you set up 2FA (8 hex characters). They are single-use: once a code is used it no longer works, but the others remain valid.",
+      "backupHelpFooter": "Don't know how many you have left? Once signed in, go to Settings → Security to see the count and regenerate them.",
       "code": "6-digit code",
       "codePlaceholder": "000000",
-      "backup": "Use a backup code (if you lost your device)",
+      "backup": "Use a backup code (if you lost your authenticator app)",
       "submit": "Verify",
       "submitting": "Verifying…",
       "backToCode": "Back to authenticator code",
       "backToPassword": "Back",
       "backupCode": "Backup code",
-      "backupCodePlaceholder": "8 hexadecimal characters"
+      "backupCodePlaceholder": "e.g. a3f7b2c9"
     },
     "errors": {
       "missing": "Enter your username and password.",
