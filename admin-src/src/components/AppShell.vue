@@ -105,7 +105,7 @@ router.afterEach(() => refreshBadge())
                    showed off the user's palette colors). -->
             <router-link
               :to="n.to"
-              class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-ink-100 hover:bg-ink-100/[0.07] transition"
+              class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-ink-100"
               active-class="nav-active"
               @click="menuOpen = false"
             >
