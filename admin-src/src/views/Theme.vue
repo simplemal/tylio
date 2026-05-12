@@ -162,6 +162,38 @@ function isActivePreset(p: ThemePreset): boolean {
   return theme.value?.palette?.name === p.palette.name
 }
 
+/**
+ * Detect which preset matches the current palette by VALUE (every
+ * color field), independently of `palette.name`. Used at page load so
+ * the picker can highlight the active preset even when the user is on
+ * an older install whose seed palette is named `terra` (no preset
+ * matches by name) or after a one-off custom edit that didn't rename
+ * the palette. Returns the matching preset's `palette.name`, or `''`
+ * if none matches (truly custom palette).
+ *
+ * Comparison is case-insensitive on the string values; field set is
+ * the canonical PALETTE_KEYS list above, which excludes `name` (the
+ * very field we're trying to derive).
+ */
+function detectPresetByValue(palette: Record<string, unknown> | undefined): string {
+  if (!palette) return ''
+  const norm = (v: unknown): string =>
+    typeof v === 'string' ? v.trim().toLowerCase().replace(/\s+/g, '') : ''
+  for (const p of PRESETS) {
+    let allMatch = true
+    for (const k of PALETTE_KEYS) {
+      const a = norm((palette as Record<string, unknown>)[k])
+      const b = norm((p.palette as Record<string, unknown>)[k])
+      // Empty fields on the loaded palette (older installs that don't
+      // store accent_soft / accent_alt_fg yet) shouldn't disqualify a
+      // match — only mismatching non-empty values do.
+      if (a !== '' && a !== b) { allMatch = false; break }
+    }
+    if (allMatch) return p.palette.name
+  }
+  return ''
+}
+
 // Sanitizer for font names used in `:style` and postMessage. The regex
 // matches ONLY whitelisted names (letters/digits/spaces). For invalid
 // names it returns 'Inter' as a safe default. Defense in depth: even
@@ -222,6 +254,23 @@ function colorHelp(key: string): string {
 
 onMounted(async () => {
   theme.value = (await api.getTheme()).theme
+  // Auto-activate the matching preset on load: if the saved palette
+  // doesn't already carry a known preset name (e.g. install seeded as
+  // 'terra', or a user manually edited without renaming), but its
+  // values still match one of the presets, set the name so the picker
+  // highlights it. This is a local hint — `savedSnapshot` is captured
+  // AFTER the assignment so the dirty-flag stays clean: the rename
+  // doesn't count as an unsaved change until the user actually changes
+  // something. A real save will then persist the name to the DB.
+  if (theme.value?.palette) {
+    const currentName = (theme.value.palette as { name?: string }).name ?? ''
+    if (!PRESETS.some((p) => p.palette.name === currentName)) {
+      const detected = detectPresetByValue(theme.value.palette as Record<string, unknown>)
+      if (detected) {
+        (theme.value.palette as { name?: string }).name = detected
+      }
+    }
+  }
   savedSnapshot.value = JSON.stringify(theme.value)
 })
 

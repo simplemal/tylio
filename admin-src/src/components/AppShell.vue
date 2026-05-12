@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../stores/auth'
 import { useInbox } from '../stores/inbox'
+import { useSite } from '../stores/site'
 // Logo imported as an asset → Vite hashes the filename and handles
 // cache-busting automatically on each build (no more "logo.svg cached
 // forever" by CDNs). Same pattern as Login.vue.
@@ -13,6 +14,7 @@ import { api } from '../api'
 const { t } = useI18n()
 const auth = useAuth()
 const inbox = useInbox()
+const site = useSite()
 const router = useRouter()
 const menuOpen = ref(false)
 
@@ -38,21 +40,28 @@ async function logout() {
   auth.user = null
   auth.csrf = null
   inbox.clear()
+  site.clear()
   router.push({ name: 'login' })
 }
 
-// Unread badge: refresh on mount + on every tab-return (visibility
-// change) + after navigation (so leaving /submissions clears the badge
-// without reloading the page).
-function refreshBadge() {
+// Unread badge + maintenance banner: refresh on mount + on every
+// tab-return (visibility change) + after navigation. The maintenance
+// flag rarely changes, but we piggyback on the same triggers because
+// the cost is negligible (one tiny COUNT + one settings table read).
+function refreshShellState() {
   if (!auth.isLogged) return
   inbox.refresh()
+  // Only refresh from network if we haven't loaded yet OR the page is
+  // being entered: Settings.vue's save() pushes the new value directly
+  // via store.setFromSettings, so a subsequent route change doesn't
+  // need to re-fetch.
+  if (!site.loaded) site.refresh()
 }
-onMounted(refreshBadge)
-const onVis = () => { if (!document.hidden) refreshBadge() }
+onMounted(refreshShellState)
+const onVis = () => { if (!document.hidden) refreshShellState() }
 document.addEventListener('visibilitychange', onVis)
 onUnmounted(() => document.removeEventListener('visibilitychange', onVis))
-router.afterEach(() => refreshBadge())
+router.afterEach(() => refreshShellState())
 </script>
 
 <template>
@@ -156,6 +165,28 @@ router.afterEach(() => refreshBadge())
 
     <!-- Main content -->
     <main class="flex-1 md:ml-64 p-5 md:p-8 max-w-6xl">
+      <!-- Maintenance banner: only shown when the site is in maintenance
+           mode. Visitors see the maintenance page; the admin keeps using
+           the site so the banner here is a reminder, not a warning. The
+           link goes to Settings → Maintenance (id="maintenance-anchor"). -->
+      <div
+        v-if="site.maintenance"
+        class="mb-5 rounded-xl border border-amber-400/30 bg-amber-400/[0.08] text-amber-200 px-4 py-3 flex items-start gap-3"
+        role="status"
+        aria-live="polite"
+      >
+        <iconify-icon icon="lucide:wrench" width="20" class="mt-0.5 shrink-0"></iconify-icon>
+        <div class="text-sm leading-snug">
+          <p class="font-medium">{{ t('shell.maintenanceTitle') }}</p>
+          <p class="text-amber-200/80 mt-0.5">{{ t('shell.maintenanceBody') }}</p>
+        </div>
+        <router-link
+          to="/settings#maintenance"
+          class="ml-auto self-center text-xs underline-offset-2 hover:underline whitespace-nowrap"
+        >
+          {{ t('shell.maintenanceManage') }}
+        </router-link>
+      </div>
       <slot />
     </main>
   </div>

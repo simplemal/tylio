@@ -32,7 +32,8 @@ final class InstallController
         // instructions on the install page. The public home already works;
         // only /admin is unreachable until `npm run build` is done.
         $adminMissing = !$this->adminShellBuilt();
-        return $this->html($response, $this->setupForm(null, '', $adminMissing));
+        $preferredLocale = $this->detectPreferredLocale($request);
+        return $this->html($response, $this->setupForm(null, '', $adminMissing, '', $preferredLocale));
     }
 
     public function submit(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
@@ -45,6 +46,9 @@ final class InstallController
         $username = trim((string)($body['username'] ?? ''));
         $password = (string)($body['password'] ?? '');
         $confirm = (string)($body['password2'] ?? '');
+        $siteTitle = trim((string)($body['site_title'] ?? ''));
+        $locale = strtolower(trim((string)($body['locale'] ?? '')));
+        $systemTheme = (string)($body['system_theme'] ?? '');
 
         $err = null;
         if (!preg_match('/^[a-zA-Z0-9_.-]{3,32}$/', $username)) {
@@ -53,13 +57,36 @@ final class InstallController
             $err = 'Password must be at least 10 characters.';
         } elseif ($password !== $confirm) {
             $err = 'Passwords do not match.';
+        } elseif ($siteTitle !== '' && mb_strlen($siteTitle) > 80) {
+            // Same upper bound enforced by Settings.vue's site title field.
+            $err = 'Site title is too long (max 80 characters).';
+        } elseif ($locale !== '' && !in_array($locale, ['it', 'en'], true)) {
+            // Defense-in-depth: the form only ever submits 'it' or 'en'
+            // (radio inputs). A different value here is a tamper attempt.
+            $err = 'Invalid language choice.';
         }
         if ($err) {
-            return $this->html($response->withStatus(422), $this->setupForm($err, $username));
+            return $this->html($response->withStatus(422), $this->setupForm($err, $username, false, $siteTitle, $locale));
         }
 
         $hash = $this->auth->hashPassword($password);
         $this->db->insert('users', ['username' => $username, 'password_hash' => $hash]);
+
+        // Apply install-time preferences:
+        //  - site.title  → overrides the default seed title (only if provided)
+        //  - site.locale → locks the public site to this language. If empty,
+        //                  the renderer falls back to Accept-Language
+        //                  negotiation (this is the documented OSS default).
+        $this->applySiteTitle($siteTitle);
+        $this->applySiteLocale($locale);
+
+        // Apply install-time theme: Nordic, light or dark based on the
+        // visitor's system theme (auto-detected by the form's JS via
+        // `prefers-color-scheme`, no dropdown to avoid showing the user
+        // 18 swatches without a preview). They can swap palette anytime
+        // later from Theme → Presets, this is just a sensible default
+        // that respects their system at the moment of install.
+        $this->applyNordicTheme($systemTheme === 'dark' ? 'dark' : 'light');
 
         // Seed sample blocks if the page is empty
         if ((int)$this->db->value('SELECT COUNT(*) FROM blocks') === 0) {
@@ -69,6 +96,101 @@ final class InstallController
         return $response
             ->withStatus(303)
             ->withHeader('Location', $this->config->adminPath() . '/');
+    }
+
+    /**
+     * Overwrite `settings.site.title` only when the user supplied a
+     * value at install time. Otherwise we keep whatever the migration
+     * seeded so old installs aren't surprised by a missing key.
+     */
+    private function applySiteTitle(string $title): void
+    {
+        if ($title === '') return;
+        $this->db->pdo()->prepare(
+            "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
+        )->execute(['site.title', json_encode($title, JSON_UNESCAPED_UNICODE)]);
+    }
+
+    /**
+     * Overwrite `settings.site.locale` only when the user picked one at
+     * install time. Empty value preserves the seed's empty string, which
+     * means "negotiate per visitor from Accept-Language" — same default
+     * documented in the 0001 migration.
+     */
+    private function applySiteLocale(string $locale): void
+    {
+        if ($locale === '') return;
+        $this->db->pdo()->prepare(
+            "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
+        )->execute(['site.locale', json_encode($locale, JSON_UNESCAPED_UNICODE)]);
+    }
+
+    /**
+     * Replace the seeded `theme.palette` with Nordic (light or dark).
+     * Other theme sections (font, tile, background, mode) are kept from
+     * the 0001 seed so the install stays a single coherent default
+     * theme, just with the Nordic palette swapped in.
+     *
+     * Palette values mirror `admin-src/src/presets.ts` exactly — keep
+     * in sync if a palette is rebalanced.
+     */
+    private function applyNordicTheme(string $mode): void
+    {
+        $nordicLight = [
+            'name' => 'nordic-light',
+            'bg' => '#e5e9f0',
+            'surface' => '#ffffff',
+            'surface_alt' => '#efeff1',
+            'text' => '#2e3440',
+            'text_muted' => '#59718b',
+            'accent' => '#5e81ac',
+            'accent_alt' => '#8db9c7',
+            'accent_soft' => '#f5faff',
+            'accent_alt_fg' => '#ffffff',
+            'border' => 'rgba(46,52,64,0.10)',
+        ];
+        $nordicDark = [
+            'name' => 'nordic-dark',
+            'bg' => '#2e3440',
+            'surface' => '#3b4252',
+            'surface_alt' => '#434c5e',
+            'text' => '#eceff4',
+            'text_muted' => '#d8dee9',
+            'accent' => '#d8dee9',
+            'accent_alt' => '#88c0d0',
+            'accent_soft' => '#3b4252',
+            'accent_alt_fg' => '#2e3440',
+            'border' => 'rgba(216,222,233,0.10)',
+        ];
+        $palette = $mode === 'dark' ? $nordicDark : $nordicLight;
+
+        $row = $this->db->one('SELECT data FROM theme WHERE id = 1');
+        $theme = $row ? (json_decode((string)$row['data'], true) ?: []) : [];
+        $theme['palette'] = $palette;
+        // `mode` mirrors the preset's light/dark hint; the renderer uses
+        // this for `<meta name="color-scheme">` and the public CSS hooks.
+        $theme['mode'] = $mode === 'dark' ? 'dark' : 'light';
+
+        $this->db->pdo()->prepare(
+            "INSERT OR REPLACE INTO theme (id, data, updated_at) VALUES (1, ?, datetime('now'))"
+        )->execute([json_encode($theme, JSON_UNESCAPED_UNICODE)]);
+    }
+
+    /**
+     * Pre-select the language radio based on `Accept-Language`. We only
+     * support `it` and `en` natively — anything else falls back to
+     * English. The user can still flip the radio before submitting.
+     */
+    private function detectPreferredLocale(ServerRequestInterface $request): string
+    {
+        $header = strtolower($request->getHeaderLine('Accept-Language'));
+        // Crude but enough for the install screen: peek at the first
+        // language tag's primary subtag.
+        if (preg_match('/^\s*([a-z]{2})\b/', $header, $m)) {
+            $tag = $m[1];
+            if ($tag === 'it') return 'it';
+        }
+        return 'en';
     }
 
     private function ensureMigrationsRun(): void
@@ -160,11 +282,19 @@ final class InstallController
             ->withHeader('Cache-Control', 'no-store');
     }
 
-    private function setupForm(?string $err = null, string $username = '', bool $adminMissing = false): string
-    {
+    private function setupForm(
+        ?string $err = null,
+        string $username = '',
+        bool $adminMissing = false,
+        string $siteTitle = '',
+        string $preferredLocale = 'en'
+    ): string {
         $errHtml = $err ? '<p class="err">' . htmlspecialchars($err) . '</p>' : '';
         $u = htmlspecialchars($username);
+        $title = htmlspecialchars($siteTitle);
         $admin = htmlspecialchars($this->config->adminPath());
+        $itChecked = $preferredLocale === 'it' ? ' checked' : '';
+        $enChecked = $preferredLocale !== 'it' ? ' checked' : '';
         // Instruction banner if the admin SPA bundle hasn't been built yet.
         // It's a warning, not a block: the public home works regardless;
         // only /admin returns 503 until npm run build is done.
@@ -178,12 +308,29 @@ npm install
 npm run build</pre>
 </div>
 HTML : '';
+        // The hidden `system_theme` field is filled in by the inline JS
+        // below from `prefers-color-scheme`. It locks Nordic light/dark
+        // at install time; users with JS off get Nordic light (the
+        // default empty string falls through to light in the controller).
         return $this->wrap('Initial setup', <<<HTML
 <h1>Welcome to <em>tylio</em></h1>
-<p class="muted">Create the admin user. After this you won't be able to access this page anymore.</p>
+<p class="muted">Set up your site. After this you won't be able to access this page anymore.</p>
 $warnHtml
 $errHtml
 <form method="post" action="">
+  <label>Site title <span class="optional">(optional)</span>
+    <input name="site_title" value="$title" maxlength="80" placeholder="e.g. Maurizio Natali">
+  </label>
+  <fieldset class="radio-group">
+    <legend>Site language</legend>
+    <label class="radio">
+      <input type="radio" name="locale" value="it"$itChecked> Italian
+    </label>
+    <label class="radio">
+      <input type="radio" name="locale" value="en"$enChecked> English
+    </label>
+    <p class="hint">Used for the public site's UI strings. You can change it later in Settings.</p>
+  </fieldset>
   <label>Username
     <input name="username" value="$u" autocomplete="off" required minlength="3" maxlength="32" pattern="[a-zA-Z0-9_.\-]+">
   </label>
@@ -193,9 +340,20 @@ $errHtml
   <label>Repeat password
     <input name="password2" type="password" required minlength="10">
   </label>
+  <input type="hidden" name="system_theme" id="system_theme" value="">
   <button type="submit">Create admin</button>
 </form>
 <p class="footer">Once the admin is created you'll be redirected to <code>$admin</code>.</p>
+<script>
+  // Locks the Nordic palette to light or dark based on the user's
+  // current system theme. We do this server-side (one shot, then it
+  // stays put even if the user later flips their OS theme) — the user
+  // can swap palette anytime from Theme → Presets in the admin.
+  try {
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    document.getElementById('system_theme').value = dark ? 'dark' : 'light';
+  } catch (e) { /* JS-off: server falls back to light */ }
+</script>
 HTML);
     }
 
@@ -231,6 +389,12 @@ HTML);
   input:focus{outline:none;border-color:#d4a574}
   button{margin-top:18px;width:100%;background:#d4a574;color:#1a1410;border:0;padding:13px;border-radius:999px;font:600 15px Inter,sans-serif;cursor:pointer;transition:background .2s}
   button:hover{background:#e8c598}
+  .optional{color:#9c8e7c;font-weight:400}
+  fieldset.radio-group{border:0;padding:0;margin:14px 0 0}
+  fieldset.radio-group legend{font-size:13px;color:#9c8e7c;margin-bottom:6px;padding:0}
+  fieldset.radio-group .radio{display:inline-flex;align-items:center;gap:8px;margin-right:18px;color:#f4ede1;font-size:14px}
+  fieldset.radio-group .radio input{width:auto;margin:0;accent-color:#d4a574}
+  fieldset.radio-group .hint{margin:6px 0 0;font-size:12px;color:#9c8e7c}
   .err{background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);color:#ffb3a8;padding:10px 12px;border-radius:10px;margin:0 0 8px;font-size:14px}
   .warn{background:rgba(232,197,152,.08);border:1px solid rgba(232,197,152,.3);color:#e8c598;padding:12px 14px;border-radius:12px;margin:0 0 16px;font-size:13px;line-height:1.5}
   .warn strong{display:block;margin-bottom:4px}

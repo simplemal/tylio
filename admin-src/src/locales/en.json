@@ -39,7 +39,10 @@
   "shell": {
     "unreadCountTitle": "{n} unread messages",
     "unreadCountAria": "Unread messages",
-    "signedInAs": "Signed in as {user}"
+    "signedInAs": "Signed in as {user}",
+    "maintenanceTitle": "Site under maintenance",
+    "maintenanceBody": "Visitors see the maintenance page. You — logged in — see the site normally so you can test it.",
+    "maintenanceManage": "Manage"
   },
   "nav": {
     "dashboard": "Tiles",
@@ -342,7 +345,8 @@
     "groups": {
       "identity": "Identity",
       "seoIndexing": "SEO and indexing",
-      "communications": "Communications"
+      "communications": "Communications",
+      "maintenance": "Maintenance"
     },
     "errors": {
       "invalidFields": "Some fields are invalid. Fix them and try again.",
@@ -373,7 +377,12 @@
       "siteLocale": "Language",
       "siteLocalePlaceholder": "it",
       "siteLocaleHelp": "ISO code of the main language (e.g. it, en, fr). HTML lang attribute — useful for accessibility and automatic translation.",
-      "siteLocaleHint": "Enter 2 letters (e.g. \"it\") or 2-2 (e.g. \"it-IT\")."
+      "siteLocaleHint": "Enter 2 letters (e.g. \"it\") or 2-2 (e.g. \"it-IT\").",
+      "maintenance": "Maintenance mode",
+      "maintenanceHelp": "When on, visitors see a maintenance page instead of your site. You — logged in as admin — keep seeing the site normally so you can preview it.",
+      "maintenanceMessage": "Maintenance message",
+      "maintenanceMessagePlaceholder": "E.g. We're updating some content, back in a few minutes.",
+      "maintenanceMessageHelp": "Text shown on the maintenance page (max 500 chars). Leave empty to use a default message in the visitor's language."
     },
     "seo": {
       "canonicalUrl": "Canonical URL",

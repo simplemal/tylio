@@ -14,9 +14,11 @@ import {
 } from '../i18n'
 import FaviconUploader from '../components/FaviconUploader.vue'
 import OgImageUploader from '../components/OgImageUploader.vue'
+import { useSite } from '../stores/site'
 
 const { t, locale } = useI18n()
 const auth = useAuth()
+const site = useSite()
 const settings = ref<Settings>({})
 const saving = ref(false)
 // Per-field errors received from the server (422). Maps `settings key → message`.
@@ -238,6 +240,27 @@ const known: FieldDef[] = [
     helpKey: 'settings.contact.notifyEmailHelp',
     inputType: 'email',
   },
+
+  // ===== Maintenance mode =====
+  // When the toggle is on, public visitors get a dedicated maintenance
+  // page (rendered server-side by PageController). The logged-in admin
+  // keeps seeing the real site so they can preview changes. The textarea
+  // is optional — empty → localized fallback in the template.
+  {
+    groupKey: 'settings.groups.maintenance',
+    key: 'site.maintenance',
+    labelKey: 'settings.site.maintenance',
+    type: 'toggle',
+    helpKey: 'settings.site.maintenanceHelp',
+  },
+  {
+    key: 'site.maintenance_message',
+    labelKey: 'settings.site.maintenanceMessage',
+    type: 'textarea',
+    placeholderKey: 'settings.site.maintenanceMessagePlaceholder',
+    helpKey: 'settings.site.maintenanceMessageHelp',
+    maxlength: 500,
+  },
 ]
 
 onMounted(async () => {
@@ -272,6 +295,9 @@ async function save() {
   saveError.value = ''
   try {
     settings.value = (await api.updateSettings(settings.value)).settings
+    // Sync the AppShell banner without a separate fetch: we already
+    // have the freshly-saved value here.
+    site.setFromSettings(settings.value as Record<string, unknown>)
   } catch (e: unknown) {
     if (e instanceof ApiError && e.status === 422 && e.data.fields && typeof e.data.fields === 'object') {
       fieldErrors.value = e.data.fields as Record<string, string>
@@ -512,7 +538,15 @@ async function performDelete() {
 
   <div class="tile space-y-5">
     <template v-for="(f, i) in known" :key="f.key">
-      <h2 v-if="f.groupKey" class="font-display text-xl mt-2 first:mt-0 pb-1 border-b border-white/10">
+      <!-- Section heading. `id` is the last dotted segment of the key
+           (e.g. `groups.maintenance` → `maintenance`) so deep links like
+           `/settings#maintenance` (used by the AppShell banner) scroll
+           the user straight to the right section. -->
+      <h2
+        v-if="f.groupKey"
+        :id="f.groupKey.split('.').pop()"
+        class="font-display text-xl mt-2 first:mt-0 pb-1 border-b border-white/10 scroll-mt-24"
+      >
         {{ t(f.groupKey) }}
       </h2>
       <div class="field" :class="{ 'pt-4 border-t border-white/5': i > 0 && !f.groupKey }">
@@ -556,6 +590,7 @@ async function performDelete() {
             :id="f.key"
             :value="getStr(f.key)"
             :placeholder="f.placeholderKey ? t(f.placeholderKey) : undefined"
+            :maxlength="f.maxlength"
             @input="setStr(f.key, ($event.target as HTMLTextAreaElement).value)"
           ></textarea>
           <input

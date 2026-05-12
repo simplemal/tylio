@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Tylio\Controllers;
 
 use Tylio\Config;
+use Tylio\Services\Auth;
 use Tylio\Services\DB;
 use Tylio\Services\Renderer;
 use Psr\Http\Message\ResponseInterface;
@@ -25,16 +26,69 @@ class PageController
         protected DB $db,
         protected Renderer $renderer,
         protected Config $config,
+        protected Auth $auth,
     ) {}
 
     public function home(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
+        // Maintenance mode: visitors get a dedicated page, the logged-in
+        // admin keeps seeing the real site so they can still preview
+        // their work in-place. The admin's awareness lives in the SPA
+        // (banner in AppShell). We do NOT track maintenance hits — they
+        // would skew the stats panel.
+        if ($this->isMaintenanceOn() && !$this->isAdminLogged($request)) {
+            $accept = (string)$request->getHeaderLine('Accept-Language');
+            $html = $this->renderer->renderMaintenance($accept);
+            $response->getBody()->write($html);
+            return $response
+                ->withStatus(503)
+                ->withHeader('Content-Type', 'text/html; charset=utf-8')
+                ->withHeader('Cache-Control', 'no-store')
+                ->withHeader('Retry-After', '600');
+        }
         $this->trackVisit($request, null);
         $html = $this->renderer->renderPage();
         $response->getBody()->write($html);
         return $response
             ->withHeader('Content-Type', 'text/html; charset=utf-8')
             ->withHeader('Cache-Control', 'public, max-age=60');
+    }
+
+    /**
+     * Reads `settings['site.maintenance']` directly (one tiny SQL hit).
+     * Kept as a single-purpose query rather than going through
+     * `Renderer::loadSettings()` — the maintenance path must stay light
+     * even when the DB is under heavy contention. Returns false on any
+     * error (fail-open: better to serve the site than to 503 because
+     * of a settings row glitch).
+     */
+    protected function isMaintenanceOn(): bool
+    {
+        try {
+            $row = $this->db->one(
+                'SELECT value FROM settings WHERE key = ?',
+                ['site.maintenance'],
+            );
+            if (!$row) return false;
+            $decoded = json_decode((string)$row['value'], true);
+            return $decoded === true || $decoded === 1 || $decoded === '1';
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns true if the request carries a valid (non-pending) admin
+     * session cookie. Used to short-circuit maintenance mode so the
+     * admin can keep working on the live site.
+     */
+    protected function isAdminLogged(ServerRequestInterface $request): bool
+    {
+        try {
+            return $this->auth->loadFromRequest($request);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     public function preview(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface

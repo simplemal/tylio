@@ -141,6 +141,46 @@ class Renderer
     }
 
     /**
+     * Render the public maintenance page. Self-contained — uses the
+     * theme palette + fonts so the offline page still feels like the
+     * user's site. Called by `PageController::home()` when
+     * `settings['site.maintenance']` is truthy AND the visitor is not
+     * the authenticated admin.
+     *
+     * Returns the full HTML as a string; the caller is responsible for
+     * setting the HTTP status (503 + Retry-After is the convention).
+     */
+    public function renderMaintenance(string $acceptLanguage = ''): string
+    {
+        $theme = $this->loadTheme();
+        $settings = $this->loadSettings();
+        // Re-use the same locale resolution as renderPage so the
+        // hardcoded fallback strings in the template (it/en) pick the
+        // right language even on a fresh install with no site.locale set.
+        $this->applySiteLocale($settings, $acceptLanguage);
+        $locale = $this->i18n->currentLocale();
+        $title = (string)$this->settingsValue($settings, 'site.title', 'tylio');
+        $message = (string)$this->settingsValue($settings, 'site.maintenance_message', '');
+
+        ob_start();
+        $renderer = $this;
+        require $this->maintenanceTemplatePath();
+        return (string)ob_get_clean();
+    }
+
+    /**
+     * Path to the maintenance.php template, exposed as a protected hook
+     * so sub-classes (the multi-tenant overlay's `TenantRenderer`) can
+     * reuse the same template via the parent's `__DIR__` regardless of
+     * where the OSS package is installed (rootPath in OSS, vendor tree
+     * in SaaS). Override only to ship a different template entirely.
+     */
+    protected function maintenanceTemplatePath(): string
+    {
+        return __DIR__ . '/../Templates/maintenance.php';
+    }
+
+    /**
      * No-op. Historically "orphan" half tiles (not paired with another half)
      * were stretched to 2 columns via a `m-tile--orphan` class so the grid
      * had no gaps. Current design choice: keep the gap — a half stays a
