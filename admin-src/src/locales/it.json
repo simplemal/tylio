@@ -34,7 +34,7 @@
     "library": "Libreria",
     "loadingShort": "Carico…",
     "uploadError": "Errore di caricamento",
-    "imageRequired": "Devi caricare un'immagine."
+    "imageRequired": "Devi caricare un’immagine."
   },
   "shell": {
     "unreadCountTitle": "{n} messaggi non letti",
@@ -61,15 +61,15 @@
     "submitting": "Accedo…",
     "twoFactor": {
       "title": "Verifica in due passaggi",
-      "hint": "Inserisci il codice 2FA dell'app authenticator.",
+      "hint": "Inserisci il codice 2FA dell’app authenticator.",
       "hintBackup": "Inserisci uno qualunque dei codici di emergenza che hai salvato al setup del 2FA (8 caratteri hex). Sono monouso: dopo aver usato un codice quello non vale più, ma gli altri restano validi.",
       "backupHelpFooter": "Non sai quanti te ne restano? Una volta dentro, vai su Impostazioni → Sicurezza per vedere il conteggio e rigenerarli.",
       "code": "Codice (6 cifre)",
       "codePlaceholder": "000000",
-      "backup": "Usa un backup code (se hai perso l'app authenticator)",
+      "backup": "Usa un backup code (se hai perso l’app authenticator)",
       "submit": "Verifica",
       "submitting": "Verifico…",
-      "backToCode": "Torna al codice dell'app",
+      "backToCode": "Torna al codice dell’app",
       "backToPassword": "Torna indietro",
       "backupCode": "Backup code",
       "backupCodePlaceholder": "es. a3f7b2c9"
@@ -79,7 +79,7 @@
       "invalid": "Credenziali non valide.",
       "rateLimited": "Troppi tentativi. Riprova tra {seconds} secondi.",
       "rateLimitedFallback": "Troppi tentativi. Riprova tra qualche secondo.",
-      "invalid2fa": "Codice non valido. Verifica l'orologio del telefono e riprova.",
+      "invalid2fa": "Codice non valido. Verifica l’orologio del telefono e riprova.",
       "invalidBackup": "Backup code non valido o già usato.",
       "generic": "Errore di rete. Riprova.",
       "wrongDomain": "Sei sul dominio sbagliato. Reindirizzamento al lookup del tuo sito…"
@@ -135,7 +135,7 @@
     "back": "Indietro",
     "delete": "Elimina tessera",
     "deleteTile": "Elimina",
-    "deleteConfirm": "Eliminare questa tessera? L'operazione è irreversibile.",
+    "deleteConfirm": "Eliminare questa tessera? L’operazione è irreversibile.",
     "deleteConfirmNamed": "Eliminare la tessera \"{label}\"?",
     "deleteConfirmLabel": "Elimina",
     "duplicate": "Duplica",
@@ -155,7 +155,7 @@
     "applyDividerApplying": "Applico…",
     "applyDividerConfirm": "Applicare questo stile e sfondo a tutti i separatori della pagina?",
     "applyDividerConfirmLong": "Applicare questo stile di separatore a TUTTI i separatori della pagina? Le impostazioni correnti sostituiranno quelle degli altri separatori. (Operazione non annullabile.)",
-    "applyDividerHint": "Hai più separatori sulla pagina e vuoi che siano tutti uguali? Questo pulsante applica lo stile attuale (anche se non l'hai salvato) a TUTTI i separatori della pagina e ti riporta in home admin.",
+    "applyDividerHint": "Hai più separatori sulla pagina e vuoi che siano tutti uguali? Questo pulsante applica lo stile attuale (anche se non l’hai salvato) a TUTTI i separatori della pagina e ti riporta in home admin.",
     "applyDividerDone": "Applicato a {count} separatori.",
     "tabContent": "Contenuto",
     "tabStyle": "Stile",
@@ -179,7 +179,7 @@
     "titleSizeStandard": "Standard",
     "titleSizeLarge": "Grande",
     "loading": "Carico…",
-    "previewSavedNotice": "L'anteprima mostra l'ultima versione salvata. {save} per vedere le modifiche correnti.",
+    "previewSavedNotice": "L’anteprima mostra l’ultima versione salvata. {save} per vedere le modifiche correnti.",
     "previewHint": "Anteprima isolata di questa tessera. Salva per aggiornare.",
     "previewReload": "Ricarica",
     "previewTitle": "Anteprima · Mobile",
@@ -230,15 +230,15 @@
       "hexPlaceholder": "#rrggbb",
       "autoSuffix": " (auto)",
       "help": {
-        "bg": "Colore di sfondo dell'intera pagina, visibile dietro tutte le tessere e attorno ad esse.",
+        "bg": "Colore di sfondo dell’intera pagina, visibile dietro tutte le tessere e attorno ad esse.",
         "surface": "Colore di base di ogni tessera (link, social, gallery, prodotti, ecc.). Quando le tessere sono \"Trasparenti\" o \"Vetro\", deriva da qui.",
         "surface_alt": "Sfondo per gli elementi dentro alle tessere: pulsanti, link interni, badge, hover.",
         "text": "Testo principale: titoli, paragrafi, link, prezzi.",
         "text_muted": "Testo secondario: sottotitoli, didascalie, descrizioni minori e i pattern di sfondo.",
-        "accent": "Colore di richiamo principale: bottoni \"Acquista\", link attivi, badge sconto, anello attorno all'avatar.",
+        "accent": "Colore di richiamo principale: bottoni \"Acquista\", link attivi, badge sconto, anello attorno all’avatar.",
         "accent_alt": "Variante secondaria del colore di richiamo. Sfondo dei badge.",
-        "accent_soft": "Compagno dell'accento principale: sfondo dei chip che ospitano elementi accent (quadrato icona dei link, pillole social). Lascia vuoto per auto-derivare una versione tinta dell'accento; metti un colore (es. #ffffff) per controllarlo a mano (es. pillole social bianche con icona colorata).",
-        "accent_alt_fg": "Compagno dell'accento secondario: testo che appare sopra l'accento secondario (badge). Scegli un colore con buon contrasto su quel fondo — il bianco/nero generico spesso non è la scelta migliore, qui puoi tarare a mano.",
+        "accent_soft": "Compagno dell’accento principale: sfondo dei chip che ospitano elementi accent (quadrato icona dei link, pillole social). Lascia vuoto per auto-derivare una versione tinta dell’accento; metti un colore (es. #ffffff) per controllarlo a mano (es. pillole social bianche con icona colorata).",
+        "accent_alt_fg": "Compagno dell’accento secondario: testo che appare sopra l’accento secondario (badge). Scegli un colore con buon contrasto su quel fondo — il bianco/nero generico spesso non è la scelta migliore, qui puoi tarare a mano.",
         "border": "Bordi sottili tra tessere e elementi. Spesso translucido per non rubare attenzione (es. rgba con alpha basso)."
       }
     },
@@ -266,13 +266,13 @@
       "styleTransparent": "Trasparente",
       "styleGlass": "Vetro",
       "opacity": "Opacità tessere ({pct}%)",
-      "glassHint": "L'effetto vetro si nota quando dietro c'è uno sfondo ben visibile — soprattutto con la foto, o un pattern con intensità alta.",
+      "glassHint": "L’effetto vetro si nota quando dietro c’è uno sfondo ben visibile — soprattutto con la foto, o un pattern con intensità alta.",
       "geometryDesktop": "Geometria desktop",
       "geometryMobile": "Geometria mobile",
       "mobileSpacing": "Spaziatura",
       "mobileDesktop": "Come desktop",
       "mobileMinimal": "Risparmia spazio",
-      "mobileHint": "Per gli smartphone può essere utile scegliere la modalità {minimal} che nasconde la forma delle tessere per avere meno margini e sfruttare meglio lo schermo per i contenuti. In questo caso le tessere spariranno: bordi, raggio e sfondo non vengono applicati su mobile, lo spazio verticale tra una tessera e l'altra resta come quello desktop. Su desktop nulla cambia."
+      "mobileHint": "Per gli smartphone può essere utile scegliere la modalità {minimal} che nasconde la forma delle tessere per avere meno margini e sfruttare meglio lo schermo per i contenuti. In questo caso le tessere spariranno: bordi, raggio e sfondo non vengono applicati su mobile, lo spazio verticale tra una tessera e l’altra resta come quello desktop. Su desktop nulla cambia."
     },
     "background": {
       "title": "Sfondo",
@@ -288,8 +288,8 @@
       "patternImage": "Foto",
       "intensity": "Intensità ({pct}%)",
       "image": "Immagine di sfondo",
-      "imagePlaceholder": "Trascina qui un'immagine grande (1920px+) per lo sfondo",
-      "imageHint": "Riempie tutto il viewport (cover). Tipicamente meglio con un'immagine grande e poco \"rumorosa\"."
+      "imagePlaceholder": "Trascina qui un’immagine grande (1920px+) per lo sfondo",
+      "imageHint": "Riempie tutto il viewport (cover). Tipicamente meglio con un’immagine grande e poco \"rumorosa\"."
     },
     "mode": {
       "title": "Schema colori",
@@ -324,7 +324,7 @@
       "title": "Anteprima · Mobile",
       "reload": "Ricarica anteprima",
       "frameTitle": "Anteprima",
-      "hint": "L'anteprima si aggiorna live mentre modifichi. L'aspetto del pannello cambia solo al salvataggio."
+      "hint": "L’anteprima si aggiorna live mentre modifichi. L’aspetto del pannello cambia solo al salvataggio."
     }
   },
   "settings": {
@@ -347,7 +347,7 @@
     "errors": {
       "invalidFields": "Alcuni campi non sono validi. Correggili e riprova.",
       "saveFailed": "Errore nel salvataggio. Riprova.",
-      "exportFailed": "Errore durante l'esportazione.",
+      "exportFailed": "Errore durante l’esportazione.",
       "deleteGeneric": "Errore di rete. Riprova fra qualche minuto.",
       "deleteWithStatus": "Errore ({status}): {detail}",
       "errorWithStatus": "Errore ({status})",
@@ -369,10 +369,10 @@
       "siteDescriptionHelp": "Riassunto del sito: appare sotto il titolo nei risultati di ricerca e quando il link viene incollato su social/Whatsapp/Slack. Punta a ~155 caratteri.",
       "siteAuthor": "Autore",
       "siteAuthorPlaceholder": "Nome e cognome",
-      "siteAuthorHelp": "Nome dell'autore principale del sito. Va nel meta \"author\" e nel JSON-LD strutturato per Google.",
+      "siteAuthorHelp": "Nome dell’autore principale del sito. Va nel meta \"author\" e nel JSON-LD strutturato per Google.",
       "siteLocale": "Lingua",
       "siteLocalePlaceholder": "it",
-      "siteLocaleHelp": "Codice ISO della lingua principale (es. it, en, fr). Attributo lang dell'HTML — utile per accessibilità e traduzione automatica.",
+      "siteLocaleHelp": "Codice ISO della lingua principale (es. it, en, fr). Attributo lang dell’HTML — utile per accessibilità e traduzione automatica.",
       "siteLocaleHint": "Inserisci 2 lettere (es. \"it\") oppure 2-2 (es. \"it-IT\")."
     },
     "seo": {
@@ -380,12 +380,12 @@
       "canonicalUrlPlaceholder": "https://miosito.example.com",
       "canonicalUrlHelp": "Lascia vuoto nel 99% dei casi: il tuo sito vive solo su un indirizzo e usiamo automaticamente quello. Compila SOLO se il tuo sito risponde anche da un altro dominio (es. hai un dominio personalizzato che redirige): metti qui quello che vuoi sia \"il principale\" per Google.",
       "canonicalUrlHint": "Deve iniziare con http:// o https://",
-      "robotsIndex": "Permetti l'indicizzazione sui motori di ricerca",
+      "robotsIndex": "Permetti l’indicizzazione sui motori di ricerca",
       "robotsIndexHelp": "Quando spento, viene aggiunto <meta name=\"robots\" content=\"noindex,nofollow\"> e Google/Bing non mostreranno il sito nei risultati. Utile per ambienti di staging o pagine private.",
       "ogImage": "Immagine social (Open Graph)",
       "ogImageHelp": "Immagine mostrata quando condividi un link al tuo sito su Facebook, Twitter, Telegram, Whatsapp. Dimensione consigliata 1200×630 px.",
       "favicon": "Favicon",
-      "faviconHelp": "L'icona piccola che appare nella tab del browser e nei segnalibri. Carica un'immagine quadrata (PNG, JPG o WEBP) — generiamo automaticamente tutte le dimensioni necessarie. Ideale 512×512 o più per evitare bordi sgranati su dispositivi grandi.",
+      "faviconHelp": "L’icona piccola che appare nella tab del browser e nei segnalibri. Carica un’immagine quadrata (PNG, JPG o WEBP) — generiamo automaticamente tutte le dimensioni necessarie. Ideale 512×512 o più per evitare bordi sgranati su dispositivi grandi.",
       "twitterHandle": "Handle Twitter / X",
       "twitterHandlePlaceholder": "@nomeutente",
       "twitterHandleHelp": "Il tuo username su X (con o senza @). Usato in twitter:site/twitter:creator quando il link viene condiviso, per attribuirlo a te nel preview."
@@ -393,12 +393,12 @@
     "contact": {
       "notifyEmail": "Email per i messaggi",
       "notifyEmailPlaceholder": "es. tuonome@esempio.it",
-      "notifyEmailHelp": "Se compilata, ogni messaggio inviato dal form Contatti ti viene inoltrato anche via email (oltre a essere salvato in \"Messaggi\"). Lascia vuoto per ricevere solo nell'admin. Per essere sicuro di ricevere i messaggi, aggiungi nei tuoi contatti accettati l'indirizzo configurato come MAIL_FROM_ADDRESS sul server.",
+      "notifyEmailHelp": "Se compilata, ogni messaggio inviato dal form Contatti ti viene inoltrato anche via email (oltre a essere salvato in \"Messaggi\"). Lascia vuoto per ricevere solo nell’admin. Per essere sicuro di ricevere i messaggi, aggiungi nei tuoi contatti accettati l’indirizzo configurato come MAIL_FROM_ADDRESS sul server.",
       "notifyEmailHint": "Dove ricevere i messaggi inviati dal form contatti."
     },
     "language": {
-      "title": "Lingua dell'admin",
-      "hint": "L'interfaccia admin si adatta al browser. Puoi forzare la lingua qui.",
+      "title": "Lingua dell’admin",
+      "hint": "L’interfaccia admin si adatta al browser. Puoi forzare la lingua qui.",
       "label": "Lingua",
       "browser": "Predefinito del browser ({locale})",
       "auto": "Predefinito del browser",
@@ -410,7 +410,7 @@
     },
     "security": {
       "title": "Sicurezza",
-      "changePasswordHint": "Cambia la password del tuo account in qualsiasi momento. Verrai reindirizzato a una pagina dedicata che chiede password attuale + nuova (la pagina è separata dall'admin per ragioni di sicurezza).",
+      "changePasswordHint": "Cambia la password del tuo account in qualsiasi momento. Verrai reindirizzato a una pagina dedicata che chiede password attuale + nuova (la pagina è separata dall’admin per ragioni di sicurezza).",
       "changePassword": "Cambia password",
       "currentPassword": "Password attuale",
       "newPassword": "Nuova password",
@@ -418,7 +418,7 @@
       "passwordChanged": "Password aggiornata.",
       "passwordMismatch": "Le password non coincidono.",
       "twoFactor": "Autenticazione a due fattori",
-      "twoFactorIntro": "Aggiunge un secondo passaggio al login: oltre alla password, dovrai inserire un codice a 6 cifre generato da un'app authenticator (Google Authenticator, 1Password, Aegis, Authy). Compatibile con qualsiasi app TOTP.",
+      "twoFactorIntro": "Aggiunge un secondo passaggio al login: oltre alla password, dovrai inserire un codice a 6 cifre generato da un’app authenticator (Google Authenticator, 1Password, Aegis, Authy). Compatibile con qualsiasi app TOTP.",
       "twoFactorBackupRemaining": "Backup code residui:",
       "twoFactorBackupRemainingHint": "su 10 (un backup code si consuma quando lo usi al posto del codice TOTP).",
       "twoFactorStatusOn": "Attiva",
@@ -427,9 +427,9 @@
       "twoFactorDisable": "Disattiva 2FA",
       "twoFactorDisabling": "Disattivo…",
       "twoFactorRegenerateBackup": "Rigenera backup codes",
-      "twoFactorSetupHint": "Scansiona il QR con un'app di autenticazione (Aegis, 1Password, Google Authenticator…) e inserisci il codice a 6 cifre per confermare.",
+      "twoFactorSetupHint": "Scansiona il QR con un’app di autenticazione (Aegis, 1Password, Google Authenticator…) e inserisci il codice a 6 cifre per confermare.",
       "twoFactorSetupStep1": "Scansiona il QR con la tua app authenticator (oppure copia manualmente il secret se preferisci).",
-      "twoFactorSetupStep2": "Inserisci il codice a 6 cifre generato dall'app per confermare che funziona.",
+      "twoFactorSetupStep2": "Inserisci il codice a 6 cifre generato dall’app per confermare che funziona.",
       "twoFactorQrAlt": "QR code 2FA",
       "twoFactorSecretLabel": "Secret (manuale, se il QR non si legge):",
       "twoFactorCode": "Codice a 6 cifre",
@@ -437,7 +437,7 @@
       "twoFactorConfirmAndEnable": "Conferma e attiva",
       "twoFactorBackupCodes": "Codici di backup",
       "twoFactorBackupTitle": "Salva questi backup codes ora.",
-      "twoFactorBackupHint": "Servono per accedere se perdi l'app authenticator. Ognuno è single-use. Non li mostreremo più.",
+      "twoFactorBackupHint": "Servono per accedere se perdi l’app authenticator. Ognuno è single-use. Non li mostreremo più.",
       "twoFactorBackupCopyAll": "Copia tutti",
       "twoFactorBackupSaved": "Ho salvato i codici",
       "twoFactorRegenerate": "Rigenera i codici di backup",
@@ -454,10 +454,10 @@
       "download": "Scarica index.html",
       "downloading": "Preparazione…",
       "generating": "Genero…",
-      "warning": "Alcune funzioni non possono funzionare nell'HTML standalone e sono escluse dall'export:",
+      "warning": "Alcune funzioni non possono funzionare nell’HTML standalone e sono escluse dall’export:",
       "warningExclTitle": "Alcune funzioni richiedono il server tylio e NON saranno incluse:",
       "warningContactTile": "Tessera \"Modulo di contatto\"",
-      "warningContactTileNote": "— esclusa dall'export (il form inviava i dati al server tylio per salvarli e spedirti l'email di notifica; senza backend non funziona).",
+      "warningContactTileNote": "— esclusa dall’export (il form inviava i dati al server tylio per salvarli e spedirti l’email di notifica; senza backend non funziona).",
       "warningEmailNotify": "Email di notifica",
       "warningEmailNotifyNote": "— escluse (dipendono dal modulo contatti sopra).",
       "warningClickCount": "Conteggio click sulle tessere",
@@ -481,9 +481,9 @@
       "title": "Cancella account e pagina",
       "deleteAccount": "Elimina account",
       "deleteAccountAndPage": "Cancella account e pagina",
-      "deleteHint": "Cancella definitivamente l'account e tutti i dati. L'operazione è irreversibile.",
+      "deleteHint": "Cancella definitivamente l’account e tutti i dati. L’operazione è irreversibile.",
       "deleteIntro": "I dati non saranno recuperabili: cancelliamo dal nostro archivio in modo definitivo e completo tutti i blocchi, le impostazioni, il tema, le immagini caricate, i messaggi ricevuti e le statistiche. Anche il sottodominio si libera e torna disponibile.",
-      "deleteIrreversible": "L'operazione non è reversibile.",
+      "deleteIrreversible": "L’operazione non è reversibile.",
       "deleteTypeToConfirm": "Per confermare, scrivi",
       "deleteTypeInField": "nel campo qui sotto e clicca \"Cancella definitivamente\".",
       "deleteConfirmLabel": "Scrivi CANCELLA per confermare",
@@ -506,12 +506,12 @@
     "deleteConfirm": "Eliminare questo messaggio?",
     "deleteOneConfirm": "Eliminare definitivamente questo messaggio?",
     "deleteOneTitle": "Elimina questo messaggio",
-    "deleteAllConfirm": "Eliminare tutti i messaggi? L'operazione è irreversibile.",
-    "deleteAllConfirmCount": "Eliminare TUTTI i {count} messaggi salvati? L'azione è irreversibile.",
+    "deleteAllConfirm": "Eliminare tutti i messaggi? L’operazione è irreversibile.",
+    "deleteAllConfirmCount": "Eliminare TUTTI i {count} messaggi salvati? L’azione è irreversibile.",
     "from": "Da",
     "received": "Ricevuto",
     "loading": "Carico…",
-    "infoLead": "I messaggi inviati dal form {contact} della tua home vengono {savedHere} in modo che tu non li perda mai (anche se l'email non arriva).",
+    "infoLead": "I messaggi inviati dal form {contact} della tua home vengono {savedHere} in modo che tu non li perda mai (anche se l’email non arriva).",
     "contact": "Contatti",
     "savedHere": "salvati qui",
     "infoForwardedTo": "Vengono {forwardedByEmail} a",
@@ -539,7 +539,7 @@
       "sentLabel": "Inoltrata via email",
       "noServer": "Server non configurato per inviare email",
       "noEmailSet": "Email per i messaggi non configurata in Impostazioni",
-      "deliveryErrorPrefix": "Errore nell'inoltro: ",
+      "deliveryErrorPrefix": "Errore nell’inoltro: ",
       "deliveryErrorUnknown": "sconosciuto"
     }
   },
@@ -572,9 +572,9 @@
     "dimensions": "Dimensioni",
     "dragHere": "Trascina i file qui per caricarli",
     "dragHint": "JPG, PNG, WebP, GIF, SVG · max 10 MB",
-    "dropPlaceholder": "Trascina qui un'immagine 1200×630 px",
+    "dropPlaceholder": "Trascina qui un’immagine 1200×630 px",
     "pickFromLibrary": "Scegli dalla libreria",
-    "removeImageConfirm": "Rimuovere l'immagine? (Il file resta in libreria.)",
+    "removeImageConfirm": "Rimuovere l’immagine? (Il file resta in libreria.)",
     "loading": "Carico…",
     "copyUrl": "Copia URL",
     "deleteFile": "Elimina",
@@ -583,7 +583,7 @@
     "libraryDialogTitle": "Scegli dalla libreria",
     "urlOrLibrary": "URL immagine o seleziona dalla libreria",
     "errors": {
-      "notImage": "Carica un'immagine.",
+      "notImage": "Carica un’immagine.",
       "uploadFailed": "Errore di caricamento."
     }
   },
@@ -683,7 +683,7 @@
     "uploadFile": "Carica file"
   },
   "faviconUploader": {
-    "imageRequired": "Carica un'immagine (PNG, JPG, WEBP).",
+    "imageRequired": "Carica un’immagine (PNG, JPG, WEBP).",
     "uploadErrorFromMedia": "Errore: impossibile generare la favicon dal file selezionato",
     "dragSquareHere": "Trascina un PNG quadrato qui",
     "generatingIcons": "Genero le icone…",
@@ -693,9 +693,9 @@
     "faviconActiveHint": "Favicon attiva. Generate automaticamente le dimensioni 32, 180, 192, 512 px in {path}."
   },
   "ogImageUploader": {
-    "imageRequired": "Carica un'immagine.",
-    "removeConfirm": "Rimuovere l'immagine? (Il file resta in libreria)",
-    "dragImage": "Trascina qui un'immagine 1200×630 px",
+    "imageRequired": "Carica un’immagine.",
+    "removeConfirm": "Rimuovere l’immagine? (Il file resta in libreria)",
+    "dragImage": "Trascina qui un’immagine 1200×630 px",
     "libraryButton": "Scegli dalla libreria",
     "removeAction": "Rimuovi",
     "urlPrefix": "URL:"
