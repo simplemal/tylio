@@ -103,8 +103,12 @@ class Renderer
      * @param list<string> $excludeTypes block types to SKIP during render
      *   (used by StaticExporter to omit blocks that depend on the server,
      *   e.g. `contact` which posts to /submit/{id}).
+     * @param bool $adminMaintenanceBanner inject the "site offline to
+     *   visitors" banner at the top of the public layout. Set true ONLY
+     *   when the admin is previewing the live site during maintenance
+     *   (PageController.home does the auth + maintenance flag check).
      */
-    public function renderPage(bool $includeDisabled = false, ?int $onlyId = null, array $excludeTypes = []): string
+    public function renderPage(bool $includeDisabled = false, ?int $onlyId = null, array $excludeTypes = [], bool $adminMaintenanceBanner = false): string
     {
         $theme = $this->loadTheme();
         $settings = $this->loadSettings();

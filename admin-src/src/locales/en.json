@@ -384,6 +384,19 @@
       "maintenanceMessagePlaceholder": "E.g. We're updating some content, back in a few minutes.",
       "maintenanceMessageHelp": "Text shown on the maintenance page (max 500 chars). Leave empty to use a default message in the visitor's language."
     },
+    "maintenance": {
+      "title": "Maintenance mode",
+      "help": "Show a maintenance page to public visitors. You — logged in as admin — keep seeing and editing the site normally.",
+      "statusOn": "ACTIVE",
+      "toggleLabel": "Site under maintenance",
+      "toggleHint": "When on, visitors see the maintenance page (HTTP 503). You — logged in — see the site normally.",
+      "messageLabel": "Message for visitors",
+      "messageHelp": "Text shown on the maintenance page (max 500 chars). Leave empty to use a default message in the visitor's language.",
+      "messagePlaceholder": "E.g. We're updating some content, back in a few minutes.",
+      "footerOff": "Saves independently from the rest of the settings.",
+      "footerOn": "Site is under maintenance. Visitors see the stop page.",
+      "saveButton": "Save"
+    },
     "seo": {
       "canonicalUrl": "Canonical URL",
       "canonicalUrlPlaceholder": "https://example.com",

@@ -31,12 +31,16 @@ class PageController
 
     public function home(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        // Maintenance mode: visitors get a dedicated page, the logged-in
-        // admin keeps seeing the real site so they can still preview
-        // their work in-place. The admin's awareness lives in the SPA
-        // (banner in AppShell). We do NOT track maintenance hits — they
-        // would skew the stats panel.
-        if ($this->isMaintenanceOn() && !$this->isAdminLogged($request)) {
+        // Maintenance mode flow:
+        //  - visitors → renderMaintenance() + HTTP 503
+        //  - admin (logged in) → renderPage() with an injected banner at
+        //    the top that says "site is offline to visitors, only you
+        //    see this" with a link back to Settings → Manutenzione.
+        // We do NOT track admin maintenance hits — they would skew the
+        // stats panel.
+        $maintenanceOn = $this->isMaintenanceOn();
+        $adminLogged = $maintenanceOn && $this->isAdminLogged($request);
+        if ($maintenanceOn && !$adminLogged) {
             $accept = (string)$request->getHeaderLine('Accept-Language');
             $html = $this->renderer->renderMaintenance($accept);
             $response->getBody()->write($html);
@@ -47,6 +51,18 @@ class PageController
                 ->withHeader('Retry-After', '600');
         }
         $this->trackVisit($request, null);
+        // When the admin is previewing during maintenance, ask the
+        // renderer to inject the "you're seeing this, visitors are
+        // blocked" banner. Cache-Control becomes no-store so we don't
+        // accidentally serve the admin-only banner to anonymous CDN
+        // hits later (Cloudflare keys cache on URL, not session).
+        if ($adminLogged) {
+            $html = $this->renderer->renderPage(false, null, [], true);
+            $response->getBody()->write($html);
+            return $response
+                ->withHeader('Content-Type', 'text/html; charset=utf-8')
+                ->withHeader('Cache-Control', 'no-store');
+        }
         $html = $this->renderer->renderPage();
         $response->getBody()->write($html);
         return $response

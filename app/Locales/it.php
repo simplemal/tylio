@@ -38,6 +38,12 @@ return [
     'public.lightbox.close' => 'Chiudi',
     'public.powered_by' => 'Powered by tylio',
 
+    // Admin-only banner shown at the top of the public site when
+    // maintenance mode is on AND the visitor is the logged-in admin.
+    'public.maintenance_banner.title' => 'Sito in manutenzione',
+    'public.maintenance_banner.body' => 'I visitatori vedono la pagina di manutenzione. Tu, da loggato, vedi il sito normalmente per testarlo.',
+    'public.maintenance_banner.action' => 'Gestisci',
+
     // -----------------------------------------------------------------
     // Public site — contact form (block-rendered)
     // -----------------------------------------------------------------

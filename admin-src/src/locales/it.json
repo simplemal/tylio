@@ -384,6 +384,19 @@
       "maintenanceMessagePlaceholder": "Es. Stiamo aggiornando alcuni contenuti, torniamo tra qualche minuto.",
       "maintenanceMessageHelp": "Testo mostrato sulla pagina di manutenzione (max 500 caratteri). Se lo lasci vuoto, viene usato un messaggio predefinito nella lingua del visitatore."
     },
+    "maintenance": {
+      "title": "Modalità manutenzione",
+      "help": "Mostra una pagina di manutenzione ai visitatori del sito pubblico. Tu, da loggato in admin, continui a vedere e modificare il sito normalmente.",
+      "statusOn": "ATTIVA",
+      "toggleLabel": "Sito in manutenzione",
+      "toggleHint": "Quando attiva, i visitatori vedono la pagina di manutenzione (HTTP 503). Tu, da loggato, vedi il sito normalmente.",
+      "messageLabel": "Messaggio per i visitatori",
+      "messageHelp": "Testo mostrato sulla pagina di manutenzione (max 500 caratteri). Se vuoto, viene usato un messaggio predefinito nella lingua del visitatore.",
+      "messagePlaceholder": "Es. Stiamo aggiornando alcuni contenuti, torniamo tra qualche minuto.",
+      "footerOff": "Salvataggio indipendente dal resto delle impostazioni.",
+      "footerOn": "Il sito è in manutenzione. I visitatori vedono la pagina di stop.",
+      "saveButton": "Salva"
+    },
     "seo": {
       "canonicalUrl": "URL canonico",
       "canonicalUrlPlaceholder": "https://miosito.example.com",

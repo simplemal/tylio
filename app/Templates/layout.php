@@ -5,7 +5,12 @@
  * @var array $settings
  * @var array $blocks
  * @var string $appUrl
+ * @var bool $adminMaintenanceBanner injected by Renderer.renderPage when
+ *   the logged-in admin is previewing the live site during maintenance.
+ *   Optional — defaults to false for callers that don't set it (static
+ *   export, preview routes, …).
  */
+$adminMaintenanceBanner = $adminMaintenanceBanner ?? false;
 $siteTitle = $renderer->settingsValue($settings, 'site.title', 'tylio');
 $siteTagline = $renderer->settingsValue($settings, 'site.tagline', '');
 $siteDescription = $renderer->settingsValue($settings, 'site.description', '');
@@ -148,6 +153,97 @@ $tileCard = (
       data-tile-flush="<?= ((float)($theme['tile']['gap'] ?? 14) <= 0) ? '1' : '0' ?>"
       data-tile-card="<?= $tileCard ? '1' : '0' ?>"
       data-mobile-spacing="<?= ($theme['tile']['mobile_spacing'] ?? 'desktop') === 'minimal' ? 'minimal' : 'desktop' ?>">
+  <?php if ($adminMaintenanceBanner): ?>
+    <!-- Admin-only maintenance banner: shown ONLY when the logged-in
+         admin is previewing the live site during maintenance. The page
+         is rendered with Cache-Control: no-store so this never gets
+         served to anonymous visitors through CDN caching.
+
+         Markup is self-styled (inline) to stay readable even if the
+         theme's public.css decides to do something weird with body's
+         child layouts. Position fixed at the top, full-width, above
+         the tile mosaic; the body gets matching padding so the first
+         tile doesn't disappear under it. -->
+    <div class="m-admin-maint-banner" role="status">
+      <span class="m-admin-maint-banner__dot" aria-hidden="true"></span>
+      <div class="m-admin-maint-banner__body">
+        <strong><?= $renderer->escape($renderer->t('public.maintenance_banner.title')) ?></strong>
+        <span><?= $renderer->escape($renderer->t('public.maintenance_banner.body')) ?></span>
+      </div>
+      <a class="m-admin-maint-banner__action" href="/admin/#/settings">
+        <?= $renderer->escape($renderer->t('public.maintenance_banner.action')) ?>
+      </a>
+    </div>
+    <style>
+      :root { --m-admin-banner-h: 58px; }
+      .m-body { padding-top: var(--m-admin-banner-h); }
+      .m-admin-maint-banner {
+        position: fixed;
+        top: 0; left: 0; right: 0;
+        z-index: 9999;
+        min-height: var(--m-admin-banner-h);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 10px 18px;
+        background: #1a1410;
+        border-bottom: 1px solid rgba(251, 191, 36, 0.45);
+        color: #fde68a;
+        font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        box-shadow: 0 8px 28px -16px rgba(0,0,0,0.6);
+      }
+      .m-admin-maint-banner__dot {
+        width: 10px; height: 10px; border-radius: 50%;
+        background: #fbbf24;
+        box-shadow: 0 0 0 5px rgba(251,191,36,0.18);
+        flex-shrink: 0;
+        animation: m-admin-pulse 2s ease-in-out infinite;
+      }
+      @keyframes m-admin-pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.55; transform: scale(0.85); }
+      }
+      .m-admin-maint-banner__body {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .m-admin-maint-banner__body strong {
+        color: #fef3c7;
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .m-admin-maint-banner__body span {
+        color: #fde68a;
+        opacity: 0.85;
+        font-size: 12.5px;
+      }
+      .m-admin-maint-banner__action {
+        flex-shrink: 0;
+        padding: 7px 14px;
+        border-radius: 999px;
+        background: rgba(251, 191, 36, 0.2);
+        border: 1px solid rgba(251, 191, 36, 0.5);
+        color: #fef3c7;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        transition: background 0.15s ease;
+      }
+      .m-admin-maint-banner__action:hover {
+        background: rgba(251, 191, 36, 0.3);
+      }
+      @media (max-width: 600px) {
+        :root { --m-admin-banner-h: 84px; }
+        .m-admin-maint-banner { flex-wrap: wrap; padding: 10px 14px; }
+        .m-admin-maint-banner__body { flex-basis: 100%; order: 2; }
+        .m-admin-maint-banner__dot { order: 1; }
+        .m-admin-maint-banner__action { order: 1; margin-left: auto; }
+      }
+    </style>
+  <?php endif; ?>
   <div class="m-bg" aria-hidden="true">
     <div class="m-bg__pattern"></div>
   </div>

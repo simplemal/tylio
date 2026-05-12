@@ -249,6 +249,14 @@
   .btn-danger {
     @apply bg-red-500/15 text-red-300 hover:bg-red-500/25 border border-red-500/20;
   }
+  /* Warning variant: used by the maintenance Save button when the toggle
+     is ON, so the affordance reads as "you're committing the site to
+     offline" rather than the neutral palette-driven btn-primary. The
+     amber tones are fixed (semantic warning, not derived from the
+     palette) — same logic as the inbox-unread dot in AppShell. */
+  .btn-warning {
+    @apply bg-amber-400/20 text-amber-100 hover:bg-amber-400/30 border border-amber-400/40;
+  }
   .btn-danger:disabled {
     @apply opacity-50 cursor-not-allowed hover:bg-red-500/15;
   }
