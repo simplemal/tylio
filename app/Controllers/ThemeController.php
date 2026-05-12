@@ -106,6 +106,8 @@ class ThemeController
 
         if (isset($theme['tile']) && is_array($theme['tile'])) {
             $tile = [];
+            // Numeric geometry: clamp into a sane range so a malicious
+            // payload can't push a 9999999 px into the CSS var.
             foreach (['radius', 'gap', 'border'] as $k) {
                 if (isset($theme['tile'][$k]) && is_numeric($theme['tile'][$k])) {
                     $tile[$k] = max(0, min(200, (int)$theme['tile'][$k]));
@@ -113,6 +115,23 @@ class ThemeController
             }
             if (isset($theme['tile']['opacity']) && is_numeric($theme['tile']['opacity'])) {
                 $tile['opacity'] = max(0.0, min(1.0, (float)$theme['tile']['opacity']));
+            }
+            if (isset($theme['tile']['tessellate']) && is_numeric($theme['tile']['tessellate'])) {
+                $tile['tessellate'] = max(0.0, min(1.0, (float)$theme['tile']['tessellate']));
+            }
+            // String enums: lock to the documented set (admin SPA's
+            // `Theme.vue` only emits these values; anything else is a
+            // tamper attempt and gets dropped).
+            $enums = [
+                'style' => ['solid', 'transparent', 'glass'],
+                'mobile_spacing' => ['desktop', 'minimal'],
+                'shadow' => ['none', 'soft', 'medium', 'strong'],
+            ];
+            foreach ($enums as $k => $allowed) {
+                if (isset($theme['tile'][$k]) && is_string($theme['tile'][$k])
+                    && in_array($theme['tile'][$k], $allowed, true)) {
+                    $tile[$k] = $theme['tile'][$k];
+                }
             }
             $out['tile'] = $tile;
         }
@@ -125,6 +144,12 @@ class ThemeController
             }
             if (isset($theme['background']['intensity']) && is_numeric($theme['background']['intensity'])) {
                 $bg['intensity'] = max(0.0, min(1.0, (float)$theme['background']['intensity']));
+            }
+            // Pattern: locked to the documented set (admin SPA `Theme.vue`).
+            $bgPatterns = ['none', 'dots', 'grid', 'lines-thin', 'lines-thick', 'mosaic', 'cubes', 'image'];
+            if (isset($theme['background']['pattern']) && is_string($theme['background']['pattern'])
+                && in_array($theme['background']['pattern'], $bgPatterns, true)) {
+                $bg['pattern'] = $theme['background']['pattern'];
             }
             $out['background'] = $bg;
         }
