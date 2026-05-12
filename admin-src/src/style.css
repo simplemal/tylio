@@ -232,8 +232,13 @@
     background: rgb(var(--backend-accent-rgb));
     color: rgb(var(--backend-accent-fg-rgb));
   }
+  /* Hover override: darken the active bg by mixing 8% black instead of
+     reducing opacity. Opacity-based hover let the dark sidebar/bg show
+     through, making the pill look "dissolved" instead of "pressed".
+     `color-mix` keeps the bg fully opaque so the foreground contrast
+     stays exactly what the cascade picked. */
   .btn-primary:hover {
-    background: rgb(var(--backend-accent-rgb) / 0.9);
+    background: color-mix(in srgb, rgb(var(--backend-accent-rgb)) 92%, black);
   }
   .btn-ghost {
     /* Border ink-100/40 (main text at 40%) — always contrasts with the
@@ -472,16 +477,17 @@
 /* Sidebar nav: active route pill. Uses `--backend-accent` as bg and
    its companion fg as text/icon. Colors are STABLE across hover so
    the contrast we picked in the cascade is the contrast you always
-   see — hover state is signalled with a derived background tint
-   instead (driven by the same accent, so it stays on-palette without
-   adding another color to reason about). */
+   see — hover state is signalled with a slightly darker bg via
+   `color-mix` (NOT opacity: a previous opacity-based hover let the
+   sidebar bg show through and the whole pill looked dissolved on
+   dark themes). */
 .nav-active {
   background: rgb(var(--backend-accent-rgb));
   color: rgb(var(--backend-accent-fg-rgb));
 }
 .nav-active:hover {
   color: rgb(var(--backend-accent-fg-rgb));
-  background: rgb(var(--backend-accent-rgb) / 0.9);
+  background: color-mix(in srgb, rgb(var(--backend-accent-rgb)) 92%, black);
 }
 .nav-active .nav-item__icon {
   color: rgb(var(--backend-accent-fg-rgb));
