@@ -131,7 +131,7 @@ function backToPassword() {
   <div class="min-h-screen grid place-items-center p-6">
     <div class="w-full max-w-sm">
       <div class="flex flex-col items-center gap-3 mb-8">
-        <img :src="logoUrl" alt="tylio.app" class="brand-logo" width="56" height="56" />
+        <img :src="logoUrl" :alt="t('login.brandAlt')" class="brand-logo" width="56" height="56" />
         <h1 class="font-display text-3xl font-semibold tracking-tight">
           tylio<span class="text-ink-300 font-normal">.app</span>
         </h1>

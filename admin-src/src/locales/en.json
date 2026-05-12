@@ -54,6 +54,7 @@
   "login": {
     "title": "Sign in",
     "subtitle": "sign in to the admin panel",
+    "brandAlt": "Site logo",
     "username": "Username",
     "password": "Password",
     "submit": "Sign in",
@@ -374,7 +375,7 @@
     },
     "seo": {
       "canonicalUrl": "Canonical URL",
-      "canonicalUrlPlaceholder": "https://mysite.tylio.app",
+      "canonicalUrlPlaceholder": "https://example.com",
       "canonicalUrlHelp": "Leave empty in 99% of cases: your site only lives at one address and we use it automatically. Only fill in if your site also responds from another domain (e.g. you have a custom domain that redirects): put the one you want to be \"the main one\" for Google here.",
       "canonicalUrlHint": "Must start with http:// or https://",
       "robotsIndex": "Allow indexing by search engines",
@@ -390,7 +391,7 @@
     "contact": {
       "notifyEmail": "Email for messages",
       "notifyEmailPlaceholder": "e.g. yourname@example.com",
-      "notifyEmailHelp": "If filled in, every message sent from the Contacts form is also forwarded to you via email (in addition to being saved in \"Messages\"). Leave empty to receive only in the admin. To make sure messages reach you, add hello@tylio.app to your accepted contacts.",
+      "notifyEmailHelp": "If filled in, every message sent from the Contacts form is also forwarded to you via email (in addition to being saved in \"Messages\"). Leave empty to receive only in the admin. To make sure messages reach you, whitelist the address configured as MAIL_FROM_ADDRESS on this server in your accepted contacts.",
       "notifyEmailHint": "Where contact-form submissions are forwarded."
     },
     "language": {

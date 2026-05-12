@@ -28,6 +28,26 @@ class AuthController
         protected UserTwoFactorAuth $twoFactor,
     ) {}
 
+    /**
+     * Tenant scope passed to {@see RateLimit::loginCheck()} /
+     * {@see RateLimit::clearForIp()} for both step-1 and step-2 of the
+     * login flow.
+     *
+     * OSS returns `null` (single bucket, single user), the multi-tenant
+     * overlay overrides this to return the resolved tenant id so each
+     * tenant's brute-force counter / lockout is independent — without
+     * this hook, a successful login (or 2FA verify) on tenant A would
+     * silently clear the lockout for an attacker hammering tenant B
+     * from the same IP.
+     *
+     * **Extendable by design.** Sub-classes are expected to read the
+     * request attribute set by their tenant middleware.
+     */
+    protected function rateLimitScope(ServerRequestInterface $request): ?int
+    {
+        return null;
+    }
+
     public function login(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
         $body = $request->getParsedBody();
@@ -39,7 +59,8 @@ class AuthController
             return self::json($response, ['error' => 'missing_credentials'], 400);
         }
 
-        $wait = $this->limit->loginCheck($ip);
+        $scope = $this->rateLimitScope($request);
+        $wait = $this->limit->loginCheck($ip, $scope);
         if ($wait !== null) {
             return self::json($response, [
                 'error' => 'rate_limited',
@@ -54,7 +75,7 @@ class AuthController
             return self::json($response, ['error' => 'invalid_credentials'], 401);
         }
 
-        $this->limit->clearForIp($ip);
+        $this->limit->clearForIp($ip, $scope);
         $this->auth->logAttempt($ip, $username, true);
 
         // If the user has 2FA enabled we create a PENDING session and ask
@@ -107,7 +128,8 @@ class AuthController
         // attempts (10^6); with a 250 ms delay plus IP-based rate limit it
         // becomes impractical.
         $ip = $this->auth->clientIp($request);
-        $wait = $this->limit->loginCheck($ip);
+        $scope = $this->rateLimitScope($request);
+        $wait = $this->limit->loginCheck($ip, $scope);
         if ($wait !== null) {
             return self::json($response, ['error' => 'rate_limited', 'retry_after' => $wait], 429);
         }
@@ -117,14 +139,14 @@ class AuthController
             : $this->twoFactor->verifyTotp($userId, $code);
 
         if (!$ok) {
-            usleep(250_000); // costo costante anti-enumeration
+            usleep(250_000); // constant-cost anti-enumeration
             $this->auth->logAttempt($ip, (string)($pending['user_id'] ?? ''), false);
             return self::json($response, [
                 'error' => $useBackup ? 'invalid_backup_code' : 'invalid_2fa_code',
             ], 401);
         }
 
-        $this->limit->clearForIp($ip);
+        $this->limit->clearForIp($ip, $scope);
         $this->auth->clearPending2fa((string)$pending['id']);
         $this->db->insert('audit_log', [
             'user_id' => $userId,

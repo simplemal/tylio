@@ -90,6 +90,14 @@ foreach ($jobs as $job) {
         $totalDeleted += $count;
         echo "  ✓ {$job['label']}: deleted {$count} rows\n";
     } catch (\Throwable $e) {
+        // "no such table" is a benign condition on partial installs
+        // (e.g. someone ran cleanup before applying migrations, or a
+        // table that exists in the platform overlay was queried on a
+        // plain OSS DB). Skip rather than abort the whole sweep.
+        if (str_contains($e->getMessage(), 'no such table')) {
+            echo "  · {$job['label']}: skipped (table missing)\n";
+            continue;
+        }
         echo "  ✗ {$job['label']}: " . $e->getMessage() . "\n";
         exit(1);
     }

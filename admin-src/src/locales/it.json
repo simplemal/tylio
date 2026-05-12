@@ -53,6 +53,7 @@
   },
   "login": {
     "title": "Accedi",
+    "brandAlt": "Logo del sito",
     "subtitle": "accedi al pannello",
     "username": "Username",
     "password": "Password",
@@ -374,7 +375,7 @@
     },
     "seo": {
       "canonicalUrl": "URL canonico",
-      "canonicalUrlPlaceholder": "https://miosito.tylio.app",
+      "canonicalUrlPlaceholder": "https://miosito.example.com",
       "canonicalUrlHelp": "Lascia vuoto nel 99% dei casi: il tuo sito vive solo su un indirizzo e usiamo automaticamente quello. Compila SOLO se il tuo sito risponde anche da un altro dominio (es. hai un dominio personalizzato che redirige): metti qui quello che vuoi sia \"il principale\" per Google.",
       "canonicalUrlHint": "Deve iniziare con http:// o https://",
       "robotsIndex": "Permetti l'indicizzazione sui motori di ricerca",
@@ -390,7 +391,7 @@
     "contact": {
       "notifyEmail": "Email per i messaggi",
       "notifyEmailPlaceholder": "es. tuonome@esempio.it",
-      "notifyEmailHelp": "Se compilata, ogni messaggio inviato dal form Contatti ti viene inoltrato anche via email (oltre a essere salvato in \"Messaggi\"). Lascia vuoto per ricevere solo nell'admin. Per essere sicuro di ricevere i messaggi, aggiungi hello@tylio.app nei tuoi contatti accettati.",
+      "notifyEmailHelp": "Se compilata, ogni messaggio inviato dal form Contatti ti viene inoltrato anche via email (oltre a essere salvato in \"Messaggi\"). Lascia vuoto per ricevere solo nell'admin. Per essere sicuro di ricevere i messaggi, aggiungi nei tuoi contatti accettati l'indirizzo configurato come MAIL_FROM_ADDRESS sul server.",
       "notifyEmailHint": "Dove ricevere i messaggi inviati dal form contatti."
     },
     "language": {
