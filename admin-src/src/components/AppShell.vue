@@ -92,18 +92,21 @@ router.afterEach(() => refreshBadge())
       >
         <ul class="flex flex-col gap-1">
           <li v-for="n in nav" :key="n.to">
-            <!-- Main menu — simple logic based ONLY on text/surface:
+            <!-- Main menu colors:
                  - Default: text+icon = ink-100 (primary text)
                  - Hover: text+icon = ink-300 (secondary text)
-                 - Active: INVERTED → bg = ink-100, text+icon = ink-900
-                   (the background becomes the text color, and the text
-                   becomes the background color). text and surface are
-                   designed as opposites in any palette → contrast ALWAYS
-                   guaranteed, no dependency on accent. -->
+                 - Active: bg = --backend-accent, text+icon = its companion
+                   foreground (--backend-accent-fg). The two vars are
+                   driven by theme.ts → pickBackendAccent: tries `accent`,
+                   then `accent_alt`, then falls back to `text` so the
+                   contrast against the sidebar surface is guaranteed in
+                   every palette (the previous logic was hardcoded to the
+                   text/surface inversion, which always worked but never
+                   showed off the user's palette colors). -->
             <router-link
               :to="n.to"
               class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-ink-100 hover:text-ink-300 transition"
-              active-class="is-active bg-ink-100 text-ink-900 hover:text-ink-900"
+              active-class="nav-active"
               @click="menuOpen = false"
             >
               <span class="relative inline-flex">

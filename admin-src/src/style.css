@@ -17,6 +17,14 @@
   --accent-alt-rgb: 232 197 152;
   --accent-deep-rgb: 168 122 74;
   --accent-fg-rgb: 26 20 16; /* foreground for text on accent (auto: white/black) */
+  /* Backend accent: bg of admin's primary UI surfaces (nav-active,
+     btn-primary, settings-switch ON). Recomputed at runtime by theme.ts
+     via a 3-step cascade (accent → accent_alt → text) that filters out
+     too-light / too-dark / too-grey colors so the accent is always
+     visible against the admin surface. These defaults match the
+     earth-tone fallback above. */
+  --backend-accent-rgb: 212 165 116;
+  --backend-accent-fg-rgb: 26 20 16;
   --bg-glow-1: rgba(212, 165, 116, 0.1);
   --bg-glow-2: rgba(232, 197, 152, 0.07);
 }
@@ -214,12 +222,18 @@
   .btn {
     @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-full font-medium transition;
   }
-  /* Primary button: bg=text, fg=surface — INVERTED. Works in any palette
-     (text and surface are opposites). No accent: in extreme palettes
-     (Pink Lady · light: accent=surface=#fff) a bg-accent would be
-     invisible on the white tile. */
+  /* Primary button: bg=backend-accent, fg=backend-accent-fg. The
+     `--backend-accent-rgb` var is driven by theme.ts with a 3-step
+     cascade (accent → accent_alt → text) so it stays vivid in every
+     palette but falls back to the old text-color invariant in extreme
+     palettes (Pink Lady · light: accent=surface=#fff → cascade picks
+     a vivid fallback instead of producing an invisible white button). */
   .btn-primary {
-    @apply bg-ink-100 text-ink-900 hover:bg-ink-100/90;
+    background: rgb(var(--backend-accent-rgb));
+    color: rgb(var(--backend-accent-fg-rgb));
+  }
+  .btn-primary:hover {
+    background: rgb(var(--backend-accent-rgb) / 0.9);
   }
   .btn-ghost {
     /* Border ink-100/40 (main text at 40%) — always contrasts with the
@@ -448,12 +462,29 @@
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   transition: transform 0.18s ease;
 }
-/* Active toggle: uses ink-100 (main text) instead of accent. accent can
-   collapse with surface in extreme palettes (Pink Lady · light:
-   accent=#fff, sidebar=#fff → active toggle invisible). text is always
-   the opposite of surface in any palette. */
+/* Active toggle: uses --backend-accent (vivid when possible, falls back
+   to ink-100 in extreme palettes). See theme.ts → pickBackendAccent for
+   the cascade. */
 .settings-switch.is-on .settings-switch__track {
-  background: rgb(var(--ink-100-rgb));
+  background: rgb(var(--backend-accent-rgb));
+}
+
+/* Sidebar nav: active route pill. Same `--backend-accent` cascade as
+   the toggle ON state and `.btn-primary`, so the active item picks up
+   the same vivid accent in every palette (and falls back to the old
+   text-color inversion in extreme cases). The hover override keeps the
+   foreground locked to the accent's companion fg, otherwise the
+   inherited `.nav-item:hover { text-ink-300 }` would dim the active
+   pill on mouseover. */
+.nav-active {
+  background: rgb(var(--backend-accent-rgb));
+  color: rgb(var(--backend-accent-fg-rgb));
+}
+.nav-active:hover {
+  color: rgb(var(--backend-accent-fg-rgb));
+}
+.nav-active .nav-item__icon {
+  color: rgb(var(--backend-accent-fg-rgb));
 }
 
 /* "Status green" override for light theme: emerald-300/400 (light Tailwind)
