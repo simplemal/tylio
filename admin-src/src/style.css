@@ -485,9 +485,17 @@
   background: rgb(var(--backend-accent-rgb));
   color: rgb(var(--backend-accent-fg-rgb));
 }
+/* `!important` on the bg here is intentional: the base `.nav-item` class
+   carries a Tailwind utility `hover:bg-ink-100/[0.07]` for the non-active
+   case, and the cascade was letting that utility win on the active item
+   too (specificity tie + Tailwind's layer position). The result was the
+   active pill collapsing into the same faint tint as the disabled-hover
+   state, with the active-fg text still on top → dark-on-dark / light-on-
+   light depending on the palette. The `!important` is a deliberate
+   override against the base utility, not against another semantic rule. */
 .nav-active:hover {
-  color: rgb(var(--backend-accent-fg-rgb));
-  background: color-mix(in srgb, rgb(var(--backend-accent-rgb)) 92%, black);
+  color: rgb(var(--backend-accent-fg-rgb)) !important;
+  background: color-mix(in srgb, rgb(var(--backend-accent-rgb)) 92%, black) !important;
 }
 .nav-active .nav-item__icon {
   color: rgb(var(--backend-accent-fg-rgb));
