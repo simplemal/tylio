@@ -98,25 +98,34 @@ function passesBackendAccentChecks(c: [number, number, number]): boolean {
 /**
  * Pick the admin's "backend accent" with a 3-step cascade so the active
  * nav item / toggle-ON / primary button always have a vivid, readable
- * color regardless of the palette the user picked:
+ * color regardless of the palette the user picked.
  *
- *   1. `accent` (primary)        — when it has enough hue + contrast
- *   2. `accent_alt` (secondary)  — when the primary is neutral; this is
- *                                  often where the palette author put the
- *                                  "vivid foil" (e.g. Pink Lady has
- *                                  accent=#fff, accent_alt=#ff5fa8)
- *   3. `text` (`ink-100`)        — guaranteed contrast with surface,
- *                                  same fallback the toggle used before
- *                                  this cascade existed
+ * Each step yields BOTH the background and its companion foreground —
+ * the foreground choice is part of the cascade, not an afterthought:
+ *
+ *   1. `accent`      passes checks → bg=accent,     fg=accentSoft
+ *      (when the primary accent is vivid, use the palette author's
+ *      "contrast on main accent" as the text color on top of it)
+ *
+ *   2. `accentSoft`  passes checks → bg=accentSoft, fg=accent
+ *      (when the primary is too neutral, the "contrast on accent" is
+ *      usually a vivid foil — Pink Lady · light has accent=#fff and
+ *      accent_soft=#ff5fa8; we swap them so the vivid one becomes the
+ *      backdrop and the neutral one becomes the text)
+ *
+ *   3. fallback                  → bg=text,        fg=surface
+ *      (both candidates are neutral or out-of-range; the old "text on
+ *      surface" inversion is guaranteed to contrast in any palette)
  */
 function pickBackendAccent(
   accent: [number, number, number],
-  accentAlt: [number, number, number],
+  accentSoft: [number, number, number],
   text: [number, number, number],
-): [number, number, number] {
-  if (passesBackendAccentChecks(accent)) return accent
-  if (passesBackendAccentChecks(accentAlt)) return accentAlt
-  return text
+  surface: [number, number, number],
+): { bg: [number, number, number]; fg: [number, number, number] } {
+  if (passesBackendAccentChecks(accent)) return { bg: accent, fg: accentSoft }
+  if (passesBackendAccentChecks(accentSoft)) return { bg: accentSoft, fg: accent }
+  return { bg: text, fg: surface }
 }
 
 export function applyPalette(palette: PublicPalette): void {
@@ -157,18 +166,16 @@ export function applyPalette(palette: PublicPalette): void {
   root.setProperty('--accent-soft-rgb', rgbStr(accentSoft, '255 255 255'))
   root.setProperty('--accent-alt-fg-rgb', rgbStr(accentAltFg, '26 20 16'))
 
-  // Backend accent: the color used by admin UI elements (primary button,
-  // active nav item, settings toggle ON). Falls back through accent →
-  // accent_alt → text so it stays vivid + readable in every palette.
-  const backendAccent = pickBackendAccent(accent, accentAlt, text)
-  // Foreground on top of the backend accent: on-palette ink-900
-  // (surface) when the accent is light, ink-100 (text) when it's dark.
-  // Same invariant the old `bg-ink-100 text-ink-900` btn-primary relied
-  // on, just driven by the actual color we end up choosing.
-  const backendAccentFg: [number, number, number] =
-    luminance(backendAccent) > 0.55 ? surface : text
-  root.setProperty('--backend-accent-rgb', rgbStr(backendAccent, '212 165 116'))
-  root.setProperty('--backend-accent-fg-rgb', rgbStr(backendAccentFg, '26 20 16'))
+  // Backend accent: the color used by admin UI surfaces (primary
+  // button, active nav item, settings toggle ON). The cascade returns
+  // BOTH the bg and the companion fg — we never auto-derive the fg
+  // from luminance alone, because the palette author's explicit
+  // "contrast on accent" choice (`accent_soft`) carries information
+  // WCAG can't recover (e.g. a brand-specific tinted dark instead of
+  // pure black). See `pickBackendAccent` for the cascade rules.
+  const backend = pickBackendAccent(accent, accentSoft, text, surface)
+  root.setProperty('--backend-accent-rgb', rgbStr(backend.bg, '212 165 116'))
+  root.setProperty('--backend-accent-fg-rgb', rgbStr(backend.fg, '26 20 16'))
 
   // Background glow: subtle accent-colored vignette.
   root.setProperty('--bg-glow-1', `rgba(${accent.join(',')},.10)`)
