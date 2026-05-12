@@ -145,13 +145,14 @@ router.afterEach(() => refreshShellState())
                   :title="t('shell.unreadCountTitle', { n: inbox.unread })"
                   :aria-label="t('shell.unreadCountAria')"
                 ></span>
-                <!-- "Site under maintenance" dot: fixed amber (semantic
-                     "warning/attention"), pulsing so the eye catches it
-                     even on a quick glance at the sidebar. Mirror of the
-                     rose-500 pattern above. -->
+                <!-- "Site under maintenance" dot: theme-aware warning
+                     hue (--warning-rgb), pulsing so the eye catches it
+                     at a glance. The `.warn-dot` utility renders the
+                     full-saturation amber regardless of light/dark
+                     palette. -->
                 <span
                   v-if="n.badge === 'maintenance' && site.maintenance"
-                  class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-ink-900 animate-pulse"
+                  class="warn-dot absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full ring-2 ring-ink-900 animate-pulse"
                   :title="t('shell.maintenanceTitle')"
                   :aria-label="t('shell.maintenanceTitle')"
                 ></span>
@@ -187,23 +188,24 @@ router.afterEach(() => refreshShellState())
     <!-- Main content -->
     <main class="flex-1 md:ml-64 p-5 md:p-8 max-w-6xl">
       <!-- Maintenance banner: only shown when the site is in maintenance
-           mode. Visitors see the maintenance page; the admin keeps using
-           the site so the banner here is a reminder, not a warning. The
-           link goes to Settings → Maintenance (id="maintenance-anchor"). -->
+           mode. Uses the theme-aware `.warn-box` utility so the text /
+           border / background all stay readable on every palette (the
+           old bare `bg-amber-400/[0.08] text-amber-200` was invisible
+           on Nordic light & friends — amber on cream-white). -->
       <div
         v-if="site.maintenance"
-        class="mb-5 rounded-xl border border-amber-400/30 bg-amber-400/[0.08] text-amber-200 px-4 py-3 flex items-start gap-3"
+        class="warn-box mb-5 rounded-xl px-4 py-3 flex items-start gap-3"
         role="status"
         aria-live="polite"
       >
-        <iconify-icon icon="lucide:wrench" width="20" class="mt-0.5 shrink-0"></iconify-icon>
+        <iconify-icon icon="lucide:wrench" width="20" class="warn-icon mt-0.5 shrink-0"></iconify-icon>
         <div class="text-sm leading-snug">
-          <p class="font-medium">{{ t('shell.maintenanceTitle') }}</p>
-          <p class="text-amber-200/80 mt-0.5">{{ t('shell.maintenanceBody') }}</p>
+          <p class="warn-strong font-medium">{{ t('shell.maintenanceTitle') }}</p>
+          <p class="mt-0.5 opacity-90">{{ t('shell.maintenanceBody') }}</p>
         </div>
         <router-link
           to="/maintenance"
-          class="ml-auto self-center text-xs underline-offset-2 hover:underline whitespace-nowrap"
+          class="warn-strong ml-auto self-center text-xs underline-offset-2 hover:underline whitespace-nowrap"
         >
           {{ t('shell.maintenanceManage') }}
         </router-link>

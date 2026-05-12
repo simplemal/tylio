@@ -768,10 +768,10 @@ async function performDelete() {
     <!-- ===== BACKUP CODES (shown only once) ===== -->
     <div
       v-else-if="twoFactorView === 'showing_backup'"
-      class="space-y-3 p-4 rounded-xl border border-amber-500/40 bg-amber-500/5"
+      class="warn-box space-y-3 p-4 rounded-xl"
     >
       <p class="text-sm">
-        <strong class="text-amber-300">{{ t('settings.security.twoFactorBackupTitle') }}</strong>
+        <strong class="warn-strong">{{ t('settings.security.twoFactorBackupTitle') }}</strong>
         {{ t('settings.security.twoFactorBackupHint') }}
       </p>
       <pre class="grid grid-cols-2 gap-1 text-sm font-mono bg-ink-900 rounded-md p-3 text-ink-100">{{ twoFactorBackupCodes.join('\n') }}</pre>
@@ -848,8 +848,8 @@ async function performDelete() {
          the tylio backend (form submit, email, tracking) doesn't work
          offline. For absolute clarity we list them here — the user
          knows exactly what they will get in the downloaded file. -->
-    <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 mb-4">
-      <p class="text-xs text-amber-200 font-medium mb-2 flex items-center gap-1.5">
+    <div class="warn-box rounded-xl p-3 mb-4">
+      <p class="warn-strong text-xs font-medium mb-2 flex items-center gap-1.5">
         <iconify-icon icon="lucide:triangle-alert" width="14"></iconify-icon>
         {{ t('settings.export.warningExclTitle') }}
       </p>

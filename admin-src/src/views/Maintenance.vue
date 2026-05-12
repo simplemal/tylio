@@ -109,11 +109,11 @@ function discardChanges(): void {
     </div>
     <span
       v-if="flag"
-      class="text-sm font-medium text-amber-200 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-400/[0.12] border border-amber-400/40"
+      class="warn-pill text-sm font-medium inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
     >
       <span class="relative inline-flex">
-        <span class="absolute inset-0 rounded-full bg-amber-400 animate-ping opacity-60"></span>
-        <span class="relative w-2 h-2 rounded-full bg-amber-400"></span>
+        <span class="warn-dot absolute inset-0 rounded-full animate-ping opacity-60"></span>
+        <span class="warn-dot relative w-2 h-2 rounded-full"></span>
       </span>
       {{ t('maintenance.statusOn') }}
     </span>
@@ -140,9 +140,7 @@ function discardChanges(): void {
   <section
     v-else
     class="tile"
-    :class="flag
-      ? 'border-amber-400/40 bg-amber-400/[0.06] shadow-[0_0_0_1px_rgba(251,191,36,0.18)_inset]'
-      : ''"
+    :class="flag ? 'warn-tile' : ''"
   >
     <!-- Toggle row -->
     <label class="!flex items-start gap-4 cursor-pointer !mb-6 !pb-0">

@@ -174,13 +174,13 @@ function mailStatusInfo(m: Submission): { icon: string; label: string; class: st
       return {
         icon: 'lucide:mail-warning',
         label: t('submissions.mailStatus.noServer'),
-        class: 'text-amber-400',
+        class: 'warn-icon',
       }
     case 'no_recipient':
       return {
         icon: 'lucide:mail-warning',
         label: t('submissions.mailStatus.noEmailSet'),
-        class: 'text-amber-400',
+        class: 'warn-icon',
       }
     case 'error':
       return {

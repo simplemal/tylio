@@ -25,6 +25,12 @@
      earth-tone fallback above. */
   --backend-accent-rgb: 212 165 116;
   --backend-accent-fg-rgb: 26 20 16;
+  /* Semantic warning hue — fixed value (not derived from the palette).
+     Amber-500 (#f59e0b) sits in the mid-luminosity range so it reads as
+     "warning" on both light and dark palettes. Components combine it
+     with --ink-100-rgb via color-mix for the final readable text. See
+     `.warn-box` / `.warn-pill` / `.warn-tile` below. */
+  --warning-rgb: 245 158 11;
   --bg-glow-1: rgba(212, 165, 116, 0.1);
   --bg-glow-2: rgba(232, 197, 152, 0.07);
 }
@@ -249,13 +255,69 @@
   .btn-danger {
     @apply bg-red-500/15 text-red-300 hover:bg-red-500/25 border border-red-500/20;
   }
-  /* Warning variant: used by the maintenance Save button when the toggle
-     is ON, so the affordance reads as "you're committing the site to
-     offline" rather than the neutral palette-driven btn-primary. The
-     amber tones are fixed (semantic warning, not derived from the
-     palette) — same logic as the inbox-unread dot in AppShell. */
+  /* ===== Warning surface — theme-aware =====
+     Used everywhere we have a "heads-up" status: the AppShell
+     maintenance banner, the Maintenance view's "ATTIVA" pill + ON-state
+     tile, the static-export caveat box in Settings, the 2FA backup-codes
+     callout, etc.
+
+     The original implementation used bare Tailwind classes
+     (`bg-amber-400/[0.08] text-amber-200 …`) which assumed a dark admin
+     UI: on light palettes (Nordic light, Pink Lady light, …) the
+     foreground amber-200 became cream-on-cream → invisible.
+
+     Strategy: pick `--warning-rgb` = amber-500 (mid-luminosity, the most
+     "road sign" amber), use semi-transparent backgrounds so the box
+     blends with whatever surface it lands on, and derive the text color
+     by `color-mix`-ing the warning hue with the palette's current
+     primary text (`--ink-100-rgb`, set by theme.ts). On light themes
+     ink-100 is dark slate → text leans dark amber-brown (readable on
+     pale-amber tint). On dark themes ink-100 is cream → text leans
+     light amber. Same single CSS rule, both worlds. */
+  .warn-box {
+    background: rgb(var(--warning-rgb) / 0.12);
+    border: 1px solid rgb(var(--warning-rgb) / 0.45);
+    color: color-mix(in srgb, rgb(var(--warning-rgb)) 55%, rgb(var(--ink-100-rgb)));
+  }
+  /* Stronger variant for titles/labels inside a .warn-box: leans more
+     towards the palette text (only 25% amber tint) so the heading is
+     still clearly readable even when the surface picks up some amber. */
+  .warn-strong {
+    color: color-mix(in srgb, rgb(var(--warning-rgb)) 25%, rgb(var(--ink-100-rgb)));
+  }
+  /* Compact pill (status badge: "ATTIVA"). Stronger amber bias on the
+     text because the pill is small and needs to "pop". */
+  .warn-pill {
+    background: rgb(var(--warning-rgb) / 0.18);
+    border: 1px solid rgb(var(--warning-rgb) / 0.55);
+    color: color-mix(in srgb, rgb(var(--warning-rgb)) 70%, rgb(var(--ink-100-rgb)));
+  }
+  /* Pure amber accents — icons and animated dots — that should be at
+     full saturation regardless of surrounding context. */
+  .warn-icon { color: rgb(var(--warning-rgb)); }
+  .warn-dot  { background: rgb(var(--warning-rgb)); }
+  /* Tile / form container in its "warning state" (e.g. Maintenance.vue
+     when the toggle is ON). Tinted background + tinted border + a soft
+     inset glow so the user sees at a glance which mode they're in. */
+  .warn-tile {
+    border-color: rgb(var(--warning-rgb) / 0.45);
+    background: rgb(var(--warning-rgb) / 0.06);
+    box-shadow: 0 0 0 1px rgb(var(--warning-rgb) / 0.18) inset;
+  }
+  /* Warning-flavored button — uses the same vars + a slightly stronger
+     background, with a hover variant via color-mix darkening. Same
+     pattern as .btn-primary's hover. */
   .btn-warning {
-    @apply bg-amber-400/20 text-amber-100 hover:bg-amber-400/30 border border-amber-400/40;
+    background: rgb(var(--warning-rgb) / 0.22);
+    border: 1px solid rgb(var(--warning-rgb) / 0.55);
+    color: color-mix(in srgb, rgb(var(--warning-rgb)) 70%, rgb(var(--ink-100-rgb)));
+  }
+  .btn-warning:hover {
+    background: rgb(var(--warning-rgb) / 0.32);
+  }
+  .btn-warning:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
   .btn-danger:disabled {
     @apply opacity-50 cursor-not-allowed hover:bg-red-500/15;
