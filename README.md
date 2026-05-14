@@ -242,6 +242,53 @@ return function (PDO $pdo, DB $db): void {
 
 **Golden rule**: a migration that has been applied elsewhere (CI, production, other developers) **must not be modified anymore**. Always add a new migration. See `CONTRIBUTING.md` for details.
 
+## Cutting a release
+
+`scripts/make-release.sh` automates the steps required to publish a new
+tylio release on GitHub. Each step is idempotent — if something fails
+halfway through (e.g. the editor exits without saving), re-running the
+script picks up where the previous run left off.
+
+```bash
+# Pick a semver version (the leading `v` is optional, it gets added if
+# you omit it). Dry-runs aren't a thing — but every destructive step
+# (push, GitHub release) asks for explicit confirmation.
+scripts/make-release.sh v0.2.0
+```
+
+What it does, in order:
+
+1. Validates the version against semver (`MAJOR.MINOR.PATCH[-pre][+build]`).
+2. Writes `BUILD` (release marker, e.g. `v0.2.0`) and `.version`
+   (UTC timestamp `YYYY-MM-DD-HHMMSS`). Both are read by
+   `Tylio\Util\Build::init()` for asset cache-busting.
+3. Prepends a new entry to `CHANGELOG.md`:
+   `## v0.2.0 — YYYY-MM-DD` followed by an auto-collected list of
+   `feat:`/`fix:` commits since the previous tag. Opens `$EDITOR`
+   (fallback `vi`) so you can refine the notes — the version section
+   between this header and the next `## v…` becomes the body of the
+   GitHub release.
+4. Runs `composer install --no-dev --optimize-autoloader` to refresh
+   `composer.lock` against the release.
+5. Runs `cd admin-src && npm install && npm run build && cd ..` to
+   refresh the bundled SPA. The built `admin/` directory is then
+   packaged as `tylio-admin-bundle-vX.Y.Z.tar.gz`, attached to the
+   GitHub release so anyone updating an OSS install without Node can
+   just drop the new bundle in place.
+6. Commits everything as `chore(release): vX.Y.Z` and creates an
+   annotated git tag `vX.Y.Z`.
+7. Prompts before `git push origin main && git push origin vX.Y.Z`.
+8. Prompts before `gh release create vX.Y.Z` with the auto-extracted
+   changelog section as `--notes-file` and the admin tarball as an
+   asset. Skipped silently if `gh` is not installed (you can create
+   the release manually from the GitHub UI).
+
+Re-cutting an existing version is supported with `--force-tag`
+(deletes the local tag, re-creates it). Don't pass it after pushing —
+re-tagging a published version is bad form. Just bump the patch level.
+The script refuses to commit if the working tree has uncommitted
+changes outside the gitignored `admin/` build directory.
+
 ## Useful commands
 
 ```bash
