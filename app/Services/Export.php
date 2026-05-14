@@ -229,15 +229,30 @@ class Export
         }
         // Only copy files referenced by the media table — anything else
         // (orphan uploads from deleted media rows) is junk we don't want
-        // to bring along.
-        $media = $this->db->all('SELECT filename FROM media');
-        foreach ($media as $r) {
-            $fn = basename((string)$r['filename']);
+        // to bring along. Subclasses scope this list to a tenant.
+        foreach ($this->mediaFilenames() as $rawName) {
+            $fn = basename($rawName);
             if ($fn === '' || $fn === '.' || $fn === '..') continue;
             $src = $srcDir . '/' . $fn;
             if (!is_file($src)) continue;
             @copy($src, $destDir . '/' . $fn);
         }
+    }
+
+    /**
+     * Filenames recorded in the media table. Subclasses (TenantExport)
+     * override to filter by `tenant_id`.
+     *
+     * @return list<string>
+     */
+    protected function mediaFilenames(): array
+    {
+        $rows = $this->db->all('SELECT filename FROM media');
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = (string)$r['filename'];
+        }
+        return $out;
     }
 
     private function copyFavicons(string $destDir): void
@@ -270,7 +285,7 @@ class Export
      * than a JSON-encoded one). Returning the raw fallback is safer for
      * portability — the importer always JSON-encodes back before INSERT.
      */
-    private function decodeJson(string $raw): mixed
+    protected function decodeJson(string $raw): mixed
     {
         if ($raw === '') return null;
         $decoded = json_decode($raw, true);
