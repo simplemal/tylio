@@ -526,6 +526,47 @@ export type SettingValue = string | boolean
 export type Settings = Record<string, SettingValue>
 
 // =====================================================================
+// Update check (GET /api/admin/update-check)
+// =====================================================================
+
+/**
+ * Successful payload from GET /api/admin/update-check.
+ *
+ *  - `current`: locally installed version (e.g. `v0.1.0`, `v0.1.0-3-gabc`,
+ *    `build-2026-05-14-160000`, `dev`).
+ *  - `latest`: most recent GitHub release tag, or `null` when the API
+ *    call failed (network down, rate limit, no releases yet).
+ *  - `is_outdated`: true only if both versions are comparable and the
+ *    local one is strictly older.
+ *  - `last_checked`: ISO-8601 of the last successful poll.
+ *  - `changelog_html`: pre-sanitized HTML of the release body (Markdown
+ *    rendered server-side via `Util\Markdown`), safe to v-html.
+ *  - `release_url`: GitHub release page link.
+ *  - `release_name`: human title of the release.
+ */
+export interface UpdateCheckOk {
+  current: string
+  latest: string | null
+  is_outdated: boolean
+  last_checked: string
+  changelog_html: string
+  release_url: string
+  release_name: string
+}
+
+/**
+ * Operator-disabled signal returned by the SaaS overlay
+ * (`TenantUpdateController`). HTTP 200 + `{ disabled: true }` so the
+ * SPA can hide the card without surfacing an error.
+ */
+export interface UpdateCheckDisabled {
+  disabled: true
+  reason?: string
+}
+
+export type UpdateCheckResponse = UpdateCheckOk | UpdateCheckDisabled
+
+// =====================================================================
 // API error
 // =====================================================================
 

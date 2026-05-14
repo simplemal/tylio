@@ -11,6 +11,7 @@ import {
   type Stats,
   type Submission,
   type Theme,
+  type UpdateCheckResponse,
   type User,
 } from './types'
 
@@ -154,6 +155,14 @@ export const api = {
 
   // Stats
   stats: () => request<Stats>('/stats'),
+
+  // Update check (Settings → "Aggiornamenti tylio" card). Compares local
+  // version with the latest GitHub release. 24h cache on the server;
+  // pass `force=true` to bust it (the "Verifica ora" link).
+  updateCheck: (force = false) =>
+    request<UpdateCheckResponse>(
+      '/admin/update-check' + (force ? '?force=1' : ''),
+    ),
 
   // Submissions
   listSubmissions: () => request<{ submissions: Submission[] }>('/submissions'),
