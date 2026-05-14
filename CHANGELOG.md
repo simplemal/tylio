@@ -5,6 +5,28 @@ All notable changes to tylio are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## v0.1.0 — 2026-05-14
+
+### Notes
+
+- feat(updates/admin): "Aggiornamenti tylio" card in Settings with version compare + changelog
+- feat(updates): /api/admin/update-check compares local vs GitHub release with 24h cache
+- feat(import): /install/import + /admin/import accept tar.gz exports, handle schema variations
+- feat(export): GET /admin/export produces full-site tar.gz (data + uploads + favicons)
+- feat(install): comprehensive Linux prereq guide + automated bootstrap script
+- fix(install): wizard now uses Neon · scuro palette (default OSS UI)
+- fix(admin): warning surfaces readable on light AND dark palettes
+- feat(maintenance): dedicated /maintenance route with own sidebar entry
+- feat(maintenance): standalone settings card + admin banner on live site
+- fix(theme): preserve palette.name (preset id) through sanitization
+- feat(install+maintenance+palette): site setup wizard, maintenance mode, palette auto-highlight
+- fix(theme): widen sanitizer whitelist for tile + background fields
+- fix(admin/i18n): escape @ in translation strings + add pre-build syntax check
+- fix(admin/i18n): use typographic apostrophe in IT to avoid vue-i18n lexer crash
+- fix(admin): bump checkbox/radio size to 18px for visibility
+- fix(admin): re-enable native appearance on checkbox/radio
+
 ## [Unreleased]
 
 ### Added
