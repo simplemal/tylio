@@ -17,6 +17,7 @@ use Tylio\Services\Migrations;
 use Tylio\Services\RateLimit;
 use Tylio\Services\Renderer;
 use Tylio\Services\StaticExporter;
+use Tylio\Services\UpdateChecker;
 use Slim\Factory\AppFactory;
 
 return static function (): \Slim\App {
@@ -81,6 +82,16 @@ return static function (): \Slim\App {
     $container->set(Import::class, fn(Container $c) => new Import(
         $c->get(DB::class),
         $config,
+    ));
+    // GitHub release lookup for the admin SPA's "Aggiornamenti tylio"
+    // card. Results cached in `settings` for 24h to stay under the
+    // GitHub API rate limit.
+    $container->set(UpdateChecker::class, fn(Container $c) => new UpdateChecker(
+        $c->get(DB::class),
+        $config,
+    ));
+    $container->set(\Tylio\Controllers\UpdateController::class, fn(Container $c) => new \Tylio\Controllers\UpdateController(
+        $c->get(UpdateChecker::class),
     ));
 
     // Auto-migrate on boot: idempotent, safe on a fresh install too.

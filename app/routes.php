@@ -14,6 +14,7 @@ use Tylio\Controllers\SubmissionsController;
 use Tylio\Controllers\ThemeController;
 use Tylio\Controllers\TwoFactorController;
 use Tylio\Controllers\TypesController;
+use Tylio\Controllers\UpdateController;
 use Tylio\Middleware\AuthMiddleware;
 use Tylio\Middleware\CsrfMiddleware;
 use Slim\App;
@@ -110,6 +111,11 @@ return static function (App $app): void {
 
         $g->get('/export', [ExportController::class, 'download']);
         $g->get('/export/inline', [ExportController::class, 'downloadInline']);
+
+        // Compare local tylio version with the latest GitHub release.
+        // 24h cache; pass `?force=1` to bust it (e.g. when the user
+        // clicks the "Verifica ora" link in Settings).
+        $g->get('/admin/update-check', [UpdateController::class, 'check']);
 
         // 2FA management endpoints (user already authenticated).
         $g->get('/2fa/status', [TwoFactorController::class, 'status']);
