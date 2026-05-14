@@ -25,37 +25,147 @@
 
 ## Requirements
 
-- PHP **8.2+** with extensions: `pdo_sqlite`, `gd`, `zip`, `sodium`, `mbstring`, `fileinfo`, `json`
-- **Composer** 2.x
+- PHP **8.2+** with extensions: `pdo_sqlite`, `gd`, `zip`, `sodium`, `mbstring`, `fileinfo`, `json`, `curl`, `intl`, `xml`
+- **Composer** 2.x (installed via the official installer — see notes below)
 - **Node 20+** + npm (only to build the admin SPA — not needed on the server in production)
+- `sqlite3` CLI (optional, useful for inspecting the database)
 - Apache with `mod_rewrite` (or equivalent with front-controller routing)
 
 ## Install (first time)
 
+> **Fast path for Ubuntu/Debian users:** run `sudo bash scripts/install-prereqs.sh`
+> after cloning. It installs PHP 8.3 with all extensions, Composer (official
+> installer), Node 20, and `sqlite3` — picking the right packages for your
+> distro codename (focal/jammy/noble/bookworm/trixie). Pass `--check` to
+> verify what's already installed without touching the system.
+
+### 1. Clone
+
 ```bash
-# 1. Clone
 git clone https://github.com/simplemal/tylio.git my-site
 cd my-site
+```
 
-# 2. PHP dependencies
+If you cloned with `sudo` into a system directory (e.g. `/var/www/`), git's
+"dubious ownership" protection will block subsequent `git` / `composer`
+commands. Allow the directory for both root and your deploy user:
+
+```bash
+git config --global --add safe.directory /var/www/my-site
+sudo git config --global --add safe.directory /var/www/my-site
+```
+
+### 2. Install PHP 8.2+ and required extensions (Ubuntu/Debian)
+
+Ubuntu 20.04 (focal) ships PHP 7.4 by default and Ubuntu 22.04 (jammy) ships
+PHP 8.1 — too old for tylio. Use the **Sury PPA** (`packages.sury.org/php/`),
+*not* `ppa:ondrej/php` on Launchpad (the launchpad PPA has been empty for
+focal since June 2025 — verified).
+
+```bash
+sudo apt update
+sudo apt install -y curl ca-certificates lsb-release apt-transport-https
+curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
+sudo dpkg -i /tmp/debsuryorg-archive-keyring.deb
+echo "deb [signed-by=/usr/share/keyrings/deb.sury.org-php.gpg] https://packages.sury.org/php/ $(lsb_release -sc) main" \
+    | sudo tee /etc/apt/sources.list.d/sury-php.list
+sudo apt update
+
+# Install PHP 8.3 + the extensions tylio needs.
+# Replace "8.3" with the version you want — make sure to keep it consistent.
+sudo apt install -y \
+    php8.3 php8.3-cli php8.3-fpm \
+    php8.3-sqlite3 php8.3-gd php8.3-zip \
+    php8.3-mbstring php8.3-xml php8.3-curl php8.3-intl
+```
+
+> Built-ins in PHP 8.3 (no extra package needed): `sodium`, `fileinfo`,
+> `json`, `ctype`, `openssl`.
+
+Sanity check:
+
+```bash
+php --version
+php -m | grep -iE 'pdo_sqlite|gd|zip|mbstring|sodium|curl|intl'
+```
+
+### 3. Install Composer (official installer — NOT `apt`)
+
+**Do not** run `sudo apt install composer`. On Ubuntu/Debian the apt package
+pulls **`php-cli` from the distro** as a dependency, and the resulting
+`/usr/bin/composer` is hard-wired to that older PHP — even if you installed
+8.3 from Sury. Symptom: `composer install` fails with `ext-gd / ext-pdo_sqlite /
+ext-zip missing` because Composer is looking inside the wrong PHP.
+
+```bash
+php -r "copy('https://getcomposer.org/installer', '/tmp/composer-setup.php');"
+sudo php /tmp/composer-setup.php --install-dir=/usr/local/bin --filename=composer
+rm /tmp/composer-setup.php
+composer --version   # should print "Composer version 2.x"
+```
+
+### 4. Install Node 20+ (NodeSource setup script)
+
+Node 20+ is not available in the Ubuntu repos on focal/jammy. Use the
+NodeSource setup script:
+
+```bash
+sudo apt install -y curl
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo bash -
+sudo apt install -y nodejs
+node --version    # v20.x
+npm --version
+```
+
+### 5. Install the `sqlite3` CLI (optional but useful)
+
+`php8.3-sqlite3` is only the PHP extension. The `sqlite3` shell binary is
+separate:
+
+```bash
+sudo apt install -y sqlite3
+```
+
+### 6. PHP dependencies and admin SPA
+
+```bash
 composer install --no-dev --optimize-autoloader
 
-# 3. Build the admin SPA (Vue + Vite)
 cd admin-src
 npm install
 npm run build          # writes ../admin/ (gitignored)
 cd ..
+```
 
-# 4. Configuration
+### 7. Pre-create runtime directories with correct ownership
+
+PHP-FPM runs as `www-data` on Ubuntu/Debian (`apache` on Red Hat). When you
+cloned with `sudo` the project root is `root:root`, so the `mkdir` calls in
+`bootstrap.php` would silently fail and `data/db.sqlite` would never get
+created. Create the directories upfront and hand them to the web user:
+
+```bash
+sudo mkdir -p data data/sessions data/logs uploads favicons
+sudo chown -R www-data:www-data data uploads favicons
+sudo chmod -R 770 data uploads favicons
+```
+
+If you're on shared hosting with no shell, create those four directories via
+SFTP — the install wizard will create `db.sqlite` on the first hit.
+
+### 8. Configuration
+
+```bash
 cp .env.example .env
 # Edit .env: at minimum set APP_URL and APP_KEY:
 #   APP_KEY=$(php -r "echo bin2hex(random_bytes(32));")
-
-# 5. Webserver
-# Apache: DocumentRoot = project root. The shipped .htaccess provides
-# front-controller routing on index.php and denies access to
-# .env, vendor/, app/, etc.
 ```
+
+### 9. Webserver
+
+Apache: **DocumentRoot = project root** (the repo's top level, *not*
+`public/`). The shipped `.htaccess` provides front-controller routing on
+`index.php` and denies access to `.env`, `vendor/`, `app/`, etc.
 
 Visit `https://your-domain.example/install` in a browser to:
 - create the admin user,
@@ -64,7 +174,15 @@ Visit `https://your-domain.example/install` in a browser to:
 
 `/install` auto-disables itself after first run. Then `/admin` is your editor.
 
-> **No shell on the server?** Install runs entirely via browser. Migrations apply automatically on the first hit to `/install` (and on every subsequent boot — they're idempotent).
+> **No shell on the server?** Install runs entirely via browser. Migrations
+> apply automatically on the first hit to `/install` (and on every subsequent
+> boot — they're idempotent).
+>
+> **Migrating from a tylio.app SaaS tenant?** Drop a `.tar.gz` exported from
+> the SaaS admin into the install wizard's second card ("Importa un sito
+> esistente"). The importer rewrites the multi-tenant schema to single-tenant,
+> moves the slug-scoped uploads to flat paths, and patches all DB references
+> in one shot. See *Troubleshooting* below for details.
 
 ## Upgrade (from one version to the next)
 
@@ -207,3 +325,109 @@ MIT — see [LICENSE](LICENSE).
 ## Hosted version
 
 [tylio.app](https://tylio.app) is the hosted service built on this codebase plus a separate multi-tenant overlay. For self-hosted use, everything you need is in this repo — it stands alone.
+
+## Troubleshooting
+
+Real frictions encountered installing tylio on a fresh Ubuntu 20.04 LXC,
+distilled. If you hit something new, please open an issue.
+
+### `sudo: setrlimit(RLIMIT_CORE): Operation not permitted`
+
+You're on a Proxmox unprivileged LXC. Benign warning — the command runs.
+To suppress it, add `Defaults !use_pty` to `/etc/sudoers` via `visudo`,
+or just ignore the line.
+
+### `composer install` reports `ext-gd / ext-pdo_sqlite / ext-zip missing`
+
+Most common cause on Ubuntu 20.04: you ran `apt install composer`, which
+pulled the distro's PHP 7.4 as a dependency, and `/usr/bin/composer` is
+now pinned to PHP 7.4 (which doesn't have the extensions). Fix: use the
+official installer (step 3 above) and check `composer --version` prints
+the right PHP path (`composer about` or `composer diagnose`).
+
+If the right Composer is in place, you really are missing the extensions —
+install them via the Sury PPA (step 2 above).
+
+### `fatal: detected dubious ownership in repository at '/var/www/...'`
+
+Git ≥ 2.35 refuses to operate in repos not owned by the current user
+(anti-attack measure on shared filesystems). Clear it for both root and
+your deploy user:
+
+```bash
+git config --global --add safe.directory /var/www/your-site
+sudo git config --global --add safe.directory /var/www/your-site
+```
+
+### `bash: sqlite3: command not found`
+
+`php8.3-sqlite3` is the PHP extension; the CLI binary is a separate package:
+
+```bash
+sudo apt install -y sqlite3
+```
+
+### HTTP 500 on the first hit; logs say `unable to open database file`
+
+`data/` doesn't exist (or `www-data` can't write into it). After `sudo git
+clone …` the project root is `root:root 755`. Pre-create the runtime dirs
+and chown them (step 7 above):
+
+```bash
+sudo mkdir -p data data/sessions data/logs uploads favicons
+sudo chown -R www-data:www-data data uploads favicons
+sudo chmod -R 770 data uploads favicons
+```
+
+### Migrated from a tylio.app SaaS tenant: `no such column: id` on `theme`
+
+The SaaS multitenant migration drops `theme.id` and uses `tenant_id` as
+the primary key — but OSS queries `SELECT data FROM theme WHERE id = 1`.
+Just patching the column isn't enough: the SaaS schema has
+`INTEGER PRIMARY KEY` on `tenant_id`, which makes it a ROWID alias, so
+each subsequent `INSERT OR REPLACE` from the OSS admin auto-increments
+instead of overwriting — you end up with multiple "theme" rows.
+
+**Don't migrate manually.** Use the importer: `POST /install/import` (no
+admin yet) or `POST /admin/import` (already installed). It rebuilds the
+`theme` table with the OSS schema (`id INTEGER PRIMARY KEY CHECK(id=1)`),
+deletes extra tenant rows, and rewrites slug-scoped media paths to flat
+ones in one transaction. See "Import a tar.gz export" below.
+
+### Migrated from SaaS: images/icons broken (`/uploads/<slug>/foo.png`)
+
+The SaaS overlay stores media under `public/uploads/<slug>/`; OSS stores
+them flat in `public/uploads/`. The importer handles this automatically:
+it copies files flat into `public/uploads/` / `public/favicons/` and
+rewrites every reference in `blocks.data`, `blocks.style`, `theme.data`,
+and `settings.value` from `/uploads/<slug>/` to `/uploads/` (and the same
+for favicons). Both unescaped (`/uploads/x/`) and JSON-escaped
+(`\/uploads\/x\/`) forms are covered.
+
+### Import a tar.gz export
+
+A tylio SaaS site (and a tylio OSS site, too) can produce a portable
+`.tar.gz` archive containing the full state — DB rows + media files.
+
+Export from the source site:
+- **OSS**: `Settings → Esporta sito` (or `GET /admin/export`).
+- **SaaS tenant**: same UI; the platform overlay scopes the export to the
+  current tenant.
+- **SaaS superadmin**: `Tenants → <tenant> → Export tenant` produces an
+  archive for any tenant.
+
+Import on the target OSS installation, before creating the admin user:
+
+```bash
+curl -F "archive=@my-site-export.tar.gz" https://my-new-site.example/install/import
+```
+
+…or via the install wizard's second card ("Hai un export di un sito tylio
+esistente?"). After admin creation use `POST /admin/import` with
+`confirm=true` instead — it overwrites every row of the current site.
+
+### `npm run build` fails on Ubuntu 20.04 with `Unexpected token '?.'`
+
+Your Node is too old. The distro repos ship Node 10.19 on focal; Vite 5
+needs Node ≥ 20. Run the NodeSource setup script (step 4 above) and check
+`node --version` prints `v20.x`.
