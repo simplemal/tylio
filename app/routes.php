@@ -5,6 +5,7 @@ use Tylio\Controllers\AuthController;
 use Tylio\Controllers\BlocksController;
 use Tylio\Controllers\ExportController;
 use Tylio\Controllers\FaviconController;
+use Tylio\Controllers\ImportController;
 use Tylio\Controllers\InstallController;
 use Tylio\Controllers\MediaController;
 use Tylio\Controllers\PageController;
@@ -23,6 +24,11 @@ return static function (App $app): void {
     // ============= INSTALL (one-shot) =============
     $app->get('/install', [InstallController::class, 'show']);
     $app->post('/install', [InstallController::class, 'submit']);
+    // Alternative to creating the admin user: import a tar.gz produced
+    // by `/admin/export` (OSS or SaaS) on another tylio instance. Auth
+    // is the install lock itself — once the admin user exists the
+    // endpoint returns 403 (use /admin/import instead).
+    $app->post('/install/import', [ImportController::class, 'fromInstall']);
 
     // ============= PUBLIC SITE =============
     $app->get('/', [PageController::class, 'home']);
@@ -32,6 +38,20 @@ return static function (App $app): void {
     $app->post('/submit/{blockId:[0-9]+}', [SubmissionsController::class, 'submit']);
     // Click tracking via navigator.sendBeacon from the public layout.
     $app->post('/track-click', [PageController::class, 'trackClick']);
+
+    // ============= ADMIN ENDPOINTS (direct, NOT routed to the SPA shell) =====
+    // Full-site export download: a tar.gz with DB rows + uploads + favicons.
+    // Linked from the SPA's Settings → "Esporta sito" card (`<a href>`,
+    // browser handles the download). Gated by AuthMiddleware (admin only)
+    // and CsrfMiddleware would block a same-origin GET, so we wire CSRF
+    // only on the import POST below.
+    $app->get('/admin/export', [ExportController::class, 'archive'])
+        ->add(AuthMiddleware::class);
+    // Full-site import: tar.gz upload. CSRF + auth required. The
+    // controller refuses without `confirm=true` POST param.
+    $app->post('/admin/import', [ImportController::class, 'fromAdmin'])
+        ->add(CsrfMiddleware::class)
+        ->add(AuthMiddleware::class);
 
     // ============= ADMIN SHELL (built SPA) =============
     $app->get('/admin', [PageController::class, 'adminShell']);

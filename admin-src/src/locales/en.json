@@ -453,6 +453,11 @@
       "twoFactorDisableConfirmPlaceholder": "Type DISABLE",
       "twoFactorDisableConfirmToken": "DISABLE"
     },
+    "archive": {
+      "title": "Export site",
+      "hint": "Download a full archive (.tar.gz) of tiles, theme, settings and media. Useful as a backup or to migrate to another tylio install.",
+      "download": "Download archive (.tar.gz)"
+    },
     "export": {
       "title": "Export home page",
       "hint": "Download a single index.html file with CSS, theme and all images embedded (data URI). It opens in any browser even without a server, and can be uploaded to static hosting (Netlify, GitHub Pages, S3). Only Google fonts and Iconify icons remain online-only.",

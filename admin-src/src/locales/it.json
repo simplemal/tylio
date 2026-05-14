@@ -453,6 +453,11 @@
       "twoFactorDisableConfirmPlaceholder": "Scrivi DISATTIVA",
       "twoFactorDisableConfirmToken": "DISATTIVA"
     },
+    "archive": {
+      "title": "Esporta sito",
+      "hint": "Scarica un archivio completo (.tar.gz) di tessere, tema, impostazioni e media. Utile come backup o per migrare verso un'altra installazione tylio.",
+      "download": "Scarica archivio (.tar.gz)"
+    },
     "export": {
       "title": "Esporta home page",
       "hint": "Scarica un unico file index.html con CSS, tema e tutte le immagini integrate (data URI). Si apre in qualunque browser anche senza server, ed è caricabile su hosting statico (Netlify, GitHub Pages, S3). Restano online-only solo i font Google e le icone Iconify.",

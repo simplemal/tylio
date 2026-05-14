@@ -442,6 +442,15 @@ function resetTwoFactorView(): void {
   twoFactorVerifyCode.value = ''
 }
 
+// Suggested filename for the full-site archive download. The server
+// computes its own filename (with a timestamp) but setting `download` on
+// the <a> tag lets the browser save it without prompting on the user's
+// preferred location.
+const archiveDownloadName = computed(() => {
+  const today = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+  return `tylio-export-${today}.tar.gz`
+})
+
 // Export the home page as a single index.html with everything inlined
 // (images as data URI, CSS already in the template). GET
 // /api/export/inline → blob → click on <a download>. AuthMiddleware via
@@ -834,6 +843,25 @@ async function performDelete() {
       </div>
       <p v-if="twoFactorError" class="text-xs text-red-300">{{ twoFactorError }}</p>
     </div>
+  </section>
+
+  <!-- "Esporta sito" section: download a tar.gz with the full site state
+       (DB rows + uploads + favicons). Re-importable on any tylio instance
+       via /admin/import or /install/import — useful as backup AND as a
+       migration vehicle (SaaS → OSS, or between OSS installations). -->
+  <section class="tile mt-5">
+    <h2 class="font-display text-xl mb-1">{{ t('settings.archive.title') }}</h2>
+    <p class="text-xs text-ink-300 mb-4">
+      {{ t('settings.archive.hint') }}
+    </p>
+    <a
+      href="/admin/export"
+      class="btn btn-ghost"
+      :download="archiveDownloadName"
+    >
+      <iconify-icon icon="lucide:archive" width="18"></iconify-icon>
+      {{ t('settings.archive.download') }}
+    </a>
   </section>
 
   <!-- "Export" section: download a single index.html with everything inline.

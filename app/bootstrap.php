@@ -9,7 +9,9 @@ use Tylio\Services\Auth;
 use Tylio\Services\BlockRegistry;
 use Tylio\Services\Csrf;
 use Tylio\Services\DB;
+use Tylio\Services\Export;
 use Tylio\Services\I18n;
+use Tylio\Services\Import;
 use Tylio\Services\Mailer;
 use Tylio\Services\Migrations;
 use Tylio\Services\RateLimit;
@@ -67,6 +69,17 @@ return static function (): \Slim\App {
     ));
     $container->set(StaticExporter::class, fn(Container $c) => new StaticExporter(
         $c->get(Renderer::class),
+        $config,
+    ));
+    // Full-site export / import (DB rows + uploads, packaged as tar.gz).
+    // Used by /admin/export, /admin/import and /install/import — all
+    // gated by their respective controllers.
+    $container->set(Export::class, fn(Container $c) => new Export(
+        $c->get(DB::class),
+        $config,
+    ));
+    $container->set(Import::class, fn(Container $c) => new Import(
+        $c->get(DB::class),
         $config,
     ));
 
