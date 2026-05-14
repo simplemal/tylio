@@ -344,6 +344,25 @@ $errHtml
   <button type="submit">Create admin</button>
 </form>
 <p class="footer">Once the admin is created you'll be redirected to <code>$admin</code>.</p>
+
+<!-- ALTERNATIVE PATH: import an existing tylio site from a .tar.gz
+     produced by /admin/export on another instance (OSS or SaaS).
+     Palette: Neon · scuro (presets.ts:neon-dark), same as the rest of
+     this wizard. The second card is server-rendered alongside the
+     admin-creation form rather than a separate route so users see
+     both options on first hit. -->
+<div class="alt-section">
+  <h2>Or restore an existing site</h2>
+  <p class="muted">Already have a <code>.tar.gz</code> exported from another tylio installation (your own OSS site or your tylio.app SaaS tenant)? Upload it here to restore everything — tiles, theme, settings, media and admin user — in one shot. This skips the form above.</p>
+  <form method="post" action="/install/import" enctype="multipart/form-data">
+    <label>Archive file (.tar.gz)
+      <input type="file" name="archive" accept=".tar.gz,.tgz,application/gzip" required>
+    </label>
+    <button type="submit" class="btn-secondary">Import archive</button>
+  </form>
+  <p class="footer">The archive replaces the database and copies <code>uploads/</code> and <code>favicons/</code>. If it came from a SaaS tenant we automatically rewrite slug-scoped paths to the OSS layout.</p>
+</div>
+
 <script>
   // Locks the Nordic palette to light or dark based on the user's
   // current system theme. We do this server-side (one shot, then it
@@ -409,6 +428,16 @@ HTML);
   .footer{font-size:12px;color:#97a3c2;margin:18px 0 0}
   code{background:#353746;padding:2px 6px;border-radius:6px;color:#62aaf9;font-size:90%}
   a{color:#62aaf9}
+  /* Alternative-path card (import existing tar.gz). Same palette
+     (Neon · scuro), softer accent — secondary action, not the primary
+     create-admin call to action. */
+  .alt-section{margin-top:28px;padding-top:22px;border-top:1px solid rgba(248,248,242,.08)}
+  .alt-section h2{font-family:Fraunces,serif;margin:0 0 6px;font-size:20px;font-weight:600;letter-spacing:-.01em;color:#ff79c6}
+  input[type="file"]{padding:10px;background:#353746;border:1px dashed rgba(255,121,198,.35);border-radius:12px;cursor:pointer}
+  input[type="file"]::file-selector-button{background:#1a1c25;color:#ff79c6;border:1px solid rgba(255,121,198,.4);padding:6px 12px;border-radius:8px;font:600 12px Inter,sans-serif;margin-right:10px;cursor:pointer}
+  input[type="file"]::file-selector-button:hover{background:#282a36}
+  button.btn-secondary{background:transparent;color:#ff79c6;border:1px solid rgba(255,121,198,.55)}
+  button.btn-secondary:hover{background:rgba(255,121,198,.12)}
 </style>
 </head><body><div class="box">$body</div></body></html>
 HTML;
