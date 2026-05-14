@@ -378,31 +378,37 @@ HTML);
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;font:16px Inter,system-ui,sans-serif;background:#0f0d0a;color:#f4ede1;display:grid;place-items:center;min-height:100vh;padding:24px;
-    background-image:radial-gradient(700px 500px at 100% -10%, rgba(212,165,116,.18), transparent 60%),radial-gradient(600px 500px at -10% 110%, rgba(232,197,152,.12), transparent 60%);}
-  .box{max-width:480px;width:100%;background:#1a1612;border:1px solid rgba(244,237,225,.08);border-radius:18px;padding:28px;box-shadow:0 30px 60px -40px rgba(0,0,0,.6)}
+  /* Palette: Neon · scuro (presets.ts: neon-dark).
+     bg=#1a1c25 surface=#282a36 surface_alt=#353746 text=#f8f8f2
+     muted=#97a3c2 accent=#62aaf9 (royal blue) accent_alt=#ff79c6 (fluo pink)
+     border=rgba(248,248,242,0.08).
+     Install wizard è "Maurizio-facing UI" → Neon · scuro fissa, indipendente
+     dalla palette che l'utente sceglierà per il suo sito a fine wizard. */
+  body{margin:0;font:16px Inter,system-ui,sans-serif;background:#1a1c25;color:#f8f8f2;display:grid;place-items:center;min-height:100vh;padding:24px;
+    background-image:radial-gradient(700px 500px at 100% -10%, rgba(98,170,249,.18), transparent 60%),radial-gradient(600px 500px at -10% 110%, rgba(255,121,198,.12), transparent 60%);}
+  .box{max-width:480px;width:100%;background:#282a36;border:1px solid rgba(248,248,242,.08);border-radius:18px;padding:28px;box-shadow:0 30px 60px -40px rgba(0,0,0,.6)}
   h1{font-family:Fraunces,serif;margin:0 0 8px;font-size:28px;font-weight:600;letter-spacing:-.01em}
-  em{font-style:normal;color:#d4a574}
-  .muted{color:#9c8e7c;margin:0 0 16px}
-  label{display:block;font-size:13px;color:#9c8e7c;margin:14px 0 0}
-  input{width:100%;background:#221c17;border:1px solid rgba(244,237,225,.08);border-radius:12px;padding:12px;color:#f4ede1;margin-top:6px;font-family:inherit;box-sizing:border-box}
-  input:focus{outline:none;border-color:#d4a574}
-  button{margin-top:18px;width:100%;background:#d4a574;color:#1a1410;border:0;padding:13px;border-radius:999px;font:600 15px Inter,sans-serif;cursor:pointer;transition:background .2s}
-  button:hover{background:#e8c598}
-  .optional{color:#9c8e7c;font-weight:400}
+  em{font-style:normal;color:#62aaf9}
+  .muted{color:#97a3c2;margin:0 0 16px}
+  label{display:block;font-size:13px;color:#97a3c2;margin:14px 0 0}
+  input{width:100%;background:#353746;border:1px solid rgba(248,248,242,.08);border-radius:12px;padding:12px;color:#f8f8f2;margin-top:6px;font-family:inherit;box-sizing:border-box}
+  input:focus{outline:none;border-color:#62aaf9}
+  button{margin-top:18px;width:100%;background:#62aaf9;color:#1a1c25;border:0;padding:13px;border-radius:999px;font:600 15px Inter,sans-serif;cursor:pointer;transition:background .2s}
+  button:hover{background:#7fbcfb}
+  .optional{color:#97a3c2;font-weight:400}
   fieldset.radio-group{border:0;padding:0;margin:14px 0 0}
-  fieldset.radio-group legend{font-size:13px;color:#9c8e7c;margin-bottom:6px;padding:0}
-  fieldset.radio-group .radio{display:inline-flex;align-items:center;gap:8px;margin-right:18px;color:#f4ede1;font-size:14px}
-  fieldset.radio-group .radio input{width:auto;margin:0;accent-color:#d4a574}
-  fieldset.radio-group .hint{margin:6px 0 0;font-size:12px;color:#9c8e7c}
+  fieldset.radio-group legend{font-size:13px;color:#97a3c2;margin-bottom:6px;padding:0}
+  fieldset.radio-group .radio{display:inline-flex;align-items:center;gap:8px;margin-right:18px;color:#f8f8f2;font-size:14px}
+  fieldset.radio-group .radio input{width:auto;margin:0;accent-color:#62aaf9}
+  fieldset.radio-group .hint{margin:6px 0 0;font-size:12px;color:#97a3c2}
   .err{background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);color:#ffb3a8;padding:10px 12px;border-radius:10px;margin:0 0 8px;font-size:14px}
-  .warn{background:rgba(232,197,152,.08);border:1px solid rgba(232,197,152,.3);color:#e8c598;padding:12px 14px;border-radius:12px;margin:0 0 16px;font-size:13px;line-height:1.5}
+  .warn{background:rgba(255,121,198,.08);border:1px solid rgba(255,121,198,.35);color:#ff79c6;padding:12px 14px;border-radius:12px;margin:0 0 16px;font-size:13px;line-height:1.5}
   .warn strong{display:block;margin-bottom:4px}
-  .warn p{margin:6px 0;color:#d4b58c}
-  .warn pre{margin:8px 0 0;padding:10px;background:#0f0d0a;border-radius:8px;font:12px ui-monospace,monospace;overflow-x:auto;color:#f4ede1}
-  .footer{font-size:12px;color:#9c8e7c;margin:18px 0 0}
-  code{background:#221c17;padding:2px 6px;border-radius:6px;color:#d4a574;font-size:90%}
-  a{color:#d4a574}
+  .warn p{margin:6px 0;color:#f8b4dd}
+  .warn pre{margin:8px 0 0;padding:10px;background:#1a1c25;border-radius:8px;font:12px ui-monospace,monospace;overflow-x:auto;color:#f8f8f2}
+  .footer{font-size:12px;color:#97a3c2;margin:18px 0 0}
+  code{background:#353746;padding:2px 6px;border-radius:6px;color:#62aaf9;font-size:90%}
+  a{color:#62aaf9}
 </style>
 </head><body><div class="box">$body</div></body></html>
 HTML;
