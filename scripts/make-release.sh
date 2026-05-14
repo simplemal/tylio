@@ -198,10 +198,13 @@ else
 fi
 
 # ---------- 6. commit --------------------------------------------------
+# Note: BUILD, .version, admin/ and the tarball are gitignored on
+# purpose (BUILD/.version cause merge conflicts on every release;
+# admin/ is a build artifact rebuilt per environment; the tarball
+# only lives on the GitHub release as an asset). They stay on disk
+# but never enter a commit.
 log "Staging release files"
-git add BUILD .version CHANGELOG.md
-# composer.lock may or may not be tracked depending on the project's
-# .gitignore — add it if it's present and tracked.
+git add CHANGELOG.md
 if git ls-files --error-unmatch composer.lock >/dev/null 2>&1; then
   git add composer.lock
 fi
