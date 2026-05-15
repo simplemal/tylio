@@ -84,34 +84,40 @@ async function refresh() {
 }
 
 /**
- * Shape of vuedraggable's `@change` payload. Each sub-event is
- * optional; exactly one fires per drag-drop:
- *   - `added`  → an item arrived in this list
- *   - `removed`→ an item left this list
- *   - `moved`  → an item changed index within this list
+ * vuedraggable's `@change { added }` doesn't fire reliably on the
+ * destination of a cross-list drag: its internal `onDragAdd` reads
+ * `evt.item._underlying_vm_` and early-returns when it's `undefined`,
+ * which is what we observed every time. We bypass that abstraction
+ * and listen to the raw SortableJS events (`@add`, `@update`) which
+ * fire deterministically, then look up the block id from the dragged
+ * DOM element's `data-block-id` attribute. Each `<article>` slot root
+ * carries `:data-block-id="b.id"` for exactly this purpose.
  */
-type GroupChangeEvent = {
-  added?: { element: Block; newIndex: number }
-  removed?: { element: Block; oldIndex: number }
-  moved?: { element: Block; newIndex: number; oldIndex: number }
+type DragEvt = { item: HTMLElement; oldIndex?: number; newIndex?: number }
+function idFromEvent(evt: DragEvt): number {
+  return Number(evt.item.getAttribute('data-block-id') || 0)
 }
 
-/**
- * Handle a vuedraggable `@change` event on the top-level mosaic.
- *   - `added`  → the dragged tile arrived from a group: detach it (parent_id=null).
- *   - `removed`→ went into a group: the destination's handler claims it.
- *   - `moved`  → reorder within top-level: persist new order.
- * `added` and `moved` both want a reorder write at the end so positions
- * line up with the new top-level sequence.
- */
-async function onTopLevelChange(evt: GroupChangeEvent) {
-  if (evt.added) {
-    const item = evt.added.element
-    item.parent_id = null
-    await api.updateBlock(item.id, { parent_id: null })
-  }
-  if (evt.added || evt.moved) {
+async function onTopLevelAdd(evt: DragEvt) {
+  const id = idFromEvent(evt)
+  if (!id) return
+  try {
+    await api.updateBlock(id, { parent_id: null })
+    const local = topLevel.value.find((b) => b.id === id)
+    if (local) local.parent_id = null
     await api.reorder(topLevel.value.map((b) => b.id))
+  } catch (e) {
+    console.error('[dashboard] detach failed:', e)
+    await refresh()
+  }
+}
+
+async function onTopLevelUpdate() {
+  try {
+    await api.reorder(topLevel.value.map((b) => b.id))
+  } catch (e) {
+    console.error('[dashboard] top reorder failed:', e)
+    await refresh()
   }
 }
 
@@ -120,15 +126,28 @@ async function onTopLevelChange(evt: GroupChangeEvent) {
  * `added` here means the tile was dragged INTO this group → attach
  * (parent_id = groupId). `moved` reorders the group's children.
  */
-async function onGroupChange(groupId: number, evt: GroupChangeEvent) {
-  if (evt.added) {
-    const item = evt.added.element
-    item.parent_id = groupId
-    await api.updateBlock(item.id, { parent_id: groupId })
+async function onGroupAdd(groupId: number, evt: DragEvt) {
+  const id = idFromEvent(evt)
+  if (!id) return
+  try {
+    await api.updateBlock(id, { parent_id: groupId })
+    const kids = childrenByParent.value[groupId] || []
+    const local = kids.find((b) => b.id === id)
+    if (local) local.parent_id = groupId
+    await api.reorder(kids.map((b) => b.id))
+  } catch (e) {
+    console.error('[dashboard] attach failed:', e)
+    await refresh()
   }
-  if (evt.added || evt.moved) {
+}
+
+async function onGroupUpdate(groupId: number) {
+  try {
     const kids = childrenByParent.value[groupId] || []
     await api.reorder(kids.map((b) => b.id))
+  } catch (e) {
+    console.error('[dashboard] group reorder failed:', e)
+    await refresh()
   }
 }
 
@@ -178,8 +197,48 @@ function onTopLevelMove(evt: {
 function makeGroupMove(groupId: number) {
   return (evt: { draggedContext: { element: Block } }) => canDropInto(groupId, evt)
 }
-function makeGroupChange(groupId: number) {
-  return (evt: GroupChangeEvent) => onGroupChange(groupId, evt)
+function makeGroupAdd(groupId: number) {
+  return (evt: DragEvt) => onGroupAdd(groupId, evt)
+}
+function makeGroupUpdate(groupId: number) {
+  return () => onGroupUpdate(groupId)
+}
+
+/**
+ * Class object for the per-item <article>. We use a single root element
+ * for both group and regular tiles because vuedraggable's #item slot
+ * MUST resolve to a stable DOM node so it can attach the
+ * `__draggable_context` (drag-source metadata). With a v-if/v-else
+ * fragment, the resolved `node.el` was undefined on some renders and
+ * the cross-list `onAdd` handler bailed out before persisting — the
+ * exact "drag adds to UI but doesn't save" bug we hit.
+ */
+function tileClassFor(b: Block): Record<string, boolean> {
+  const isGroup = b.type === 'group'
+  const isFull = placement.value[b.id] === 'full'
+  const isOrphan = placement.value[b.id] === 'orphan'
+  return {
+    'dash-group': isGroup,
+    'dash-group--dragging': isGroup && dragging.value,
+    'cursor-pointer': !isGroup,
+    'hover:border-ink-100/40': !isGroup,
+    'transition': !isGroup,
+    'dash-tile--no-bg': !isGroup && isNoBg(b),
+    'opacity-60': !b.enabled,
+    'dash-tile--full': isFull,
+    'dash-tile--orphan': !isGroup && isOrphan,
+    'dash-tile--half': !isFull && !(isOrphan && !isGroup),
+  }
+}
+
+/**
+ * Click on a top-level tile. Groups don't navigate (their visible
+ * surface is "container chrome", not an edit target) — the user
+ * interacts with the children inside. Other tiles open the edit view.
+ */
+function onTileClick(b: Block) {
+  if (b.type === 'group') return
+  router.push({ name: 'edit-block', params: { id: b.id } })
 }
 
 async function toggleEnabled(b: Block) {
@@ -421,24 +480,24 @@ function blockSummary(b: Block): string {
     ghost-class="dash-ghost"
     chosen-class="dash-chosen"
     :move="onTopLevelMove"
-    @change="onTopLevelChange"
     @start="dragging = true"
     @end="dragging = false"
+    @add="onTopLevelAdd"
+    @update="onTopLevelUpdate"
   >
     <template #item="{ element: b }">
-      <!-- A group tile: ghost card (dashed) housing its children stack.
-           In the Dashboard the chrome is intentionally visible so the
-           user can see + manipulate the structure; on the public site
-           a group renders no chrome at all (no padding, no border). -->
+      <!-- SINGLE-ROOT <article> for every top-level item. The branching
+           between "group container" and "regular tile" happens INSIDE,
+           never via v-if at the root — vuedraggable needs a stable DOM
+           node per slot entry to attach drag-source metadata. -->
       <article
-        v-if="b.type === 'group'"
-        class="tile dash-group group relative"
-        :class="[
-          { 'opacity-60': !b.enabled },
-          { 'dash-group--dragging': dragging },
-          placement[b.id] === 'full' ? 'dash-tile--full' : 'dash-tile--half',
-        ]"
+        class="tile group relative"
+        :class="tileClassFor(b)"
+        :data-block-id="b.id"
+        @click="onTileClick(b)"
       >
+        <!-- ============ GROUP container ============ -->
+        <template v-if="b.type === 'group'">
         <div class="dash-group__header">
           <button
             class="grip btn-icon !w-8 !h-8 !cursor-grab active:!cursor-grabbing"
@@ -493,14 +552,16 @@ function blockSummary(b: Block): string {
           ghost-class="dash-ghost"
           chosen-class="dash-chosen"
           :move="makeGroupMove(b.id)"
-          @change="makeGroupChange(b.id)"
           @start="dragging = true"
           @end="dragging = false"
+          @add="makeGroupAdd(b.id)"
+          @update="makeGroupUpdate(b.id)"
         >
           <template #item="{ element: child }">
             <article
               class="tile dash-group__child group/child relative cursor-pointer hover:border-ink-100/40 transition"
               :class="[{ 'opacity-60': !child.enabled }, { 'dash-tile--no-bg': isNoBg(child) }]"
+              :data-block-id="child.id"
               @click="router.push({ name: 'edit-block', params: { id: child.id } })"
             >
               <div class="flex items-center gap-3 mb-2">
@@ -579,23 +640,10 @@ function blockSummary(b: Block): string {
           <iconify-icon icon="lucide:plus" width="16"></iconify-icon>
           {{ t('dashboard.addToGroup') }}
         </button>
-      </article>
+        </template>
 
-      <!-- Regular tile (non-group, top-level). -->
-      <article
-        v-else
-        class="tile group relative cursor-pointer hover:border-ink-100/40 transition"
-        :class="[
-          { 'opacity-60': !b.enabled },
-          { 'dash-tile--no-bg': isNoBg(b) },
-          placement[b.id] === 'full'
-            ? 'dash-tile--full'
-            : placement[b.id] === 'orphan'
-              ? 'dash-tile--orphan'
-              : 'dash-tile--half',
-        ]"
-        @click="router.push({ name: 'edit-block', params: { id: b.id } })"
-      >
+        <!-- ============ Regular tile (non-group) ============ -->
+        <template v-else>
         <div class="flex items-center gap-3 mb-2">
           <button
             class="grip btn-icon !w-8 !h-8 !cursor-grab active:!cursor-grabbing"
@@ -666,6 +714,7 @@ function blockSummary(b: Block): string {
             <iconify-icon icon="lucide:trash-2" width="16"></iconify-icon>
           </button>
         </div>
+        </template>
       </article>
     </template>
   </draggable>
