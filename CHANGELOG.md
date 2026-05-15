@@ -6,6 +6,46 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.1 — 2026-05-15
+
+### Added — Aggiornamento in-app stile WordPress
+
+Lo `UpdateChecker` mostrava già "Disponibile vX.Y.Z" ma per applicare serviva SSH manuale (`git pull`, `composer install`, `npm run build`, `php scripts/migrate.php`). Ora c'è il bottone **"Aggiorna ora"** nella card "Aggiornamenti tylio" di Settings che fa tutto da web GUI.
+
+**Flusso quando l'admin clicca "Aggiorna ora":**
+1. Server passa in maintenance mode automaticamente (visitatori vedono la pagina 503, l'admin resta loggato e vede il progress).
+2. Scarica `tylio-source-vX.Y.Z.tar.gz` dall'asset della GitHub release.
+3. Estrae in dir staging temporanea (`PharData`, zero shell dependency).
+4. Backuppa la root corrente in `data/.backup/<old-version>-<timestamp>.tar.gz` (esclude `data/`, `uploads/`, `favicons/`, `.env` per tenere il backup small).
+5. Swappa atomic-ish staging → root, preservando i dati runtime + `.env`.
+6. Applica le migrazioni nuove (`Migrations::run`).
+7. `opcache_reset()` così le next request usano il code nuovo.
+8. Ripristina lo stato precedente di maintenance, persiste `site.last_update_at` / `site.last_update_version`.
+9. La SPA refresha la dl delle versioni mostrando "Aggiornato a vX.Y.Z".
+
+**Nuovo asset di release**: `tylio-source-vX.Y.Z.tar.gz` (full source + `vendor/` + `admin/` SPA precompilato). Lo `scripts/make-release.sh` lo genera per ogni release. Self-host con zero dipendenze runtime — non servono `composer` né `npm` sul server di destinazione, solo PHP.
+
+**File nuovi/modificati:**
+- `app/Database/migrations/0009_update_state.sql`: settings `site.update_in_progress`, `site.last_update_*`.
+- `app/Services/UpdateApplier.php`: orchestrator (download + extract via PharData + backup + swap + migrate + opcache reset).
+- `app/Controllers/UpdateController.php`: nuovi metodi `state()` (GET) e `apply()` (POST).
+- `app/routes.php`: rotte `GET /api/admin/update/state`, `POST /api/admin/update/apply` sotto auth+CSRF.
+- `admin-src/src/views/Settings.vue`: rimossa la sezione "How to update" con comandi shell, sostituita dal bottone "Aggiorna ora" con spinner + banner outcome (success verde / error rosso) + path del backup.
+- `scripts/make-release.sh`: step 5b che genera il `tylio-source-*.tar.gz`.
+
+**Sicurezza:**
+- Auth + CSRF già coperti dal route group.
+- Pre-flight check su write permission della root → errore esplicito se www-data non può scrivere.
+- Maintenance mode forzato durante l'apply → niente request concorrenti che vedono code half-swapped.
+- Backup automatico → rollback manuale possibile in caso di problemi: `tar xzf data/.backup/v0.3.0-...tar.gz -C /var/www/tylio/`.
+
+**Sull'overlay SaaS (tylio.app):** `TenantUpdateController` disabilita anche `state` e `apply` (oltre al `check` già disabilitato). I tenant non possono toccare il codice OSS condiviso — l'aggiornamento del SaaS lo fa il superadmin via SFTP, come sempre.
+
+**Limiti noti (questa è MVP):**
+- `apply()` è sync nel request HTTP. Su un self-host lento il browser potrebbe timeout-are dopo 30-60s mentre lo swap continua server-side. Il `last_update_at` settato a fine ti dice comunque se è andato a buon fine.
+- Niente rollback automatico in caso di crash mid-swap. La dir `.deprecated-*` con il code vecchio resta su disco fino al cleanup post-swap; in caso di crash mid-step, si rinomina a mano.
+- Non supporta upgrade da versioni precedenti a v0.3.1 (le release < v0.3.1 non contengono l'asset `tylio-source-*.tar.gz`). Per maurizionatali.it / installazioni < v0.3.1: upgrade manuale a v0.3.1 una volta, poi auto-update da lì in poi.
+
 ## v0.3.0 — 2026-05-15
 
 ### Added — Block "group" container
