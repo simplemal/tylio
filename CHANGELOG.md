@@ -6,6 +6,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.2.6 — 2026-05-15
+
+### Fixed — tessera Link UX (round 3)
+
+- **Favicon non più incapsulata in un quadrato colorato**. Tre varianti distinte per il container icona:
+  - `--custom` (Iconify): sfondo `accent-soft` + glifo accent (invariato — è una glyph monocromatica, va bene tinta)
+  - `--favicon`: **sfondo bianco sempre** (la superficie "attesa" per una favicon, indipendente dal tema del sito), favicon riempie 36×36 con `object-fit: contain` e `border-radius` solo sui bordi esterni del container
+  - `--fallback` (no URL host o load fail): sfondo bianco + chain-link SVG in grigio neutro (`#666`) visibile su entrambi i temi
+- **Icona è ora un link** (`<a>`) verso lo stesso URL del titolo. Mouse users possono cliccare sia il titolo che l'icona. `tabindex="-1"` + `aria-hidden="true"` evitano doppio tab-stop / lettura per screen reader (il titolo resta il link canonico).
+- **Cursor `pointer` esplicito** su `.m-link__icon`, `.m-link__title` e `.m-badge--copy`. Alcuni reset CSS strippano il cursor di default sugli `<a>` — esplicitiamo per coerenza.
+- **Hover del titolo: niente cambio colore**, solo `text-decoration: underline` con `text-decoration-color: currentColor`. Prima passava a `var(--accent)` che su palette estreme (accent bianco → invisibile) faceva sparire il testo.
+- **Spazio verticale titolo→descrizione ridotto**: `line-height: 1.2` su `.m-link__label` e `1.25` su `.m-link__desc`.
+
 ## v0.2.5 — 2026-05-15
 
 ### Fixed — tessera Link UX (round 2)

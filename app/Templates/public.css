@@ -396,13 +396,40 @@ a{color:inherit;text-decoration:none}
   background:color-mix(in oklab, var(--surface-alt) 80%, transparent);
   border:1px solid var(--border);
 }
+/* Icon box: shared geometry (36×36, rounded corners). Variants split
+   the styling because favicons (full-color raster) and Iconify glyphs
+   (monochrome vector) want different chrome. The <a> wrapper points to
+   the link's URL, so the icon itself is a click target — gets a pointer
+   cursor explicitly even though anchors get it for free (some themes
+   strip it via reset). */
 .m-link__icon{
-  width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
-  background:var(--accent-soft);color:var(--accent);
-  flex-shrink:0;font-size:18px;overflow:hidden;
+  width:36px;height:36px;border-radius:10px;
+  flex-shrink:0;overflow:hidden;
+  display:grid;place-items:center;
+  text-decoration:none;color:inherit;cursor:pointer;
 }
-.m-link__icon svg{width:20px;height:20px}
-.m-link__favicon{width:20px;height:20px;display:block;border-radius:4px;object-fit:contain}
+.m-link__icon:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px;
+}
+/* Iconify glyph variant: tinted square (accent-soft bg, accent stroke). */
+.m-link__icon--custom{
+  background:var(--accent-soft);color:var(--accent);
+  font-size:18px;
+}
+.m-link__icon--custom svg{width:20px;height:20px}
+/* Favicon variant: white background always (the canonical "expected"
+   surface for a favicon, independent of the site theme), favicon fills
+   the box edge-to-edge (the rounded container clips overflow). */
+.m-link__icon--favicon{background:#fff}
+.m-link__favicon{
+  width:100%;height:100%;display:block;object-fit:contain;
+}
+/* Fallback variant: no URL host or favicon load error. White bg (same
+   surface as the working-favicon case for visual consistency); the
+   chain-link SVG uses a neutral mid-gray so it's readable on white
+   regardless of light/dark theme. */
+.m-link__icon--fallback{background:#fff;color:#666}
+.m-link__icon--fallback svg{width:20px;height:20px}
 .m-link__icon-fallback{display:grid;place-items:center;width:100%;height:100%}
 .m-link__body{flex:1;min-width:0}
 /* Title + badge: flex with `wrap-reverse`. When they fit on the same line
@@ -415,19 +442,28 @@ a{color:inherit;text-decoration:none}
 .m-link__label{
   display:flex;flex-wrap:wrap-reverse;align-items:center;
   gap:4px 8px;font-weight:500;min-width:0;
+  line-height:1.2;
 }
-/* The title is the ONLY clickable element of the row: rendered as <a> and
-   styled like a link (no underline at rest, accent on hover/focus). The
-   surrounding row no longer animates on hover — only this element does. */
+/* The title is the ONLY clickable text on the row: rendered as <a>,
+   styled to keep its inherited color in every state (so themes with a
+   white/extreme accent don't make the text invisible on hover). The
+   only visual hover feedback is an underline + pointer cursor. */
 .m-link__title{
   flex:0 1 auto;min-width:0;max-width:100%;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  color:inherit;text-decoration:none;
-  transition:color .15s ease;
+  color:inherit;text-decoration:none;cursor:pointer;
 }
 .m-link__title:hover,
-.m-link__title:focus-visible{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
-.m-link__desc{color:var(--text-muted);font-size:13px;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.m-link__title:focus-visible{
+  text-decoration:underline;
+  text-decoration-color:currentColor;
+  text-underline-offset:3px;
+}
+.m-link__desc{
+  color:var(--text-muted);font-size:13px;
+  line-height:1.25;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
 /* Badge — pill for tags/labels in links.
    ROLE: uses accent-alt as the load-bearing color. Changing `accent_alt` in
    the palette only changes the badges (and nothing else). The bg is SOLID

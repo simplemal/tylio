@@ -56,15 +56,26 @@ foreach ($items as $it) {
 ?>
   <li>
     <div class="m-link">
-      <span class="m-link__icon" aria-hidden="true">
+      <?php
+      // Icon as a second link to the same URL. Marked aria-hidden and
+      // tabindex=-1 so screen readers + keyboard nav don't see it as a
+      // second tab-stop (the title is the canonical link). Mouse users
+      // can still click the icon. The mode class drives the look:
+      //   - --custom   accent-soft bg, Iconify glyph in the middle
+      //   - --favicon  white bg, favicon image filling the box
+      //   - --fallback white bg, generic chain SVG (no host / load fail)
+      $iconClass = 'm-link__icon m-link__icon--'
+          . ($iconName !== '' ? 'custom' : ($faviconUrl !== '' ? 'favicon' : 'fallback'));
+      ?>
+      <a class="<?= $iconClass ?>" href="<?= $renderer->escape($url) ?>"<?= $external ? ' rel="noopener noreferrer" target="_blank"' : '' ?> tabindex="-1" aria-hidden="true">
         <?php if ($iconName !== ''): ?>
           <iconify-icon icon="<?= $renderer->escape($iconName) ?>" width="20" height="20"></iconify-icon>
         <?php elseif ($faviconUrl !== ''): ?>
-          <img class="m-link__favicon" src="<?= $renderer->escape($faviconUrl) ?>" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'m-link__icon-fallback',innerHTML:'<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' width=\'20\' height=\'20\'><path d=\'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\'/><path d=\'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\'/></svg>'}))">
+          <img class="m-link__favicon" src="<?= $renderer->escape($faviconUrl) ?>" alt="" width="36" height="36" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.replace('m-link__icon--favicon','m-link__icon--fallback');this.replaceWith(Object.assign(document.createElement('span'),{className:'m-link__icon-fallback',innerHTML:'<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' width=\'20\' height=\'20\'><path d=\'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\'/><path d=\'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\'/></svg>'}))">
         <?php else: ?>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         <?php endif; ?>
-      </span>
+      </a>
       <span class="m-link__body">
         <span class="m-link__label">
           <a class="m-link__title" href="<?= $renderer->escape($url) ?>"<?= $external ? ' rel="noopener noreferrer" target="_blank"' : '' ?>><?= $renderer->escape($label) ?></a>
