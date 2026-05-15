@@ -273,7 +273,29 @@ const updateCheckHidden = ref(false)
 const updateChecking = ref(false)
 const updateError = ref('')
 const showChangelog = ref(false)
-const showHowTo = ref(false)
+
+// ===== In-app upgrade flow =====
+// Read-side state surfaced by GET /api/admin/update/state.
+const updateState = ref<{
+  in_progress: boolean
+  last_update_at: string
+  last_version: string
+  last_error: string
+  last_backup: string
+} | null>(null)
+
+// Write-side flags for the click handler. While `applying` is true the
+// "Aggiorna ora" button is disabled and the card shows a spinner +
+// "Aggiornamento in corso..." message. The request is sync (the server
+// blocks until backup+swap+migrate complete), so the SPA can't show
+// per-step progress — only an overall spinner.
+const applying = ref(false)
+const applyResult = ref<{
+  ok: boolean
+  message: string
+  newVersion?: string
+  backupPath?: string
+} | null>(null)
 
 async function loadUpdateCheck(force = false): Promise<void> {
   if (updateChecking.value) return
@@ -306,6 +328,67 @@ async function loadUpdateCheck(force = false): Promise<void> {
     }
   } finally {
     updateChecking.value = false
+  }
+}
+
+async function loadUpdateState(): Promise<void> {
+  try {
+    const r = await api.updateState()
+    if ('disabled' in r && r.disabled) {
+      updateState.value = null
+      return
+    }
+    // Same union-narrowing limitation as loadUpdateCheck (the discriminant
+    // is optional on the OK shape): explicit cast after the disabled check.
+    updateState.value = r as {
+      in_progress: boolean
+      last_update_at: string
+      last_version: string
+      last_error: string
+      last_backup: string
+    }
+  } catch {
+    // Older OSS builds (pre-v0.3.1) don't have this endpoint — fail
+    // silently. The "Aggiorna ora" button will still POST and surface
+    // a 404 to the user if the apply endpoint is also missing.
+    updateState.value = null
+  }
+}
+
+async function applyUpdate(): Promise<void> {
+  if (applying.value) return
+  // We let the server pick `releases/latest` (no version body).
+  applying.value = true
+  applyResult.value = null
+  try {
+    const r = await api.updateApply()
+    if (r.ok) {
+      applyResult.value = {
+        ok: true,
+        message: t('settings.update.applySuccess', { version: r.new_version }),
+        newVersion: r.new_version,
+        backupPath: r.backup_path,
+      }
+      // Refresh the version dl (current should now equal latest).
+      await loadUpdateCheck(true)
+      await loadUpdateState()
+    } else {
+      applyResult.value = {
+        ok: false,
+        message: r.detail || t('settings.update.applyGenericError'),
+        backupPath: r.backup_path,
+      }
+    }
+  } catch (e: unknown) {
+    applyResult.value = {
+      ok: false,
+      message:
+        e instanceof ApiError
+          ? t('settings.errors.errorWithStatus', { status: e.status })
+          : t('settings.errors.networkError'),
+    }
+  } finally {
+    applying.value = false
   }
 }
 
@@ -367,6 +450,8 @@ onMounted(async () => {
   void load2faStatus()
   // Update check: GitHub release lookup. Cached server-side for 24h.
   void loadUpdateCheck(false)
+  // Update state: persisted markers from the last apply() (if any).
+  void loadUpdateState()
   // Admin email verification status (drives the verified tick / pending
   // code widget). Independent from the settings fetch above so a slow
   // call doesn't gate the rest of the form.
@@ -851,29 +936,68 @@ async function performDelete() {
         </p>
       </div>
 
-      <div>
+      <!-- In-app upgrade trigger. The button POSTs to /api/admin/update/apply
+           and blocks until backup + swap + migrate complete (typically
+           10-30s). The user is kept on this page; on success we refresh
+           the version dl above and surface a green confirmation. -->
+      <div class="update-apply">
         <button
           type="button"
-          class="btn btn-ghost update-toggle"
-          @click="showHowTo = !showHowTo"
+          class="btn btn-primary update-apply__btn"
+          :disabled="applying"
+          @click="applyUpdate()"
         >
           <iconify-icon
-            :icon="showHowTo ? 'lucide:chevron-down' : 'lucide:chevron-right'"
+            :icon="applying ? 'lucide:loader-2' : 'lucide:download-cloud'"
+            :class="applying ? 'animate-spin' : ''"
             width="16"
           ></iconify-icon>
-          {{ showHowTo ? t('settings.update.hideHowTo') : t('settings.update.showHowTo') }}
+          {{ applying ? t('settings.update.applying') : t('settings.update.applyNow') }}
         </button>
-        <div v-if="showHowTo" class="mt-2">
-          <p class="text-xs text-ink-300 mb-2 leading-relaxed">
-            {{ t('settings.update.howToIntro') }}
-          </p>
-          <pre class="update-cmds">{{ t('settings.update.commands') }}</pre>
-          <p class="text-xs text-ink-300 mt-2 leading-relaxed">
-            {{ t('settings.update.howToNote') }}
-          </p>
-        </div>
+        <p class="text-xs text-ink-300 mt-2 leading-relaxed">
+          {{ t('settings.update.applyDisclaimer') }}
+        </p>
       </div>
     </div>
+
+    <!-- Outcome banner: shown after an apply() completes (success or
+         failure). Persists in this session — user dismisses it implicitly
+         by reloading or by triggering another update. -->
+    <div
+      v-if="applyResult"
+      class="update-outcome mt-4"
+      :class="applyResult.ok ? 'update-outcome--ok' : 'update-outcome--err'"
+    >
+      <iconify-icon
+        :icon="applyResult.ok ? 'lucide:check-circle-2' : 'lucide:alert-circle'"
+        width="20"
+      ></iconify-icon>
+      <div class="flex-1">
+        <p class="text-sm">{{ applyResult.message }}</p>
+        <p v-if="applyResult.backupPath" class="text-xs text-ink-300 mt-1">
+          {{ t('settings.update.backupAt', { path: applyResult.backupPath }) }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Persistent "last update" line: shown when no in-session outcome
+         is active and the server has a recorded last_update_at. Helps
+         the admin remember "yes, I already updated this morning". -->
+    <p
+      v-if="!applyResult && updateState?.last_update_at && updateState.last_version"
+      class="text-xs text-ink-300 mt-3"
+    >
+      {{ t('settings.update.lastApplied', {
+        version: updateState.last_version,
+        when: relativeFromIso(updateState.last_update_at),
+      }) }}
+    </p>
+    <p
+      v-if="!applyResult && updateState?.last_error"
+      class="text-xs text-red-300 mt-1"
+    >
+      {{ t('settings.update.lastFailure', { detail: updateState.last_error }) }}
+    </p>
   </section>
 
   <div class="tile space-y-5">
@@ -1543,18 +1667,36 @@ async function performDelete() {
   text-underline-offset: 2px;
 }
 
-/* Copy-paste upgrade commands. Looks like a terminal snippet so the
-   user reads it as "run this in a shell". */
-.update-cmds {
-  background: rgb(var(--ink-900-rgb));
-  border: 1px solid rgb(var(--ink-100-rgb) / 0.08);
+/* "Aggiorna ora" wrapper: keeps the button + small disclaimer line
+   visually grouped beneath the changelog accordion. */
+.update-apply {
+  margin-top: 0.5rem;
+}
+.update-apply__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Outcome banner shown right after apply() returns. Success uses the
+   theme's accent (--accent-rgb) so it doesn't clash with whatever the
+   user picked; failure uses a neutral red bound to the dark theme. */
+.update-outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
   border-radius: 0.75rem;
-  padding: 0.9rem 1rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.82rem;
-  line-height: 1.55;
-  white-space: pre;
-  overflow-x: auto;
+  border: 1px solid rgb(var(--ink-100-rgb) / 0.08);
+}
+.update-outcome--ok {
+  background: rgb(var(--accent-rgb) / 0.08);
+  border-color: rgb(var(--accent-rgb) / 0.35);
   color: rgb(var(--ink-100-rgb));
+}
+.update-outcome--err {
+  background: rgb(220 38 38 / 0.08);
+  border-color: rgb(220 38 38 / 0.45);
+  color: rgb(252 165 165);
 }
 </style>

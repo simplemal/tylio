@@ -13,7 +13,9 @@ import {
   type Stats,
   type Submission,
   type Theme,
+  type UpdateApplyResponse,
   type UpdateCheckResponse,
+  type UpdateStateResponse,
   type User,
 } from './types'
 
@@ -186,6 +188,21 @@ export const api = {
     request<UpdateCheckResponse>(
       '/admin/update-check' + (force ? '?force=1' : ''),
     ),
+
+  // Read-side of the in-app upgrade flow. Returns the last_update_*
+  // markers persisted by UpdateApplier so the Settings card can render
+  // "Aggiornato a vX.Y.Z il …" and surface previous errors.
+  updateState: () => request<UpdateStateResponse>('/admin/update/state'),
+
+  // Trigger an in-app upgrade. Pass a tag (e.g. "v0.3.1") to target a
+  // specific release; omit to pull `releases/latest`. The request stays
+  // open for the whole apply() — typically 10-30s for a fresh install
+  // — so the SPA shows a spinner and disables interaction in the card.
+  updateApply: (version?: string) =>
+    request<UpdateApplyResponse>('/admin/update/apply', {
+      method: 'POST',
+      body: JSON.stringify(version ? { version } : {}),
+    }),
 
   // Submissions
   listSubmissions: () => request<{ submissions: Submission[] }>('/submissions'),

@@ -631,6 +631,44 @@ export interface UpdateCheckDisabled {
 
 export type UpdateCheckResponse = UpdateCheckOk | UpdateCheckDisabled
 
+/**
+ * Read-side of the in-app upgrade flow. Returned by
+ * `GET /api/admin/update/state` (or `{disabled: true}` on the SaaS
+ * overlay). Polled by Settings.vue to render the "Aggiornato a vX.Y.Z
+ * il …" line and to surface the previous attempt's error (if any).
+ */
+export interface UpdateStateOk {
+  in_progress: boolean
+  last_update_at: string
+  last_version: string
+  last_error: string
+  last_backup: string
+}
+
+export type UpdateStateResponse = UpdateStateOk | UpdateCheckDisabled
+
+/**
+ * Response of `POST /api/admin/update/apply`. On success, `new_version`
+ * is the tag installed and `backup_path` is the absolute path on disk
+ * of the pre-upgrade snapshot. On failure, `error` is one of the
+ * UpdateApplier error codes (`permissions_denied`, `already_in_progress`,
+ * `release_not_found`, `asset_missing`, `download_failed`,
+ * `extract_failed`, `staging_invalid`, `exception`) and `detail` is the
+ * human-readable Italian message ready for the toast.
+ */
+export interface UpdateApplyOk {
+  ok: true
+  new_version: string
+  backup_path: string
+}
+export interface UpdateApplyErr {
+  ok: false
+  error: string
+  detail: string
+  backup_path?: string
+}
+export type UpdateApplyResponse = UpdateApplyOk | UpdateApplyErr
+
 // =====================================================================
 // Email verification (`site.admin_email`)
 // =====================================================================
