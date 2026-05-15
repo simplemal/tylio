@@ -88,8 +88,11 @@ class UpdateController
         $result = $this->applier->apply($target !== '' ? $target : null);
 
         $status = 200;
-        if (!($result['ok'] ?? false)) {
-            $err = (string)($result['error'] ?? '');
+        if (!$result['ok']) {
+            // After narrowing `ok === false`, the apply() return type
+            // guarantees `error` is set (every fail() path writes it),
+            // so PHPStan rejects a `?? ''` defensive default here.
+            $err = $result['error'];
             // Map "user error" cases to 4xx; everything else stays 500.
             $status = match ($err) {
                 'permissions_denied'   => 412, // Precondition Failed
