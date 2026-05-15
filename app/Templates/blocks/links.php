@@ -33,14 +33,22 @@ foreach ($items as $it) {
         ? (string)$it['icon_mode']
         : ($iconRaw !== '' ? 'custom' : 'favicon');
     $iconName = ($iconMode === 'custom') ? $iconRaw : '';
-    // Favicon: only for absolute http(s) URLs with a real host.
-    // DuckDuckGo's privacy-friendly favicon service avoids leaking visitor
-    // IPs to Google. `referrerpolicy=no-referrer` further trims metadata,
-    // and an inline SVG fallback covers domains the service can't resolve.
-    $faviconHost = '';
+    // Favicon URL: only for absolute http(s) URLs with a real host. We
+    // use Google's `faviconV2` endpoint (gstatic CDN) because its hit
+    // rate on real-world domains is markedly higher than DDG's `ip3`
+    // service, which returned 404 (+ generic placeholder) on plenty of
+    // legit sites. `referrerpolicy=no-referrer` keeps the request lean
+    // on metadata. Falls through to the inline SVG (chain link) only
+    // when even Google has no record of the domain.
+    $faviconUrl = '';
     if ($iconName === '' && $external) {
         $h = parse_url($url, PHP_URL_HOST);
-        if (is_string($h) && $h !== '') $faviconHost = $h;
+        if (is_string($h) && $h !== '') {
+            // gstatic's endpoint wants the full URL (or just the
+            // scheme+host). We pass the original `url`, URL-encoded.
+            $faviconUrl = 'https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url='
+                . rawurlencode($url) . '&size=64';
+        }
     }
     $badge = (string)($it['badge'] ?? '');
     $badgeCopyable = !empty($it['badge_copyable']) && $badge !== '';
@@ -51,8 +59,8 @@ foreach ($items as $it) {
       <span class="m-link__icon" aria-hidden="true">
         <?php if ($iconName !== ''): ?>
           <iconify-icon icon="<?= $renderer->escape($iconName) ?>" width="20" height="20"></iconify-icon>
-        <?php elseif ($faviconHost !== ''): ?>
-          <img class="m-link__favicon" src="https://icons.duckduckgo.com/ip3/<?= $renderer->escape($faviconHost) ?>.ico" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'m-link__icon-fallback',innerHTML:'<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' width=\'20\' height=\'20\'><path d=\'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\'/><path d=\'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\'/></svg>'}))">
+        <?php elseif ($faviconUrl !== ''): ?>
+          <img class="m-link__favicon" src="<?= $renderer->escape($faviconUrl) ?>" alt="" width="20" height="20" loading="lazy" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'m-link__icon-fallback',innerHTML:'<svg viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\' width=\'20\' height=\'20\'><path d=\'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71\'/><path d=\'M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71\'/></svg>'}))">
         <?php else: ?>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
         <?php endif; ?>

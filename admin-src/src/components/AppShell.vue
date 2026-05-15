@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuth } from '../stores/auth'
 import { useInbox } from '../stores/inbox'
@@ -16,7 +16,22 @@ const auth = useAuth()
 const inbox = useInbox()
 const site = useSite()
 const router = useRouter()
+const route = useRoute()
 const menuOpen = ref(false)
+
+/**
+ * Sidebar "active" state. `<router-link active-class>` would only flag
+ * `/` when path equals `/`, which loses the highlight as soon as the
+ * user enters block-edit (`/blocks/:id`) — conceptually still the
+ * "Tessere" section. We add a custom rule: Tessere is active for `/`
+ * AND for any `/blocks/...` sub-path. Other entries use a startsWith
+ * match (no entry overlaps another, so this is unambiguous).
+ */
+function isNavActive(to: string): boolean {
+  const path = route.path
+  if (to === '/') return path === '/' || path.startsWith('/blocks/')
+  return path === to || path.startsWith(to + '/')
+}
 
 // Subdomain slug — shown under the brand as a pill (handy for forks
 // that host several sites). Stays empty for single-user OSS.
@@ -126,7 +141,7 @@ router.afterEach(() => refreshShellState())
             <router-link
               :to="n.to"
               class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-xl text-ink-100 hover:bg-ink-100/[0.07] transition"
-              active-class="nav-active"
+              :class="{ 'nav-active': isNavActive(n.to) }"
               @click="menuOpen = false"
             >
               <span class="relative inline-flex">

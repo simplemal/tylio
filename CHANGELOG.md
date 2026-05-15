@@ -6,6 +6,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.2.5 — 2026-05-15
+
+### Fixed — tessera Link UX (round 2)
+
+- **Favicon mostrata correttamente**. Servizio DuckDuckGo `ip3` falliva (404) su molti domini reali (es. nevecosmetics.it) facendo scattare il fallback all'SVG generico. Switch a Google `faviconV2` (gstatic CDN) — hit rate >>95% sui domini comuni. `referrerpolicy=no-referrer` mantenuto.
+- **Radio cards usano `--backend-accent-rgb`** (accent admin computato per contrasto) invece di `--accent-rgb` (frontend). Su palette estreme tipo "Pink Lady · light" il primo era bianco → bordo/dot invisibili. Allineato al pattern già usato da `.btn-primary` e dalla pill della sidebar.
+- **Riga badge + toggle ora allineata correttamente**: `align-items: flex-end` + padding-bottom calibrato sul toggle. Lo switch sta sulla stessa baseline dell'input del badge, non centrato verticalmente all'intera field (che includeva la label sopra).
+- **Sidebar "Tessere" highlight in edit-block**. `<router-link active-class>` di default attivava `/` solo a match esatto, perdendo la pill quando l'utente entrava in `/blocks/:id`. Aggiunta logica `isNavActive()` che marca Tessere attivo anche per `/blocks/*` sub-paths.
+
+### Fixed — SaaS overlay (tylio.app)
+
+- **TenantRenderer ha la propria copia di `links.php` + `public.css`** in `tylio-platform/src/Templates/`. L'aggiornamento del template OSS in v0.2.3/v0.2.4 NON arrivava al pubblico dei tenant — restava il vecchio markup con riga interamente cliccabile. Sincronizzati: solo il titolo è ora cliccabile, favicon Google, badge copy con feedback. Promemoria: ogni modifica al template OSS va portata anche nel duplicato platform.
+
 ## v0.2.4 — 2026-05-15
 
 ### Changed — admin editor della tessera Link (UX revision)

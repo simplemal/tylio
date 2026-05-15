@@ -498,8 +498,13 @@ function siblingValues(key: string): string[] {
   background: rgb(var(--ink-800-rgb) / 1.4);
 }
 .radio-cards__card.is-active {
-  border-color: rgb(var(--accent-rgb));
-  background: rgb(var(--accent-rgb) / 0.08);
+  /* Always use the admin's "backend-accent" (vivid, computed by theme.ts
+     to guarantee contrast against the panel surface). The frontend
+     `--accent-rgb` may be white/black/extreme on some palettes and would
+     vanish here — see the same reasoning behind .btn-primary and the
+     sidebar's active pill. */
+  border-color: rgb(var(--backend-accent-rgb));
+  background: rgb(var(--backend-accent-rgb) / 0.10);
 }
 .radio-cards__input {
   position: absolute;
@@ -509,7 +514,7 @@ function siblingValues(key: string): string[] {
   height: 0;
 }
 .radio-cards__card:focus-within {
-  outline: 2px solid rgb(var(--accent-rgb));
+  outline: 2px solid rgb(var(--backend-accent-rgb));
   outline-offset: 2px;
 }
 .radio-cards__dot {
@@ -524,7 +529,7 @@ function siblingValues(key: string): string[] {
   transition: border-color 0.15s ease;
 }
 .radio-cards__card.is-active .radio-cards__dot {
-  border-color: rgb(var(--accent-rgb));
+  border-color: rgb(var(--backend-accent-rgb));
 }
 .radio-cards__dot-inner {
   width: 8px;
@@ -534,7 +539,7 @@ function siblingValues(key: string): string[] {
   transition: background 0.15s ease;
 }
 .radio-cards__card.is-active .radio-cards__dot-inner {
-  background: rgb(var(--accent-rgb));
+  background: rgb(var(--backend-accent-rgb));
 }
 .radio-cards__body {
   display: flex;
@@ -557,10 +562,16 @@ function siblingValues(key: string): string[] {
 /* ----- inline_group ------------------------------------------------- */
 /* Children render side-by-side: main input takes the free space, the
    toggle settles on the right at its natural width. The container reuses
-   `.field`'s bottom margin so spacing matches surrounding rows. */
+   `.field`'s bottom margin so spacing matches surrounding rows.
+
+   Alignment is `flex-end`: the main field has a label above its input
+   while the toggle field is label-less (the switch is itself the label
+   row). Aligning bottoms puts the switch on the same baseline as the
+   input — visually centered with the input box, not with the whole
+   field (which would push it up by half the label's height). */
 .inline-group {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 16px;
   margin-bottom: 1rem;
 }
@@ -573,5 +584,9 @@ function siblingValues(key: string): string[] {
 }
 .inline-group :deep(.inline-group__toggle) {
   flex: 0 0 auto;
+  /* Drop the toggle to roughly the input's vertical midline. Inputs are
+     ~42px tall (py-2.5 + border + line-height); the switch is ~22px, so
+     a small bottom padding fine-tunes the optical center. */
+  padding-bottom: 10px;
 }
 </style>
