@@ -86,7 +86,9 @@
       "rateLimitedFallback": "Troppi tentativi. Riprova tra qualche secondo.",
       "invalid2fa": "Codice non valido. Verifica l’orologio del telefono e riprova.",
       "invalidBackup": "Backup code non valido o già usato.",
-      "generic": "Errore di rete. Riprova.",
+      "network": "Impossibile contattare il server. Verifica la connessione e riprova.",
+      "serverError": "Errore del server (HTTP {status}). Riprova tra poco — se persiste, controlla i log.",
+      "unexpectedStatus": "Risposta inattesa dal server (HTTP {status}).",
       "wrongDomain": "Sei sul dominio sbagliato. Reindirizzamento al lookup del tuo sito…"
     }
   },

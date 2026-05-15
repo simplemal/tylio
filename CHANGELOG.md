@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.2.2 — 2026-05-15
+
+### Fixed
+
+- **Login.vue: messaggi di errore precisi** invece del generico "Errore di rete". Ora distingue:
+  - `HTTP 5xx` → "Errore del server (HTTP {status}). Riprova tra poco — se persiste, controlla i log."
+  - `ApiError` con status fuori da 401/403/404/429 → "Risposta inattesa dal server (HTTP {status})."
+  - errore di rete vero (fetch fallisce prima di una risposta HTTP) → "Impossibile contattare il server. Verifica la connessione e riprova."
+  - 401, 403, 404, 429: gestiti come prima (credenziali, password change required, wrong domain, rate limit)
+
+  Prima quando il backend returnava 500 il SPA mostrava "Errore di rete" — fuorviante, perché l'utente pensava al wifi mentre il vero problema era server-side.
+
 ## v0.2.1 — 2026-05-15
 
 ### Fixed

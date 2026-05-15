@@ -86,7 +86,9 @@
       "rateLimitedFallback": "Too many attempts. Retry in a few seconds.",
       "invalid2fa": "Invalid code. Check your phone's clock and try again.",
       "invalidBackup": "Invalid or already-used backup code.",
-      "generic": "Network error. Try again.",
+      "network": "Can't reach the server. Check your connection and try again.",
+      "serverError": "Server error (HTTP {status}). Try again shortly — if it persists, check the logs.",
+      "unexpectedStatus": "Unexpected server response (HTTP {status}).",
       "wrongDomain": "You are on the wrong domain. Redirecting to the lookup for your site…"
     }
   },

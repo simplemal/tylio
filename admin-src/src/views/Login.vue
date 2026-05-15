@@ -83,8 +83,19 @@ async function submit() {
         window.location.href = lookup
       }
       return
+    } else if (e instanceof ApiError && e.status >= 500) {
+      // 5xx: server crashed. Surface the status code so the user can copy
+      // it into a bug report instead of guessing it's a network issue.
+      error.value = t('login.errors.serverError', { status: e.status })
+    } else if (e instanceof ApiError) {
+      // Catch-all for unexpected non-success statuses we don't have a
+      // specific handler for (400, 405, 410, …). Show the status code so
+      // the cause isn't hidden behind a generic "network error".
+      error.value = t('login.errors.unexpectedStatus', { status: e.status })
     } else {
-      error.value = t('login.errors.generic')
+      // Genuine network/transport error: fetch threw before any HTTP
+      // response (DNS, offline, CORS, TLS, …). Only here say "network".
+      error.value = t('login.errors.network')
     }
   } finally {
     loading.value = false
@@ -111,8 +122,12 @@ async function submit2fa() {
       error.value = useBackupCode.value
         ? t('login.errors.invalidBackup')
         : t('login.errors.invalid2fa')
+    } else if (e instanceof ApiError && e.status >= 500) {
+      error.value = t('login.errors.serverError', { status: e.status })
+    } else if (e instanceof ApiError) {
+      error.value = t('login.errors.unexpectedStatus', { status: e.status })
     } else {
-      error.value = t('login.errors.generic')
+      error.value = t('login.errors.network')
     }
   } finally {
     loading.value = false
