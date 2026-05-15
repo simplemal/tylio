@@ -327,9 +327,7 @@ class BlocksController
         // parent_id may be NULL (top-level), an int (inside a group), or
         // missing on rows from a DB that predates migration 0008. Surface
         // it as int|null to the SPA so the dashboard can group accordingly.
-        $row['parent_id'] = (isset($row['parent_id']) && $row['parent_id'] !== null && $row['parent_id'] !== 0)
-            ? (int)$row['parent_id']
-            : null;
+        $row['parent_id'] = !empty($row['parent_id']) ? (int)$row['parent_id'] : null;
         return $row;
     }
 }
