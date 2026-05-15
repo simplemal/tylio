@@ -9,6 +9,7 @@ use Tylio\Services\Auth;
 use Tylio\Services\BlockRegistry;
 use Tylio\Services\Csrf;
 use Tylio\Services\DB;
+use Tylio\Services\EmailVerification;
 use Tylio\Services\Export;
 use Tylio\Services\I18n;
 use Tylio\Services\Import;
@@ -61,6 +62,13 @@ return static function (): \Slim\App {
     $container->set(Mailer::class, fn(Container $c) => new Mailer(
         $config,
         $c->get(I18n::class),
+    ));
+    // Email verification for `site.admin_email`: code generation, hash
+    // storage, rate-limited resend. See `app/Services/EmailVerification.php`.
+    $container->set(EmailVerification::class, fn(Container $c) => new EmailVerification(
+        $c->get(DB::class),
+        $config,
+        $c->get(Mailer::class),
     ));
     $container->set(Renderer::class, fn(Container $c) => new Renderer(
         $c->get(DB::class),

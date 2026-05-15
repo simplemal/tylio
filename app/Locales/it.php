@@ -322,6 +322,194 @@ return [
     TXT,
 
     // -----------------------------------------------------------------
+    // mail.verification.* — mail "solo codice" per confermare il possesso
+    // di un indirizzo email admin. SICUREZZA: il body omette di proposito
+    // username / URL admin / URL sito (oltre a un riferimento generico),
+    // perché l'indirizzo potrebbe appartenere a un terzo per via di un
+    // refuso a install. L'unico contenuto è il codice + "ignora se non
+    // sei stato tu".
+    // -----------------------------------------------------------------
+    'mail.verification.subject' => 'Verifica la tua email',
+    'mail.verification.body_text' => <<<TXT
+    Ciao,
+
+    Qualcuno ha inserito questa email per ricevere notifiche da un sito {brand}.
+    Per confermare che è tua, incolla questo codice nella casella di verifica:
+
+      {code}
+
+    Il codice scade fra {ttl_minutes} minuti.
+
+    Se non sei stato tu, ignora questa mail — senza il codice non succede nulla.
+
+    — {brand}
+    TXT,
+    'mail.verification.body_html' => <<<HTML
+    <!doctype html>
+    <html lang="{lang}">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta name="x-apple-disable-message-reformatting">
+      <title>Verifica la tua email</title>
+    </head>
+    <body style="margin:0;padding:0;background:#1a1c25;color:#f8f8f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a1c25;padding:32px 12px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:480px;background:#282a36;border-radius:14px;border:1px solid rgba(248,248,242,0.08);overflow:hidden;">
+              <tr>
+                <td style="padding:28px 32px 8px;">
+                  <div style="font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#97a3c2;margin-bottom:6px;">{brand}</div>
+                  <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:600;font-size:24px;line-height:1.2;color:#f8f8f2;">
+                    Verifica la tua email
+                  </h1>
+                  <p style="margin:10px 0 0;color:#97a3c2;font-size:15px;line-height:1.5;">
+                    Qualcuno ha inserito questa email per ricevere notifiche da un sito {brand}. Per confermare che è tua, incolla questo codice nella casella di verifica.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:20px 32px 4px;">
+                  <div style="background:#1a1c25;border:1px solid rgba(248,248,242,0.08);border-radius:12px;padding:18px 16px;text-align:center;">
+                    <div style="color:#97a3c2;font-size:12px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px;">Codice di verifica</div>
+                    <div style="color:#62aaf9;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:30px;font-weight:600;letter-spacing:.35em;line-height:1.1;">{code}</div>
+                    <div style="margin-top:10px;color:#97a3c2;font-size:12px;">scade fra {ttl_minutes} minuti</div>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:18px 32px 24px;">
+                  <p style="margin:0;color:#97a3c2;font-size:13px;line-height:1.6;">
+                    Se non sei stato tu, ignora questa mail — senza il codice non succede nulla e non ti manderemo altri messaggi a questo indirizzo.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:14px 32px 22px;border-top:1px solid rgba(248,248,242,0.08);">
+                  <p style="margin:0;color:#97a3c2;font-size:12px;line-height:1.6;">
+                    Supporto: <a href="mailto:{support}" style="color:#62aaf9;text-decoration:none;">{support}</a>
+                    &nbsp;·&nbsp;
+                    Privacy: <a href="mailto:{privacy}" style="color:#62aaf9;text-decoration:none;">{privacy}</a>
+                  </p>
+                  <p style="margin:8px 0 0;color:#97a3c2;font-size:12px;">— {brand}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    HTML,
+
+    // -----------------------------------------------------------------
+    // mail.welcome_verified.* — inviata SOLO dopo che l'admin ha
+    // incollato correttamente il codice di verifica E `site.welcome_sent_at`
+    // è ancora NULL. Contiene le info di accesso vere e proprie.
+    // -----------------------------------------------------------------
+    'mail.welcome_verified.subject' => 'Il tuo sito {brand} è pronto · {site_label}',
+    'mail.welcome_verified.body_text' => <<<TXT
+    Ciao,
+
+    il tuo sito {brand} è configurato e la tua email è stata verificata.
+
+      Sito:     {site_url}
+      Admin:    {admin_url}
+      Username: {username}
+
+    La password l'hai già scelta tu in fase di installazione. Se in futuro
+    la perdi, da questa email puoi richiedere il reset password.
+
+    Dal pannello puoi cambiare tema, aggiungere tessere (link, bio, social,
+    gallery, contatti, ecc.) e caricare immagini.
+
+    Supporto: {support}
+    Privacy/dati: {privacy}
+
+    — {brand}
+    TXT,
+    'mail.welcome_verified.body_html' => <<<HTML
+    <!doctype html>
+    <html lang="{lang}">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      <meta name="x-apple-disable-message-reformatting">
+      <title>Il tuo sito {brand} è pronto</title>
+    </head>
+    <body style="margin:0;padding:0;background:#1a1c25;color:#f8f8f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#1a1c25;padding:32px 12px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:560px;background:#282a36;border-radius:14px;border:1px solid rgba(248,248,242,0.08);overflow:hidden;">
+              <tr>
+                <td style="padding:28px 32px 8px;">
+                  <div style="font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:#97a3c2;margin-bottom:6px;">{brand}</div>
+                  <h1 style="margin:0;font-family:Georgia,'Times New Roman',serif;font-weight:600;font-size:26px;line-height:1.2;color:#f8f8f2;">
+                    Il tuo sito è pronto
+                  </h1>
+                  <p style="margin:10px 0 0;color:#97a3c2;font-size:15px;line-height:1.5;">
+                    Email verificata per <a href="{url}" style="color:#62aaf9;text-decoration:none;font-weight:600;">{site_label}</a>.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:20px 32px 8px;">
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="background:#1a1c25;border:1px solid rgba(248,248,242,0.08);border-radius:10px;width:100%;">
+                    <tr>
+                      <td style="padding:14px 16px;">
+                        <div style="color:#97a3c2;font-size:12px;letter-spacing:.04em;text-transform:uppercase;">Username</div>
+                        <div style="color:#f8f8f2;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:15px;margin-top:2px;">{username}</div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:0 16px 14px;">
+                        <div style="color:#97a3c2;font-size:12px;letter-spacing:.04em;text-transform:uppercase;">Sito</div>
+                        <div style="margin-top:2px;"><a href="{url}" style="color:#62aaf9;text-decoration:none;font-size:15px;">{url}</a></div>
+                      </td>
+                    </tr>
+                  </table>
+                  <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px;">
+                    <tr>
+                      <td style="background:#62aaf9;border-radius:10px;">
+                        <a href="{admin_url}" style="display:inline-block;padding:12px 22px;color:#1a1c25;font-weight:600;font-size:15px;text-decoration:none;">Vai al pannello →</a>
+                      </td>
+                    </tr>
+                  </table>
+                  <p style="margin:14px 0 0;color:#97a3c2;font-size:13px;line-height:1.5;">
+                    Oppure copia e incolla nel browser:<br>
+                    <span style="color:#97a3c2;font-family:'SF Mono',Menlo,Consolas,monospace;font-size:12px;word-break:break-all;">{admin_url}</span>
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:18px 32px 12px;">
+                  <h2 style="margin:0 0 6px;font-family:Georgia,serif;font-size:17px;color:#ff79c6;">Se perdi l'accesso</h2>
+                  <p style="margin:0;color:#f8f8f2;font-size:14px;line-height:1.6;">
+                    Avendo verificato questa email, dalla schermata di login puoi richiedere il reset della password verso questo indirizzo.
+                  </p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:14px 32px 22px;border-top:1px solid rgba(248,248,242,0.08);">
+                  <p style="margin:0;color:#97a3c2;font-size:12px;line-height:1.6;">
+                    Supporto: <a href="mailto:{support}" style="color:#62aaf9;text-decoration:none;">{support}</a>
+                    &nbsp;·&nbsp;
+                    Privacy: <a href="mailto:{privacy}" style="color:#62aaf9;text-decoration:none;">{privacy}</a>
+                  </p>
+                  <p style="margin:8px 0 0;color:#97a3c2;font-size:12px;">— {brand}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    HTML,
+
+    // -----------------------------------------------------------------
     // Relative-date helper (Renderer::relativeDate)
     // -----------------------------------------------------------------
     'relative.future' => 'in arrivo',

@@ -34,8 +34,11 @@ use Symfony\Component\Mime\Address;
  * assumption that breaks when the same code is reused under a different
  * data shape. Keeping locale resolution at the call site is the cleanest
  * way to make the Mailer reusable across deployment topologies.
+ *
+ * **Extendable by design.** Non-`final`; test fakes and SaaS-overlay
+ * adapters (e.g. a "queue rather than send" transport) can subclass.
  */
-final class Mailer
+class Mailer
 {
     private ?SymfonyMailer $mailer = null;
     private ?string $lastError = null;
@@ -388,6 +391,95 @@ final class Mailer
             'accent' => $accent,
             'border' => $border,
         ]));
+    }
+
+    /**
+     * Verification-code email for the admin email address.
+     *
+     * SECURITY: body deliberately omits username, admin URL, and the
+     * site URL beyond a generic "you entered this email to access a
+     * {brand} site" referrer. The address may belong to an unrelated
+     * person (typo on install); leaking the username/URL would let them
+     * try to log in. The only payload is the code + the standard
+     * "if it wasn't you, ignore this email" line.
+     *
+     * Subject also avoids carrying the code (some clients log subjects
+     * in plaintext to indexers / push notifications).
+     */
+    public function sendVerificationCode(
+        string $to,
+        string $code,
+        int $ttlMinutes,
+        ?string $locale = null,
+    ): bool {
+        $this->applyLocale($locale);
+
+        $subject = $this->i18n->t('mail.verification.subject', $this->withBrand([]));
+        $text = $this->i18n->t('mail.verification.body_text', $this->withBrand([
+            'code' => $code,
+            'ttl_minutes' => (string)$ttlMinutes,
+        ]));
+        $esc = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $html = $this->i18n->t('mail.verification.body_html', $this->withBrand([
+            'lang' => $esc($this->i18n->currentLocale()),
+            'code' => $esc($code),
+            'ttl_minutes' => (string)$ttlMinutes,
+            'support' => $esc($this->supportAddress()),
+            'privacy' => $esc($this->privacyAddress()),
+        ]));
+
+        return $this->send($to, $subject, $text, $html);
+    }
+
+    /**
+     * Welcome email sent ONCE after the admin email is verified. Carries
+     * the credentials/URLs the user actually needs to keep using the
+     * site. Caller is responsible for gating delivery behind
+     * `site.welcome_sent_at IS NULL` so a later email change doesn't
+     * resend this content.
+     *
+     * Mirror of `sendInvite()` for the post-install flow, but for users
+     * who picked their own password (no temporary credential to ship).
+     */
+    public function sendWelcomeAfterVerified(
+        string $to,
+        string $username,
+        string $siteUrl,
+        string $adminUrl,
+        ?string $siteLabel = null,
+        ?string $locale = null,
+    ): bool {
+        $this->applyLocale($locale);
+
+        $label = $siteLabel !== null && $siteLabel !== ''
+            ? $siteLabel
+            : (string)(parse_url($siteUrl, PHP_URL_HOST) ?: $siteUrl);
+
+        $subject = $this->i18n->t('mail.welcome_verified.subject', $this->withBrand([
+            'site_label' => $label,
+        ]));
+        $text = $this->i18n->t('mail.welcome_verified.body_text', $this->withBrand([
+            'url' => $siteUrl,
+            'site_url' => $siteUrl,
+            'admin_url' => $adminUrl,
+            'username' => $username,
+            'site_label' => $label,
+            'support' => $this->supportAddress(),
+            'privacy' => $this->privacyAddress(),
+        ]));
+
+        $esc = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $html = $this->i18n->t('mail.welcome_verified.body_html', $this->withBrand([
+            'lang' => $esc($this->i18n->currentLocale()),
+            'url' => $esc($siteUrl),
+            'admin_url' => $esc($adminUrl),
+            'username' => $esc($username),
+            'site_label' => $esc($label),
+            'support' => $esc($this->supportAddress()),
+            'privacy' => $esc($this->privacyAddress()),
+        ]));
+
+        return $this->send($to, $subject, $text, $html);
     }
 
     /**
