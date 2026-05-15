@@ -237,7 +237,38 @@ class SubmissionsController
         array $payload,
         string $ip,
     ): array {
-        $notify = $this->resolveSetting('contact.notify_email', $request);
+        // Preferred recipient: the verified site.admin_email. Falls back
+        // to the legacy contact.notify_email so existing installs keep
+        // working during the migration window (0007 already copied a
+        // non-empty legacy value into site.admin_email, but the user may
+        // not have completed the verification step yet, in which case
+        // we still want SOMETHING in the inbox rather than a silent
+        // drop). The fallback is deliberately UNVERIFIED — the explicit
+        // status code makes the reasoning auditable in the Submissions
+        // admin view.
+        $adminEmail = $this->resolveSetting('site.admin_email', $request);
+        $verifiedAt = $this->resolveSetting('site.admin_email_verified_at', $request);
+
+        $notify = '';
+        $statusOverride = null;
+        if ($adminEmail !== '' && $verifiedAt !== '') {
+            $notify = $adminEmail;
+        } elseif ($adminEmail !== '') {
+            // The admin has configured an email but never verified it.
+            // Refuse to forward — the address might belong to the wrong
+            // person (typo). Record the reason in mail_status so the
+            // admin sees it inline in Submissions.
+            $statusOverride = 'unverified_recipient';
+        } else {
+            // No admin email at all → try the legacy field as a last
+            // resort. New OSS installs will have neither set.
+            $notify = $this->resolveSetting('contact.notify_email', $request);
+        }
+
+        if ($statusOverride !== null) {
+            return [$statusOverride, null];
+        }
+
         $locale = $this->resolveSetting('site.locale', $request);
         $host = $request->getUri()->getHost();
         $status = $this->mailer->sendContactNotification(
