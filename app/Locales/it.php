@@ -550,6 +550,10 @@ return [
     'blocks.hero.fields.subtitle.label' => 'Sottotitolo / Biografia',
     'blocks.hero.fields.subtitle.placeholder' => 'Una o due righe che ti descrivono. **Grassetto**, *corsivo*, [link](https://...) supportati.',
     'blocks.hero.fields.subtitle.help' => 'Testo libero in Markdown. Esempi: **grassetto**, *corsivo*, [scrivi qui il testo](https://link), `codice`, > una citazione, e all\'inizio di una riga - punto elenco. Vedi la legenda completa qui sotto.',
+    'blocks.hero.fields.align.label' => 'Allineamento',
+    'blocks.hero.fields.align.help' => 'Su mobile è sempre centrato. Su desktop "Sinistra" mette l\'avatar grande a sinistra e il testo a destra; "Centro" tiene tutto in colonna centrata come su mobile.',
+    'blocks.hero.fields.align.options.left' => 'Sinistra',
+    'blocks.hero.fields.align.options.center' => 'Centro',
 
     // ---------- links ----------
     'blocks.links.label' => 'Link',

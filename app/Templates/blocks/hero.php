@@ -7,8 +7,13 @@
 $subtitle = (string)($data['subtitle'] ?? '');
 $titleText = trim((string)($data['title'] ?? ''));
 $titleImage = trim((string)($data['title_image'] ?? ''));
+// `align` mirrors the social block's option:
+//   - 'left'   (default) → desktop split: large avatar left + text right
+//   - 'center'           → desktop keeps the mobile vertical-stack layout
+// Mobile (<780px) is always centered regardless.
+$align = ($data['align'] ?? 'left') === 'center' ? 'center' : 'left';
 ?>
-<div class="m-hero">
+<div class="m-hero<?= $align === 'center' ? ' m-hero--center' : '' ?>">
   <?php if (!empty($data['avatar'])): ?>
     <img class="m-hero__avatar" src="<?= $renderer->escape($data['avatar']) ?>" alt="" loading="eager" decoding="async">
   <?php endif; ?>

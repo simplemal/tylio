@@ -551,6 +551,10 @@ return [
     'blocks.hero.fields.subtitle.label' => 'Subtitle / Bio',
     'blocks.hero.fields.subtitle.placeholder' => 'One or two lines about you. **Bold**, *italic*, [link](https://...) supported.',
     'blocks.hero.fields.subtitle.help' => 'Free text in Markdown. Examples: **bold**, *italic*, [write your text here](https://link), `code`, > a quote, and at the start of a line - for a bullet point. See the full legend below.',
+    'blocks.hero.fields.align.label' => 'Alignment',
+    'blocks.hero.fields.align.help' => 'On mobile, the hero is always centered. On desktop, "Left" puts the large avatar on the left and the text on the right; "Center" keeps everything stacked and centered like on mobile.',
+    'blocks.hero.fields.align.options.left' => 'Left',
+    'blocks.hero.fields.align.options.center' => 'Center',
 
     // ---------- links ----------
     'blocks.links.label' => 'Links',

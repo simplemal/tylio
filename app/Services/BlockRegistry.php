@@ -115,6 +115,13 @@ final class BlockRegistry
                     ['key' => 'title', 'label' => 'blocks.hero.fields.title.label', 'type' => 'text', 'default' => 'blocks.hero.fields.title.default', 'placeholder' => 'blocks.hero.fields.title.placeholder', 'help' => 'blocks.hero.fields.title.help'],
                     ['key' => 'title_image', 'label' => 'blocks.hero.fields.title_image.label', 'type' => 'image', 'help' => 'blocks.hero.fields.title_image.help'],
                     ['key' => 'subtitle', 'label' => 'blocks.hero.fields.subtitle.label', 'type' => 'markdown', 'default' => '', 'placeholder' => 'blocks.hero.fields.subtitle.placeholder', 'help' => 'blocks.hero.fields.subtitle.help'],
+                    ['key' => 'align', 'label' => 'blocks.hero.fields.align.label', 'type' => 'select', 'default' => 'left',
+                        'help' => 'blocks.hero.fields.align.help',
+                        'options' => [
+                            ['value' => 'left', 'label' => 'blocks.hero.fields.align.options.left'],
+                            ['value' => 'center', 'label' => 'blocks.hero.fields.align.options.center'],
+                        ],
+                    ],
                 ],
             ],
 
