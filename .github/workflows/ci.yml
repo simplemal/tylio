@@ -6,10 +6,18 @@ on:
   pull_request:
     branches: [main]
 
+# Push successivi sullo stesso branch cancellano i job in coda dei commit
+# precedenti. Senza questa policy, push ravvicinati lasciavano i job zombie
+# in coda finché GitHub li timeoutava → run marcate "failure" senza log.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   php:
     name: PHP ${{ matrix.php }}
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -45,6 +53,7 @@ jobs:
   admin-spa:
     name: Admin SPA build (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       fail-fast: false
       matrix:
