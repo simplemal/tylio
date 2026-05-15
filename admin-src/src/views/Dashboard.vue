@@ -18,6 +18,10 @@ const blocks = ref<Block[]>([])
 const types = ref<BlockType[]>([])
 const loading = ref(true)
 const showAdd = ref(false)
+// True while a drag is in flight (set by vuedraggable's @start, cleared
+// on @end). Used by CSS to highlight group drop zones and to suspend
+// click-to-edit so a click that started a drag doesn't navigate.
+const dragging = ref(false)
 // When non-null, `Add tile` will create the new block inside this
 // group instead of at the top level. Set by the per-group `+` button.
 const addInsideGroup = ref<number | null>(null)
@@ -144,7 +148,26 @@ function canDropInto(parentId: number | null, evt: { draggedContext: { element: 
   return true
 }
 
-function onTopLevelMove(evt: { draggedContext: { element: Block } }): boolean {
+/**
+ * Top-level `:move` predicate. We *additionally* veto the swap when
+ * the cursor passes OVER a group while dragging a regular tile —
+ * "anti-folder-dodge": without this, the group card slides out of the
+ * way as the user approaches it, and they never reach the inner drop
+ * zone. Refusing the swap freezes the group in place so the cursor can
+ * cross the outer chrome and reach the children sortable nested
+ * inside (which has the same `group="dash"` and will adopt the item).
+ * Groups can still be reordered AMONG themselves (the veto only fires
+ * when the dragged item isn't a group itself).
+ */
+function onTopLevelMove(evt: {
+  draggedContext: { element: Block }
+  relatedContext?: { element?: Block }
+}): boolean {
+  const dragged = evt.draggedContext.element
+  const related = evt.relatedContext?.element
+  if (related && related.type === 'group' && dragged.type !== 'group') {
+    return false
+  }
   return canDropInto(null, evt)
 }
 
@@ -392,8 +415,15 @@ function blockSummary(b: Block): string {
     item-key="id"
     handle=".grip"
     class="dash-grid"
+    :swap-threshold="0.6"
+    :invert-swap="true"
+    :animation="150"
+    ghost-class="dash-ghost"
+    chosen-class="dash-chosen"
     :move="onTopLevelMove"
     @change="onTopLevelChange"
+    @start="dragging = true"
+    @end="dragging = false"
   >
     <template #item="{ element: b }">
       <!-- A group tile: ghost card (dashed) housing its children stack.
@@ -405,6 +435,7 @@ function blockSummary(b: Block): string {
         class="tile dash-group group relative"
         :class="[
           { 'opacity-60': !b.enabled },
+          { 'dash-group--dragging': dragging },
           placement[b.id] === 'full' ? 'dash-tile--full' : 'dash-tile--half',
         ]"
       >
@@ -455,8 +486,16 @@ function blockSummary(b: Block): string {
           item-key="id"
           handle=".grip"
           class="dash-group__children"
+          :swap-threshold="0.6"
+          :invert-swap="true"
+          :animation="150"
+          :empty-insert-threshold="40"
+          ghost-class="dash-ghost"
+          chosen-class="dash-chosen"
           :move="makeGroupMove(b.id)"
           @change="makeGroupChange(b.id)"
+          @start="dragging = true"
+          @end="dragging = false"
         >
           <template #item="{ element: child }">
             <article
@@ -730,5 +769,35 @@ function blockSummary(b: Block): string {
 .dash-group__add:hover {
   border-color: rgb(var(--ink-100-rgb) / 0.4);
   background: rgb(var(--ink-100-rgb) / 0.04);
+}
+
+/* While ANY drag is in flight, every group's drop-zone visually
+   "lights up" so the user sees where they can drop. This counters the
+   default sortable feel where the group's chrome looks identical to
+   every other tile and the user has no signal that THIS is a container.
+   Combined with the `:move` veto on top-level swaps over groups, the
+   group also stays put as the user approaches it instead of dodging. */
+.dash-group--dragging {
+  border-color: rgb(var(--backend-accent-rgb) / 0.5);
+}
+.dash-group--dragging .dash-group__children {
+  background: rgb(var(--backend-accent-rgb) / 0.06);
+  outline: 2px dashed rgb(var(--backend-accent-rgb) / 0.4);
+  outline-offset: -2px;
+}
+.dash-group--dragging .dash-group__children:empty::before {
+  border-color: rgb(var(--backend-accent-rgb) / 0.5);
+}
+
+/* Sortable's "chosen" + "ghost" tiles. ghost = the placeholder slot in
+   the source list while dragging; chosen = the original element under
+   the cursor (the one the user is actually moving). */
+.dash-ghost {
+  opacity: 0.4;
+  background: rgb(var(--backend-accent-rgb) / 0.1);
+  border: 2px dashed rgb(var(--backend-accent-rgb));
+}
+.dash-chosen {
+  cursor: grabbing !important;
 }
 </style>
