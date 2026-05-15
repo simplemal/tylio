@@ -94,8 +94,11 @@ class UpdateChecker
             return null;
         }
         // $http_response_header is auto-populated by file_get_contents when
-        // a stream context with `http` is used.
-        $status = $this->parseHttpStatus($http_response_header ?? []);
+        // a stream context with `http` is used. After the body succeeds it's
+        // guaranteed set — PHPStan rejects `?? []` here as "always exists",
+        // so we read it directly.
+        /** @var list<string> $http_response_header */
+        $status = $this->parseHttpStatus($http_response_header);
         if ($status === null || $status < 200 || $status >= 300) {
             return null;
         }
