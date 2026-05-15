@@ -433,7 +433,13 @@ const emailVerifyJustOk = ref(false)
 const emailJustResent = ref(false)
 const emailCooldownTick = ref(0)
 
-const emailIsVerified = computed(() => !!emailVerification.value?.verified_at)
+// "Verified" requires BOTH a non-empty admin_email AND a verified_at
+// timestamp from the server. If either is missing the badge stays
+// hidden — protects against any inconsistent server state where the
+// timestamp got set without an email row to attach it to.
+const emailIsVerified = computed(
+  () => !!emailVerification.value?.verified_at && getStr('site.admin_email') !== '',
+)
 const emailHasPending = computed(() => !!emailVerification.value?.pending)
 const emailCooldownRemaining = computed(() => {
   // `emailCooldownTick` is mutated by setInterval so this re-derives.

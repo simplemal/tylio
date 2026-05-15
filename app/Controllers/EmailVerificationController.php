@@ -118,6 +118,11 @@ class EmailVerificationController
     {
         $email = $this->resolveAdminEmail($request);
         $verifiedAt = $this->resolveStringSetting($request, 'site.admin_email_verified_at');
+        // "Verified" only makes sense bound to an address: if `admin_email`
+        // is unset, force `verified_at` to null in the response too. Guards
+        // against an inconsistent legacy/seed state where the badge would
+        // otherwise read "Verificata" next to an empty input.
+        if ($email === '') $verifiedAt = '';
         $tenantId = $this->tenantIdFromRequest($request);
         return AuthController::json($response, [
             'email' => $email,
