@@ -66,6 +66,8 @@ return [
     // -----------------------------------------------------------------
     'public.products.default_cta' => 'Acquista',
     'public.products.copy_code' => 'Clicca per copiare il codice',
+    'public.links.copy_badge' => 'Clicca per copiare',
+    'public.links.copied' => 'Copiato negli appunti',
     'public.embed.invalid_url' => 'URL embed non valido o non riconosciuto.',
     'public.youtube.unavailable' => 'Ultimo video momentaneamente non disponibile',
     'public.youtube.open_on_yt' => 'apri su YouTube',
@@ -561,6 +563,8 @@ return [
     'blocks.links.fields.items.of.icon.help' => 'Nome Iconify, es. lucide:globe',
     'blocks.links.fields.items.of.badge.label' => 'Badge',
     'blocks.links.fields.items.of.badge.help' => 'Es. "novità"',
+    'blocks.links.fields.items.of.badge_copyable.label' => 'Rendi copiabile',
+    'blocks.links.fields.items.of.badge_copyable.help' => 'Se attivo, nel sito pubblico cliccando il badge il suo testo viene copiato negli appunti del visitatore (utile per codici sconto, riferimenti, ecc.).',
     'blocks.links.fields.items.of.description.label' => 'Descrizione',
 
     // ---------- apps ----------

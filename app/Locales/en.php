@@ -68,6 +68,8 @@ return [
     // -----------------------------------------------------------------
     'public.products.default_cta' => 'Buy',
     'public.products.copy_code' => 'Click to copy the code',
+    'public.links.copy_badge' => 'Click to copy',
+    'public.links.copied' => 'Copied to clipboard',
     'public.embed.invalid_url' => 'Invalid or unrecognized embed URL.',
     'public.youtube.unavailable' => 'Latest video temporarily unavailable',
     'public.youtube.open_on_yt' => 'open on YouTube',
@@ -562,6 +564,8 @@ return [
     'blocks.links.fields.items.of.icon.help' => 'Iconify name, e.g. lucide:globe',
     'blocks.links.fields.items.of.badge.label' => 'Badge',
     'blocks.links.fields.items.of.badge.help' => 'E.g. "new"',
+    'blocks.links.fields.items.of.badge_copyable.label' => 'Make copyable',
+    'blocks.links.fields.items.of.badge_copyable.help' => 'When on, clicking the badge in the public site copies its text to the visitor’s clipboard (useful for discount codes, references, etc.).',
     'blocks.links.fields.items.of.description.label' => 'Description',
 
     // ---------- apps ----------

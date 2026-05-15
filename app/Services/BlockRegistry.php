@@ -133,6 +133,7 @@ final class BlockRegistry
                             ['key' => 'url', 'label' => 'blocks.links.fields.items.of.url.label', 'type' => 'url'],
                             ['key' => 'icon', 'label' => 'blocks.links.fields.items.of.icon.label', 'type' => 'icon', 'help' => 'blocks.links.fields.items.of.icon.help'],
                             ['key' => 'badge', 'label' => 'blocks.links.fields.items.of.badge.label', 'type' => 'text', 'help' => 'blocks.links.fields.items.of.badge.help'],
+                            ['key' => 'badge_copyable', 'label' => 'blocks.links.fields.items.of.badge_copyable.label', 'type' => 'toggle', 'default' => false, 'help' => 'blocks.links.fields.items.of.badge_copyable.help'],
                             ['key' => 'description', 'label' => 'blocks.links.fields.items.of.description.label', 'type' => 'text'],
                         ],
                     ],

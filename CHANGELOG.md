@@ -6,6 +6,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.2.3 — 2026-05-15
+
+### Changed — tessera Link
+
+- **Favicon di default sull'icona**. Se l'item ha un URL `http(s)` valido e nessuna icona scelta, viene caricata la favicon del sito tramite il servizio privacy-friendly di DuckDuckGo (`icons.duckduckgo.com/ip3/<host>.ico`, `referrerpolicy=no-referrer`, lazy). Per host non risolti, fallback all'SVG generico via `onerror`. Le icone esplicite (Iconify) restano prioritarie.
+- **Solo il "Testo" è cliccabile**, non più tutta la riga. Il wrapper riga è ora un `<div>`; solo il titolo è un `<a>` con `target=_blank` per i link esterni. Effetto hover ridotto al solo titolo (accent + underline). Migliora chiarezza UX e accessibilità — tab-stop unico per item.
+- **Opzione "Rendi copiabile" sul badge**. Nuovo toggle per item `badge_copyable`: se attivo, nel sito pubblico cliccando il badge il suo testo viene copiato negli appunti (`navigator.clipboard.writeText`) con feedback visivo (icona check + classe `.is-copied` per ~1.6s). Utile per codici sconto, riferimenti, ecc. Lo script è scoped per `data-block-id`, quindi più tessere `links` sulla stessa pagina non si pestano i piedi.
+
 ## v0.2.2 — 2026-05-15
 
 ### Fixed
