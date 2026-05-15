@@ -382,16 +382,16 @@ a{color:inherit;text-decoration:none}
       0 0 0 4px color-mix(in oklab, var(--accent) 7%, transparent);
   }
   .m-tile--hero .m-hero__title{font-size:clamp(36px,4.5vw,52px)}
-  /* `align: center` (set in the editor) keeps the mobile vertical
-     stack on desktop too — single column, centered, no split. The
-     avatar stays at its larger desktop size; only the layout flow
-     differs from the default. */
+  /* `align: center` (set in the editor) keeps the avatar-left + text-
+     right split BUT centers the pair as a unit inside the tile. We
+     drop the `1fr` on the text column (which would stretch it edge-
+     to-edge) for `auto`, then `justify-content: center` pulls the
+     whole grid to the middle. Subtitle's existing `max-width: 60ch`
+     prevents very long text from blowing the column. */
   .m-tile--hero .m-hero--center{
-    grid-template-columns:1fr;
-    justify-items:center;
-    text-align:center;
+    grid-template-columns:auto auto;
+    justify-content:center;
   }
-  .m-tile--hero .m-hero--center .m-hero__texts{align-items:center}
 }
 .m-tile--hero .m-cta{
   display:inline-flex;align-items:center;gap:10px;margin-top:8px;
