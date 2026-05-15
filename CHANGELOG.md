@@ -6,6 +6,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.0 — 2026-05-15
+
+### Added — Block "group" container
+
+- **Nuovo block type `group`**: contenitore che raccoglie 1–N tessere figlie e le dispone come un cluster coeso (es. 1 grande a sinistra + 2 stacked a destra). Migrazione `0008_group_blocks.sql` aggiunge `blocks.parent_id INTEGER NULL REFERENCES blocks(id) ON DELETE SET NULL` con index. `ON DELETE SET NULL` significa che eliminando un gruppo i figli vengono **staccati** al top-level invece di essere distrutti — niente perdita di dati.
+- **Layout planner CSS Grid**: nuovo `Renderer::planLayout()` che cammina sui blocks, costruisce le righe della pagina, e per ogni cella emette un `grid-area` inline via CSS custom property `--ga`. Sul frontend pubblico il gruppo è **completamente invisibile**: niente wrapper, niente padding/margin, solo posizionamento via grid. L'utente finale vede solo le tessere.
+- **Drag-and-drop cross-list in Dashboard admin**: trascina una tessera dentro un gruppo per attaccarla (`parent_id = group.id`), trascinala fuori per staccarla. Riordino dei figli funziona dentro al gruppo come al top-level. Workaround per bug noto di `vuedraggable` su drag cross-list: bypassiamo `@change` (che non si triggera correttamente) e usiamo direttamente gli eventi SortableJS `@add`/`@update` leggendo l'id del blocco trascinato da un attributo `data-block-id`.
+- **Anti-folder-dodge**: trascinando una tessera *verso* un gruppo, il gruppo **non scivola via** (comportamento UX tipico di SortableJS che renderebbe impossibile droppare *dentro*). `:move` predicate veta lo swap quando il target è un gruppo e il dragged non lo è.
+- **Server rifiuta gruppi annidati** (422): `BlocksController::create()`/`update()` verifica che `parent_id` non punti a un altro gruppo. La UI guarda anche lato suo per evitare di mostrare il pulsante "Aggiungi gruppo" dentro un gruppo.
+
+### Added — Hero block "centered" option
+
+- Nuovo campo `align` su hero (sinistra/centro) come già esisteva per il blocco social. Su desktop il blocco hero mantiene il suo split nativo (avatar | titolo / avatar | descrizione) — l'opzione "centro" sposta tutto il blocco al centro della propria riga senza stackare verticalmente. Su mobile il blocco è naturalmente centrato come prima.
+
+### Fixed — Admin email verification UI
+
+- Il badge **"Verificata"** non appare più quando `site.admin_email` è vuoto. Stato inconsistente possibile dopo signup malformato o cleanup parziale del DB (`admin_email=""` + `admin_email_verified_at` settato): ora la difesa è doppia.
+  - UI (`Settings.vue`): `emailIsVerified` computed richiede **entrambe** le condizioni (`verified_at` non null **AND** `site.admin_email` non vuoto).
+  - Server (`EmailVerificationController::status()`): se `email === ''` il payload restituisce `verified_at: null` forzato, anche se il setting persistito dice il contrario.
+
 ## v0.2.6 — 2026-05-15
 
 ### Fixed — tessera Link UX (round 3)
