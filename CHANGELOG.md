@@ -6,6 +6,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.2.0 — 2026-05-15
+
+### Added
+
+- **Admin email + verifica via codice**: l'install wizard chiede un'email opzionale per l'admin. La verifica avviene tramite codice 6-char (Crockford base32, no `0/O/1/I/L`), TTL 24h. La mail di **sola verifica** contiene esclusivamente il codice — niente username né URL admin per evitare leak in caso di typo. La mail di **benvenuto** con dati di accesso parte SOLO dopo verifica riuscita (flag `welcome_sent_at`). Rate-limit di 30 min sui resend manuali da Settings.
+- **Settings → Email**: nuovo campo con tick verificato/non, riga codice + bottone "Verifica" + link "Reinvia codice" con countdown.
+- **Submissions**: il form contatti ora forwarda solo a email **verificata** (`mail_status='unverified_recipient'` altrimenti). Setting legacy `contact.notify_email` auto-migrato a `site.admin_email`.
+- **CI**: aggiunto `concurrency.group` + `cancel-in-progress` per cancellare i job pendenti di push superseded, evitando job zombie. `timeout-minutes` 15/10 sui job.
+
+### Security
+
+- Codice di verifica salvato come `hash('sha256', code . pepper)` — mai in chiaro.
+- Max 5 tentativi sbagliati → invalida codice + forza resend.
+- Audit log per ogni `requestCode` / `verifyCode`.
+
+### Notes
+
+- Pacchetto SaaS (`tylio-platform`): nuova `TenantSetup` pre-verifica l'email dell'admin tenant al momento di invito superadmin.
+- TODO esplicito (`memory/tylio_todo.md`): UI password reset (form `/forgot-password`), 2FA via email come fallback TOTP, notifica al "previous email" al cambio.
+
 ## v0.1.0 — 2026-05-14
 
 ### Notes
