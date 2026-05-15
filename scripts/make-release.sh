@@ -197,6 +197,60 @@ else
   warn "admin/ not built — the release will not ship an admin bundle asset."
 fi
 
+# ---------- 5b. full-source tarball (for in-app upgrade) ----------------
+# This is the asset consumed by UpdateApplier when the admin clicks
+# "Aggiorna ora" in Settings: it must contain everything needed to run
+# tylio on a self-host with ZERO dependencies (no composer, no npm).
+# Excluded paths are the runtime/local-state set the swap explicitly
+# preserves (data/, uploads/, favicons/, .env, .git, plus the build
+# artifacts themselves to avoid recursion).
+SOURCE_ASSET="tylio-source-$VERSION.tar.gz"
+log "Packaging full source → $SOURCE_ASSET (incl. vendor/ + admin/)"
+SOURCE_STAGING="$(mktemp -d)"
+SOURCE_STAGING_TYLIO="$SOURCE_STAGING/tylio"
+mkdir -p "$SOURCE_STAGING_TYLIO"
+# Use rsync to stage so we can declare excludes cleanly. Falls back to
+# a cp-based path on systems without rsync (rare, but possible).
+if command -v rsync >/dev/null 2>&1; then
+  rsync -a \
+    --exclude='.git/' \
+    --exclude='admin-src/node_modules/' \
+    --exclude='admin-src/dist/' \
+    --exclude='data/' \
+    --exclude='uploads/' \
+    --exclude='favicons/' \
+    --exclude='.env' \
+    --exclude='tylio-admin-bundle-*.tar.gz' \
+    --exclude='tylio-source-*.tar.gz' \
+    --exclude='.phpstan-cache/' \
+    --exclude='.phpunit.cache/' \
+    --exclude='tests/' \
+    --exclude='*.swp' --exclude='*.bak' --exclude='.DS_Store' \
+    "$PROJECT_ROOT/" "$SOURCE_STAGING_TYLIO/"
+else
+  warn "rsync not installed — using cp for source staging (slower)"
+  cp -a "$PROJECT_ROOT/." "$SOURCE_STAGING_TYLIO/"
+  rm -rf "$SOURCE_STAGING_TYLIO/.git" \
+         "$SOURCE_STAGING_TYLIO/admin-src/node_modules" \
+         "$SOURCE_STAGING_TYLIO/admin-src/dist" \
+         "$SOURCE_STAGING_TYLIO/data" \
+         "$SOURCE_STAGING_TYLIO/uploads" \
+         "$SOURCE_STAGING_TYLIO/favicons" \
+         "$SOURCE_STAGING_TYLIO/tests" \
+         "$SOURCE_STAGING_TYLIO/.phpstan-cache" \
+         "$SOURCE_STAGING_TYLIO/.phpunit.cache"
+  rm -f "$SOURCE_STAGING_TYLIO/.env" "$SOURCE_STAGING_TYLIO/"tylio-*.tar.gz
+fi
+# Sanity check the staging dir before tarring.
+[[ -d "$SOURCE_STAGING_TYLIO/app" ]] || die "Source staging missing app/ — aborting"
+[[ -f "$SOURCE_STAGING_TYLIO/public/index.php" ]] || die "Source staging missing public/index.php — aborting"
+[[ -d "$SOURCE_STAGING_TYLIO/admin" ]] || warn "Source staging missing admin/ — in-app upgrade will deploy without the SPA"
+# Tar with the wrapper "tylio/" dir so UpdateApplier's collapse-single-
+# top-level step DTRT.
+( cd "$SOURCE_STAGING" && tar -czf "$PROJECT_ROOT/$SOURCE_ASSET" tylio )
+rm -rf "$SOURCE_STAGING"
+log "Source asset ready: $SOURCE_ASSET ($(du -h "$SOURCE_ASSET" | cut -f1))"
+
 # ---------- 6. commit --------------------------------------------------
 # Note: BUILD, .version, admin/ and the tarball are gitignored on
 # purpose (BUILD/.version cause merge conflicts on every release;
@@ -260,8 +314,14 @@ else
   cat "$RELEASE_NOTES_FILE"
   echo "-----------------------------"
   if confirm "Create the GitHub release with the notes above?"; then
-    if [[ -n "$ASSET" && -f "$ASSET" ]]; then
-      gh release create "$VERSION" "$ASSET" \
+    # Build the asset list dynamically — both bundles are optional but
+    # `tylio-source-*.tar.gz` is REQUIRED for the in-app upgrade flow
+    # (UpdateApplier rejects releases without it).
+    ASSETS=()
+    [[ -n "$ASSET" && -f "$ASSET" ]] && ASSETS+=("$ASSET")
+    [[ -f "$SOURCE_ASSET" ]] && ASSETS+=("$SOURCE_ASSET")
+    if [[ ${#ASSETS[@]} -gt 0 ]]; then
+      gh release create "$VERSION" "${ASSETS[@]}" \
         --title "$VERSION" \
         --notes-file "$RELEASE_NOTES_FILE"
     else
@@ -271,7 +331,7 @@ else
     fi
   else
     warn "Skipped GitHub release. Create it manually with:"
-    warn "  gh release create $VERSION ${ASSET:+\"$ASSET\" }--title \"$VERSION\" --notes-file <file>"
+    warn "  gh release create $VERSION ${ASSET:+\"$ASSET\" }${SOURCE_ASSET:+\"$SOURCE_ASSET\" }--title \"$VERSION\" --notes-file <file>"
   fi
 fi
 
