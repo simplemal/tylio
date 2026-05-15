@@ -99,6 +99,7 @@ export type BlockKind =
   | 'podcast'
   | 'contact'
   | 'skills'
+  | 'group'
   | 'divider'
   | 'footer'
 
@@ -106,6 +107,13 @@ interface BaseBlock {
   id: number
   position: number
   enabled: boolean
+  /**
+   * `null` (or absent on legacy rows) for top-level blocks; a `group`
+   * block id when this block lives inside a group's column on the
+   * public mosaic. The layout planner walks parent_id to compute the
+   * grid placement.
+   */
+  parent_id?: number | null
   style: Record<string, unknown>
   created_at: string
   updated_at: string
@@ -381,6 +389,14 @@ export interface FooterData {
   links?: FooterLink[]
 }
 
+/**
+ * Group container. Carries no own visible data — it's a layout
+ * primitive that stacks its children inside one mosaic column. The
+ * value of the group lives in the children (blocks with `parent_id`
+ * pointing at this group's id). Kept as a shape for type discipline.
+ */
+export type GroupData = Record<string, never>
+
 // --- Discriminated union -------------------------------------------------
 
 export type Block =
@@ -401,6 +417,7 @@ export type Block =
   | (BaseBlock & { type: 'podcast'; data: PodcastData })
   | (BaseBlock & { type: 'contact'; data: ContactData })
   | (BaseBlock & { type: 'skills'; data: SkillsData })
+  | (BaseBlock & { type: 'group'; data: GroupData })
   | (BaseBlock & { type: 'divider'; data: DividerData })
   | (BaseBlock & { type: 'footer'; data: FooterData })
 
@@ -410,6 +427,12 @@ export interface BlockUpdate {
   style?: Record<string, unknown>
   enabled?: boolean
   position?: number
+  /**
+   * Move this block into a group (`number`), or detach it back to
+   * top-level (`null`). Server rejects with 422 if the target id is not
+   * a group, or if this block is itself a group (no nested groups).
+   */
+  parent_id?: number | null
 }
 
 /** Mapping `type literal` → shape of `data`. Useful for generics in consumers. */
@@ -431,6 +454,7 @@ export interface BlockDataMap {
   podcast: PodcastData
   contact: ContactData
   skills: SkillsData
+  group: GroupData
   divider: DividerData
   footer: FooterData
 }

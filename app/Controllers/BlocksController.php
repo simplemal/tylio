@@ -48,17 +48,18 @@ class BlocksController
             return AuthController::json($response, ['error' => 'invalid_type'], 422);
         }
 
-        if ($type === 'footer') {
-            $position = (int)$this->db->value('SELECT COALESCE(MAX(position), 0) + 10 FROM blocks');
-        } else {
-            $position = (int)$this->db->value(
-                "SELECT COALESCE(MAX(position), 0) + 10 FROM blocks WHERE type != 'footer'"
-            );
-            $this->db->query(
-                "UPDATE blocks SET position = position + 10 WHERE type = 'footer' AND position <= ?",
-                [$position],
-            );
+        // Optional parent_id: place this block inside an existing group.
+        // Validation: parent must exist and have type='group'; you cannot
+        // nest a group inside another group (no recursion in the planner).
+        $parentId = $this->resolveParentId($body);
+        if ($parentId === false) {
+            return AuthController::json($response, ['error' => 'invalid_parent'], 422);
         }
+        if ($parentId !== null && $type === 'group') {
+            return AuthController::json($response, ['error' => 'nested_groups_not_allowed'], 422);
+        }
+
+        $position = $this->nextPosition($type, $parentId);
 
         if (isset($body['data']) && is_array($body['data'])) {
             $data = $body['data'];
@@ -76,6 +77,7 @@ class BlocksController
             'type' => $type,
             'position' => $position,
             'enabled' => 1,
+            'parent_id' => $parentId,
             'data' => json_encode($data, JSON_UNESCAPED_UNICODE),
             'style' => json_encode($style, JSON_UNESCAPED_UNICODE),
         ]);
@@ -83,6 +85,100 @@ class BlocksController
 
         $row = $this->db->one('SELECT * FROM blocks WHERE id = ?', [$id]);
         return AuthController::json($response, ['block' => self::hydrate($row)], 201);
+    }
+
+    /**
+     * Read + validate `parent_id` from a request body.
+     *
+     * Returns:
+     *   - `null` when absent (or explicitly null/empty) → block stays top-level
+     *   - the integer id when a valid group block exists with that id
+     *   - `false` when the body sends a non-null parent_id that doesn't map to a
+     *     group → caller turns this into a 422
+     *
+     * `$tenantId` scopes the parent lookup to a single tenant on the
+     * SaaS overlay; OSS leaves it `null` (any block in the global db).
+     */
+    protected function resolveParentId(array $body, ?int $tenantId = null): int|null|false
+    {
+        if (!array_key_exists('parent_id', $body)) return null;
+        $raw = $body['parent_id'];
+        if ($raw === null || $raw === '' || $raw === 0 || $raw === '0') return null;
+        if (!is_numeric($raw)) return false;
+        $pid = (int)$raw;
+        if ($tenantId === null) {
+            $parent = $this->db->one('SELECT id, type FROM blocks WHERE id = ?', [$pid]);
+        } else {
+            $parent = $this->db->one(
+                'SELECT id, type FROM blocks WHERE id = ? AND tenant_id = ?',
+                [$pid, $tenantId]
+            );
+        }
+        if (!$parent) return false;
+        if (($parent['type'] ?? '') !== 'group') return false;
+        return $pid;
+    }
+
+    /**
+     * Pick the position for a brand-new block in its parent scope.
+     *
+     * Footer is a "structural" pin-to-bottom block: always pushed past
+     * the maximum existing position, and other newly-created top-level
+     * blocks slide above any existing footers so the footer stays last
+     * in the mosaic.
+     *
+     * Block inside a group: position is scoped to that group (the
+     * footer rules don't apply — groups don't contain footers in
+     * practice, and even if they did the layout planner doesn't
+     * special-case them inside groups).
+     *
+     * `$tenantId` scopes every read/write to one tenant on the SaaS
+     * overlay; OSS leaves it `null` (global namespace).
+     */
+    protected function nextPosition(string $type, ?int $parentId, ?int $tenantId = null): int
+    {
+        if ($parentId !== null) {
+            if ($tenantId === null) {
+                return (int)$this->db->value(
+                    'SELECT COALESCE(MAX(position), 0) + 10 FROM blocks WHERE parent_id = ?',
+                    [$parentId]
+                );
+            }
+            return (int)$this->db->value(
+                'SELECT COALESCE(MAX(position), 0) + 10 FROM blocks WHERE parent_id = ? AND tenant_id = ?',
+                [$parentId, $tenantId]
+            );
+        }
+        if ($type === 'footer') {
+            if ($tenantId === null) {
+                return (int)$this->db->value(
+                    'SELECT COALESCE(MAX(position), 0) + 10 FROM blocks WHERE parent_id IS NULL'
+                );
+            }
+            return (int)$this->db->value(
+                'SELECT COALESCE(MAX(position), 0) + 10 FROM blocks WHERE parent_id IS NULL AND tenant_id = ?',
+                [$tenantId]
+            );
+        }
+        if ($tenantId === null) {
+            $position = (int)$this->db->value(
+                "SELECT COALESCE(MAX(position), 0) + 10 FROM blocks WHERE parent_id IS NULL AND type != 'footer'"
+            );
+            $this->db->query(
+                "UPDATE blocks SET position = position + 10 WHERE parent_id IS NULL AND type = 'footer' AND position <= ?",
+                [$position],
+            );
+        } else {
+            $position = (int)$this->db->value(
+                "SELECT COALESCE(MAX(position), 0) + 10 FROM blocks WHERE parent_id IS NULL AND tenant_id = ? AND type != 'footer'",
+                [$tenantId]
+            );
+            $this->db->query(
+                "UPDATE blocks SET position = position + 10 WHERE parent_id IS NULL AND tenant_id = ? AND type = 'footer' AND position <= ?",
+                [$tenantId, $position],
+            );
+        }
+        return $position;
     }
 
     public function update(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface
@@ -97,6 +193,29 @@ class BlocksController
         if (isset($body['data']) && is_array($body['data'])) $update['data'] = json_encode($body['data'], JSON_UNESCAPED_UNICODE);
         if (isset($body['style']) && is_array($body['style'])) $update['style'] = json_encode($body['style'], JSON_UNESCAPED_UNICODE);
         if (isset($body['position'])) $update['position'] = (int)$body['position'];
+
+        // Optional parent_id change: drag the block into / out of a
+        // group. Validation mirrors create(); a group can't be nested
+        // under another group. When the parent actually changes, we
+        // also append the block at the end of the new parent's scope
+        // (so reorder isn't necessary as a follow-up call).
+        if (array_key_exists('parent_id', $body)) {
+            $newParent = $this->resolveParentId($body);
+            if ($newParent === false) {
+                return AuthController::json($response, ['error' => 'invalid_parent'], 422);
+            }
+            $currentType = (string)($row['type'] ?? '');
+            if ($newParent !== null && $currentType === 'group') {
+                return AuthController::json($response, ['error' => 'nested_groups_not_allowed'], 422);
+            }
+            $currentParent = !empty($row['parent_id']) ? (int)$row['parent_id'] : null;
+            if ($newParent !== $currentParent) {
+                $update['parent_id'] = $newParent;
+                if (!isset($body['position'])) {
+                    $update['position'] = $this->nextPosition($currentType, $newParent);
+                }
+            }
+        }
 
         $this->db->update('blocks', $update, 'id = :id', ['id' => $id]);
         $this->audit($request, 'block.update', "block:$id");
@@ -169,6 +288,11 @@ class BlocksController
         $order = $body['order'] ?? [];
         if (!is_array($order)) return AuthController::json($response, ['error' => 'invalid_order'], 422);
 
+        // Scope: the order list is implicitly a reorder within a single
+        // parent_id namespace (top-level OR inside one group). We don't
+        // care which here — we just spread positions 10, 20, 30, …
+        // across the ids in `$order`. The SPA sends one call per
+        // affected parent on a drag-drop interaction.
         $this->db->transaction(function () use ($order) {
             $pos = 10;
             foreach ($order as $id) {
@@ -200,6 +324,12 @@ class BlocksController
         $row['enabled'] = (bool)$row['enabled'];
         $row['position'] = (int)$row['position'];
         $row['id'] = (int)$row['id'];
+        // parent_id may be NULL (top-level), an int (inside a group), or
+        // missing on rows from a DB that predates migration 0008. Surface
+        // it as int|null to the SPA so the dashboard can group accordingly.
+        $row['parent_id'] = (isset($row['parent_id']) && $row['parent_id'] !== null && $row['parent_id'] !== 0)
+            ? (int)$row['parent_id']
+            : null;
         return $row;
     }
 }

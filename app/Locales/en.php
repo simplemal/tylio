@@ -572,6 +572,9 @@ return [
     'blocks.links.fields.items.of.badge_copyable.label' => 'Make copyable',
     'blocks.links.fields.items.of.description.label' => 'Description',
 
+    'blocks.group.label' => 'Group',
+    'blocks.group.description' => 'Invisible container: stacks multiple tiles inside a single mosaic column. Useful to put two (or more) small tiles next to a tall one.',
+
     // ---------- apps ----------
     'blocks.apps.label' => 'Apps / Projects',
     'blocks.apps.description' => 'Large cards for projects / apps: icon, name, description, link, store badges.',

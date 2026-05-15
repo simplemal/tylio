@@ -90,10 +90,14 @@ export const api = {
 
   // Blocks
   listBlocks: () => request<{ blocks: Block[] }>('/blocks'),
-  createBlock: (type: BlockKind, data?: Record<string, unknown>) =>
+  createBlock: (
+    type: BlockKind,
+    data?: Record<string, unknown>,
+    options?: { parent_id?: number | null },
+  ) =>
     request<{ block: Block }>('/blocks', {
       method: 'POST',
-      body: JSON.stringify({ type, data }),
+      body: JSON.stringify({ type, data, parent_id: options?.parent_id }),
     }),
   updateBlock: (id: number, patch: BlockUpdate) =>
     request<{ block: Block }>(`/blocks/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),

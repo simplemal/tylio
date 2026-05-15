@@ -571,6 +571,9 @@ return [
     'blocks.links.fields.items.of.badge_copyable.label' => 'Rendi copiabile',
     'blocks.links.fields.items.of.description.label' => 'Descrizione',
 
+    'blocks.group.label' => 'Gruppo',
+    'blocks.group.description' => 'Contenitore invisibile: impila più tessere in una sola colonna del mosaico. Utile per affiancare a una tessera alta due (o più) tessere più piccole.',
+
     // ---------- apps ----------
     'blocks.apps.label' => 'App / Progetti',
     'blocks.apps.description' => 'Card grandi per progetti / app: icona, nome, descrizione, link, store badge.',

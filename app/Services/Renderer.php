@@ -95,8 +95,161 @@ class Renderer
             $r['data'] = json_decode($r['data'] ?? '{}', true) ?: [];
             $r['style'] = json_decode($r['style'] ?? '{}', true) ?: [];
             $r['enabled'] = (bool)$r['enabled'];
+            // `parent_id` may be NULL or absent on rows from a DB that
+            // predates migration 0008 — coerce to int|null for downstream code.
+            $r['parent_id'] = isset($r['parent_id']) ? (int)$r['parent_id'] : null;
+            if ($r['parent_id'] === 0) $r['parent_id'] = null;
         }
         return $rows;
+    }
+
+    /**
+     * Plan the public mosaic layout. Walks the flat block list and
+     * decides what each block's CSS grid placement should be on
+     * desktop (2-column grid). On mobile the inline custom properties
+     * are ignored by `public.css` and items flow linearly.
+     *
+     * Output: a flat list of "render units" in DOM order (= mobile
+     * linear order). Each unit knows the block to render and a CSS
+     * fragment to inject as inline style. Groups themselves never
+     * become a unit — only their children, each pinned to a row inside
+     * the group's column.
+     *
+     * Algorithm:
+     *   1. Split rows into top-level (parent_id NULL) and children-by-parent.
+     *   2. Build a sequence of "cells" from the top-level row:
+     *        - tile        → 1 col × 1 row
+     *        - tile full   → 2 col × 1 row
+     *        - group of N  → 1 col × N rows
+     *   3. Walk the cells, pairing adjacent 1-col cells side-by-side.
+     *      A paired row's height = max(left.rows, right.rows). The
+     *      shorter side's last item stretches to fill the leftover
+     *      rows so neither column has dead space.
+     *   4. Emit each render unit with grid coords as CSS variables.
+     *
+     * @param list<array<string,mixed>> $blocks Flat list, output of `loadBlocks()`.
+     * @return list<array{block: array<string,mixed>, grid: string}>
+     */
+    public function planLayout(array $blocks): array
+    {
+        // Step 1: tree split.
+        $topLevel = [];
+        $childrenByParent = [];
+        foreach ($blocks as $b) {
+            $pid = $b['parent_id'] ?? null;
+            if ($pid === null) {
+                $topLevel[] = $b;
+            } else {
+                $childrenByParent[$pid][] = $b;
+            }
+        }
+
+        // Step 2: build cells (preserving position order from loadBlocks).
+        $cells = [];
+        foreach ($topLevel as $b) {
+            $type = (string)($b['type'] ?? '');
+            if ($type === 'group') {
+                $kids = $childrenByParent[(int)$b['id']] ?? [];
+                if (empty($kids)) continue; // empty groups are invisible
+                $cells[] = [
+                    'kind' => 'group',
+                    'block' => $b,
+                    'children' => $kids,
+                    'cols' => 1,
+                    'rows' => count($kids),
+                ];
+            } else {
+                $span = $this->blockSpan($b); // 1 (half) or 2 (full)
+                $cells[] = [
+                    'kind' => 'tile',
+                    'block' => $b,
+                    'cols' => $span,
+                    'rows' => 1,
+                ];
+            }
+        }
+
+        // Step 3: walk cells, pair halves, compute row indices.
+        $units = [];
+        $rowStart = 1;
+        $i = 0;
+        $n = count($cells);
+        while ($i < $n) {
+            $cell = $cells[$i];
+            if ($cell['cols'] === 2) {
+                foreach ($this->expandCell($cell, $rowStart, $cell['rows'], 1, 2) as $u) {
+                    $units[] = $u;
+                }
+                $rowStart += $cell['rows'];
+                $i++;
+                continue;
+            }
+            // 1-col cell: pair with next 1-col cell if present.
+            if ($i + 1 < $n && $cells[$i + 1]['cols'] === 1) {
+                $left = $cell;
+                $right = $cells[$i + 1];
+                $rowHeight = max($left['rows'], $right['rows']);
+                foreach ($this->expandCell($left,  $rowStart, $rowHeight, 1, 1) as $u) $units[] = $u;
+                foreach ($this->expandCell($right, $rowStart, $rowHeight, 2, 1) as $u) $units[] = $u;
+                $rowStart += $rowHeight;
+                $i += 2;
+            } else {
+                // Orphan half: keeps a half-width column, leaves the
+                // other column empty (matches the design decision of
+                // 2026-05-10 in `markOrphanHalves`).
+                foreach ($this->expandCell($cell, $rowStart, $cell['rows'], 1, 1) as $u) {
+                    $units[] = $u;
+                }
+                $rowStart += $cell['rows'];
+                $i++;
+            }
+        }
+        return $units;
+    }
+
+    /**
+     * Turn one cell into 1+ render units with grid coords. Tiles emit
+     * a single unit spanning the cell's row range. Groups emit one unit
+     * per child, each pinned to a single row inside the column; if the
+     * group is paired with a taller cell, the LAST child absorbs the
+     * leftover row span so the column has no dead vertical space.
+     *
+     * The grid coords are stored as a CSS custom property `--ga` (a
+     * `grid-area` shorthand) so the public stylesheet can override them
+     * with `grid-area: auto` on mobile via a media query.
+     *
+     * @param array{kind:string,block:array,cols:int,rows:int,children?:list<array>} $cell
+     * @return list<array{block: array<string,mixed>, grid: string}>
+     */
+    private function expandCell(array $cell, int $rowStart, int $rowSpan, int $colStart, int $colSpan): array
+    {
+        if ($cell['kind'] === 'tile') {
+            $grid = sprintf(
+                '--ga: %d / %d / %d / %d',
+                $rowStart, $colStart,
+                $rowStart + $rowSpan, $colStart + $colSpan
+            );
+            return [['block' => $cell['block'], 'grid' => $grid]];
+        }
+        // Group: stack children. The last child gets any extra rows so
+        // the column is fully covered when the sibling on the other
+        // column is taller.
+        $kids = $cell['children'] ?? [];
+        $kidsCount = count($kids);
+        $extra = max(0, $rowSpan - $kidsCount);
+        $row = $rowStart;
+        $units = [];
+        foreach ($kids as $idx => $kid) {
+            $kidRows = 1 + ($idx === $kidsCount - 1 ? $extra : 0);
+            $grid = sprintf(
+                '--ga: %d / %d / %d / %d',
+                $row, $colStart,
+                $row + $kidRows, $colStart + $colSpan
+            );
+            $units[] = ['block' => $kid, 'grid' => $grid];
+            $row += $kidRows;
+        }
+        return $units;
     }
 
     /**
@@ -135,6 +288,18 @@ class Renderer
                 $blocks,
                 fn($b) => !isset($excl[(string)($b['type'] ?? '')]),
             ));
+        }
+
+        // Layout plan: full page render → planLayout (handles groups +
+        // grid coords). Single-block edit preview → just one unit, no
+        // grid placement (the preview iframe is a 1-col canvas anyway).
+        if ($onlyId === null) {
+            $units = $this->planLayout($blocks);
+        } else {
+            $units = array_map(
+                fn($b) => ['block' => $b, 'grid' => ''],
+                $blocks
+            );
         }
 
         ob_start();

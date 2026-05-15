@@ -116,6 +116,14 @@ a{color:inherit;text-decoration:none}
     padding:48px 28px 96px;
     gap:var(--tile-gap);
   }
+  /* Per-tile grid placement. The renderer's `planLayout()` emits an
+     inline `--ga` custom property (a `grid-area` shorthand) on every
+     tile when the page contains groups. The fallback `auto` lets pages
+     without groups use natural placement + the legacy `m-tile--span2`
+     rule below. Outside this media query (mobile, 1 col) the rule is
+     not declared, so the inline `--ga` is dormant and items flow
+     linearly in document order — which is exactly the position order. */
+  .m-tile{grid-area:var(--ga, auto)}
   .m-tile--span2{grid-column:span 2}
   /* "Orphan" half-tile (not paired with another half): takes the whole row
      so it doesn't leave a visible gap next to it. Computed server-side by the Renderer. */

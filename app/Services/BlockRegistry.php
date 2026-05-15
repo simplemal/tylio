@@ -618,6 +618,23 @@ final class BlockRegistry
                 ],
             ],
 
+            'group' => [
+                'id' => 'group',
+                'label' => 'blocks.group.label',
+                'icon' => 'lucide:layers',
+                'category' => 'blocks.categories.structure',
+                'description' => 'blocks.group.description',
+                // A group is a layout primitive, not visible chrome. Defaults
+                // to half-column so the typical "1 left + 2 stacked right"
+                // pattern works out of the box. The user can flip it to
+                // 'full' (a full-row stack) via the per-block style override.
+                'span' => 'half',
+                // No own data fields for now. The group's value lives in
+                // its children. Stays an empty array so the registry/admin
+                // generic form is happy (it just shows no fields).
+                'fields' => [],
+            ],
+
             'divider' => [
                 'id' => 'divider',
                 'label' => 'blocks.divider.label',

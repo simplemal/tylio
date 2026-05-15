@@ -249,20 +249,30 @@ $tileCard = (
   </div>
 
   <main class="m-mosaic" id="m-mosaic">
-    <?php foreach ($blocks as $block):
-        $span = $renderer->blockSpan($block);
+    <?php foreach ($units as $u):
+        $block = $u['block'];
+        // Tiles inside a group always behave as 1-column children:
+        // their declared `full` span is ignored because the group's
+        // column already constrains them. Top-level tiles use their
+        // normal span (driven by `m-tile--span2` for full tiles).
+        $span = !empty($block['parent_id']) ? 1 : $renderer->blockSpan($block);
         $disabledClass = $block['enabled'] ? '' : ' is-disabled';
         $orphanClass = !empty($block['__orphan']) ? ' m-tile--orphan' : '';
         // Per-block "No background" override: removes the tile's bg/border/shadow
         // ignoring the theme's tile-style. Set on block.style.no_bg.
         $noBgClass = !empty($block['style']['no_bg']) ? ' m-tile--no-bg' : '';
+        // Grid placement: when the page contains groups, the planner emits
+        // a `--ga` custom property (a `grid-area` shorthand) so .m-tile's
+        // CSS rule can read it. Mobile resets `grid-area: auto` via media
+        // query, falling back to natural document order.
+        $gridStyle = !empty($u['grid']) ? ' style="' . $renderer->escape($u['grid']) . '"' : '';
     ?>
-      <section class="m-tile m-tile--span<?= $span ?> m-tile--<?= $renderer->escape($block['type']) ?><?= $disabledClass ?><?= $orphanClass ?><?= $noBgClass ?>" data-block-id="<?= (int)$block['id'] ?>" data-block-type="<?= $renderer->escape($block['type']) ?>">
+      <section class="m-tile m-tile--span<?= $span ?> m-tile--<?= $renderer->escape($block['type']) ?><?= $disabledClass ?><?= $orphanClass ?><?= $noBgClass ?>" data-block-id="<?= (int)$block['id'] ?>" data-block-type="<?= $renderer->escape($block['type']) ?>"<?= $gridStyle ?>>
         <?= $renderer->renderBlock($block, $theme) ?>
       </section>
     <?php endforeach; ?>
 
-    <?php if (empty($blocks)): ?>
+    <?php if (empty($units)): ?>
       <section class="m-tile m-tile--span2 m-tile--empty">
         <h1 class="m-empty-title"><?= $renderer->t('public.empty.title') /* contains <em> */ ?></h1>
         <p class="m-empty-msg"><?= $renderer->escape($renderer->t('public.empty.message')) ?></p>
