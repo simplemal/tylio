@@ -6,6 +6,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.2.1 — 2026-05-15
+
+### Fixed
+
+- `UpdateChecker::gitDescribe()` ora passa `-c safe.directory=$root` inline, così `git describe` non fallisce con "dubious ownership" quando PHP-FPM gira come `www-data` su un repo clonato via `sudo git clone` (default OSS install path). Senza questo, la card "Aggiornamenti tylio" mostrava `Versione installata: dev` invece del tag reale.
+
 ## v0.2.0 — 2026-05-15
 
 ### Added

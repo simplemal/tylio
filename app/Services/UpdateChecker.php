@@ -335,10 +335,21 @@ class UpdateChecker
         return $this->hasTenantColumn = false;
     }
 
-    /** Run `git describe --tags --always` in the project root, return '' on any failure. */
+    /**
+     * Run `git describe --tags --always` in the project root, return '' on any failure.
+     *
+     * `-c safe.directory=$root` is passed inline so the call works even when
+     * `www-data` (PHP-FPM user) has no entry in its `$HOME/.gitconfig` for this
+     * repo (typical on installs deployed via `sudo git clone` into `/var/www/`).
+     * Without this, git refuses with "fatal: detected dubious ownership" and we
+     * fall back to BUILD file → "dev" in the UI even when the repo is on a
+     * proper release tag.
+     */
     private function gitDescribe(string $root): string
     {
-        $cmd = 'cd ' . escapeshellarg($root) . ' && git describe --tags --always 2>/dev/null';
+        $cmd = 'git -c safe.directory=' . escapeshellarg($root)
+            . ' -C ' . escapeshellarg($root)
+            . ' describe --tags --always 2>/dev/null';
         $out = [];
         $code = 1;
         @exec($cmd, $out, $code);
