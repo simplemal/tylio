@@ -6,6 +6,8 @@ import {
   type BlockKind,
   type BlockType,
   type BlockUpdate,
+  type EmailVerificationPending,
+  type EmailVerificationStatus,
   type MediaItem,
   type Settings,
   type Stats,
@@ -115,10 +117,27 @@ export const api = {
   // Settings
   getSettings: () => request<{ settings: Settings }>('/settings'),
   updateSettings: (settings: Settings) =>
-    request<{ settings: Settings }>('/settings', {
+    request<{ settings: Settings; email_changed?: boolean }>('/settings', {
       method: 'PUT',
       body: JSON.stringify({ settings }),
     }),
+
+  // Admin email verification flow (site.admin_email + companion settings).
+  // The verify endpoint also ships the welcome mail on first ever success
+  // (gated by site.welcome_sent_at IS NULL on the server). status() drives
+  // the SPA tick + countdown without re-parsing every settings row.
+  emailVerificationStatus: () =>
+    request<EmailVerificationStatus>('/admin/email/status'),
+  verifyEmailCode: (code: string) =>
+    request<{ ok: true; verified_at: string }>('/admin/email/verify', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+  requestEmailCode: () =>
+    request<{ ok: boolean; pending: EmailVerificationPending | null }>(
+      '/admin/email/resend-code',
+      { method: 'POST' },
+    ),
 
   // Account self-destroy: permanently deletes the tenant + all its data.
   // The server requires `confirm: 'DELETE'` as a safety check.

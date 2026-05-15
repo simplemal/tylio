@@ -182,6 +182,16 @@ function mailStatusInfo(m: Submission): { icon: string; label: string; class: st
         label: t('submissions.mailStatus.noEmailSet'),
         class: 'warn-icon',
       }
+    case 'unverified_recipient':
+      // The admin email is configured but the verified flag is NULL —
+      // SubmissionsController refuses to forward to an unverified
+      // recipient (could be a typo'd third party). The message is still
+      // saved here; the action item is "Verify your email in Settings".
+      return {
+        icon: 'lucide:mail-warning',
+        label: t('submissions.mailStatus.unverifiedRecipient'),
+        class: 'warn-icon',
+      }
     case 'error':
       return {
         icon: 'lucide:mail-x',

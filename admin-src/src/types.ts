@@ -492,7 +492,13 @@ export interface Submission {
    *   - 'error'        SMTP exception (see mail_error for the message)
    *   - null           attempt not recorded (row inserted before the migration)
    */
-  mail_status: 'sent' | 'no_dsn' | 'no_recipient' | 'error' | null
+  mail_status:
+    | 'sent'
+    | 'no_dsn'
+    | 'no_recipient'
+    | 'unverified_recipient'
+    | 'error'
+    | null
   mail_error: string | null
 }
 
@@ -565,6 +571,29 @@ export interface UpdateCheckDisabled {
 }
 
 export type UpdateCheckResponse = UpdateCheckOk | UpdateCheckDisabled
+
+// =====================================================================
+// Email verification (`site.admin_email`)
+// =====================================================================
+
+/**
+ * Live state of the pending verification code (if any) for the
+ * currently-configured `site.admin_email`. `cooldown_remaining` drives
+ * the SPA's "Resend in 12:34" countdown.
+ */
+export interface EmailVerificationPending {
+  email: string
+  expires_at: string
+  attempts: number
+  can_resend_at: string
+  cooldown_remaining: number
+}
+
+export interface EmailVerificationStatus {
+  email: string
+  verified_at: string | null
+  pending: EmailVerificationPending | null
+}
 
 // =====================================================================
 // API error

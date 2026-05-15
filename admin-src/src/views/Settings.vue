@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 import { ApiError } from '../types'
-import type { Settings, UpdateCheckOk } from '../types'
+import type { EmailVerificationStatus, Settings, UpdateCheckOk } from '../types'
 import { useAuth } from '../stores/auth'
 import {
   SUPPORTED_LOCALES,
@@ -102,6 +102,23 @@ function setStr(key: string, v: string): void {
  * (SettingsController.validateSettings) for consistency.
  */
 function validateField(key: string, value: string): void {
+  // Special case: site.admin_email lives outside the schema-driven
+  // `known` array (it has its own dedicated section with the verification
+  // widget). Validate it the same way as any inputType=email field.
+  if (key === 'site.admin_email') {
+    if (value === '') {
+      delete fieldErrors.value[key]
+      return
+    }
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRe.test(value)) {
+      fieldErrors.value[key] = t('settings.errors.invalidEmail')
+    } else {
+      delete fieldErrors.value[key]
+    }
+    return
+  }
+
   const def = known.find((f) => f.key === key)
   if (!def) return
   // empty value = ok (fields are optional unless pattern is strict)
@@ -231,15 +248,10 @@ const known: FieldDef[] = [
     helpKey: 'settings.seo.twitterHandleHelp',
   },
 
-  {
-    groupKey: 'settings.groups.communications',
-    key: 'contact.notify_email',
-    labelKey: 'settings.contact.notifyEmail',
-    type: 'text',
-    placeholderKey: 'settings.contact.notifyEmailPlaceholder',
-    helpKey: 'settings.contact.notifyEmailHelp',
-    inputType: 'email',
-  },
+  // NOTE: communications group is rendered as a dedicated section
+  // below (admin email + verification widget). The legacy
+  // `contact.notify_email` field is gone — see
+  // `app/Database/migrations/0007_admin_email.sql` for the migration.
 ]
 // NOTE: maintenance mode used to live here in earlier iterations
 // (first inside `known` as a regular field group, then as a
@@ -340,15 +352,25 @@ onMounted(async () => {
       settings.value[k.key] = k.type === 'toggle' ? k.key === 'seo.robots_index' : ''
     }
   }
+  // Default the admin email to empty if the migration hasn't run yet on
+  // an older snapshot (defensive).
+  if (!('site.admin_email' in settings.value)) {
+    settings.value['site.admin_email'] = ''
+  }
   // Validate values already in the DB: if any is invalid (legacy),
   // surface the inline error now without waiting for the user to edit it.
   for (const k of known) {
     if (k.type === 'text') validateField(k.key, getStr(k.key))
   }
+  validateField('site.admin_email', getStr('site.admin_email'))
   // Load 2FA status in parallel (doesn't block the form render).
   void load2faStatus()
   // Update check: GitHub release lookup. Cached server-side for 24h.
   void loadUpdateCheck(false)
+  // Admin email verification status (drives the verified tick / pending
+  // code widget). Independent from the settings fetch above so a slow
+  // call doesn't gate the rest of the form.
+  void loadEmailVerification()
 })
 
 async function save() {
@@ -357,6 +379,9 @@ async function save() {
   for (const f of known) {
     if (f.type === 'text') validateField(f.key, getStr(f.key))
   }
+  // The admin email field is rendered outside the schema-driven
+  // section but uses the same fieldErrors map; re-validate it too.
+  validateField('site.admin_email', getStr('site.admin_email'))
   if (Object.keys(fieldErrors.value).length > 0) {
     saveError.value = t('settings.errors.invalidFields')
     return
@@ -365,10 +390,19 @@ async function save() {
   saving.value = true
   saveError.value = ''
   try {
-    settings.value = (await api.updateSettings(settings.value)).settings
+    const resp = await api.updateSettings(settings.value)
+    settings.value = resp.settings
     // Sync the AppShell banner without a separate fetch: we already
     // have the freshly-saved value here.
     site.setFromSettings(settings.value as Record<string, unknown>)
+    // If the admin email changed, the server fired a fresh verification
+    // request — refresh the status widget so the countdown + tick show
+    // the new reality, and surface a one-shot toast.
+    if (resp.email_changed) {
+      emailJustResent.value = true
+      void loadEmailVerification()
+      setTimeout(() => { emailJustResent.value = false }, 6000)
+    }
   } catch (e: unknown) {
     if (e instanceof ApiError && e.status === 422 && e.data.fields && typeof e.data.fields === 'object') {
       fieldErrors.value = e.data.fields as Record<string, string>
@@ -380,6 +414,109 @@ async function save() {
     saving.value = false
   }
 }
+
+// ===== Admin email verification =====
+// Drives the Communications section: shows the current email, a
+// verified tick OR a pending-code widget (input + countdown + resend).
+//
+// The verification request is auto-fired by the server on:
+//   - install (when the user supplied an email),
+//   - settings.update() that changes site.admin_email.
+// So the SPA does NOT have a "send code" button — only "Verify" and
+// "Resend (cooldown)". On a fresh page load, the status endpoint
+// tells us the current state.
+const emailVerification = ref<EmailVerificationStatus | null>(null)
+const emailVerifyCode = ref('')
+const emailVerifyBusy = ref(false)
+const emailVerifyError = ref('')
+const emailVerifyJustOk = ref(false)
+const emailJustResent = ref(false)
+const emailCooldownTick = ref(0)
+
+const emailIsVerified = computed(() => !!emailVerification.value?.verified_at)
+const emailHasPending = computed(() => !!emailVerification.value?.pending)
+const emailCooldownRemaining = computed(() => {
+  // `emailCooldownTick` is mutated by setInterval so this re-derives.
+  void emailCooldownTick.value
+  const p = emailVerification.value?.pending
+  if (!p) return 0
+  const tEnd = Date.parse(p.can_resend_at.replace(' ', 'T') + 'Z')
+  if (!Number.isFinite(tEnd)) return 0
+  return Math.max(0, Math.floor((tEnd - Date.now()) / 1000))
+})
+const emailCooldownLabel = computed(() => {
+  const s = emailCooldownRemaining.value
+  if (s <= 0) return ''
+  const mm = Math.floor(s / 60)
+  const ss = s % 60
+  return `${mm}:${ss.toString().padStart(2, '0')}`
+})
+
+async function loadEmailVerification(): Promise<void> {
+  try {
+    emailVerification.value = await api.emailVerificationStatus()
+  } catch {
+    /* silent: the widget hides itself when state is unknown */
+  }
+}
+
+async function submitEmailVerifyCode(): Promise<void> {
+  if (emailVerifyBusy.value) return
+  const code = emailVerifyCode.value.trim().toUpperCase()
+  if (code.length !== 6) {
+    emailVerifyError.value = t('settings.email.errors.codeShape')
+    return
+  }
+  emailVerifyBusy.value = true
+  emailVerifyError.value = ''
+  try {
+    await api.verifyEmailCode(code)
+    emailVerifyJustOk.value = true
+    emailVerifyCode.value = ''
+    await loadEmailVerification()
+    setTimeout(() => { emailVerifyJustOk.value = false }, 6000)
+  } catch (e: unknown) {
+    if (e instanceof ApiError && e.status === 422) {
+      emailVerifyError.value = t('settings.email.errors.codeWrong')
+    } else if (e instanceof ApiError && e.status === 429) {
+      emailVerifyError.value = t('settings.email.errors.rateLimited')
+    } else {
+      emailVerifyError.value = t('settings.email.errors.network')
+    }
+    await loadEmailVerification()
+  } finally {
+    emailVerifyBusy.value = false
+  }
+}
+
+async function requestNewEmailCode(): Promise<void> {
+  if (emailVerifyBusy.value) return
+  if (emailCooldownRemaining.value > 0) return
+  emailVerifyBusy.value = true
+  emailVerifyError.value = ''
+  try {
+    await api.requestEmailCode()
+    emailJustResent.value = true
+    await loadEmailVerification()
+    setTimeout(() => { emailJustResent.value = false }, 6000)
+  } catch (e: unknown) {
+    if (e instanceof ApiError && e.status === 429) {
+      emailVerifyError.value = t('settings.email.errors.rateLimited')
+    } else {
+      emailVerifyError.value = t('settings.email.errors.network')
+    }
+    await loadEmailVerification()
+  } finally {
+    emailVerifyBusy.value = false
+  }
+}
+
+// Live tick so the cooldown label decrements without a roundtrip.
+// Cleared automatically by Vue when the component unmounts via the
+// onScopeDispose hook below.
+const cooldownTimer = window.setInterval(() => { emailCooldownTick.value++ }, 1000)
+import { onScopeDispose } from 'vue'
+onScopeDispose(() => window.clearInterval(cooldownTimer))
 
 // ===== 2FA TOTP =====
 // Mirror of the superadmin logic (PlatformAdminController::twoFactorPanel).
@@ -823,6 +960,125 @@ async function performDelete() {
       </div>
     </template>
   </div>
+
+  <!-- "Communications" section: the admin email + verification widget.
+       Replaces the legacy contact.notify_email field. The verification
+       request is auto-fired on email change (server-side) — the SPA
+       never has a "send code" button, only "Verify" + "Resend (X:YY)". -->
+  <section id="communications" class="tile mt-5 scroll-mt-24">
+    <h2 class="font-display text-xl mt-2 pb-1 border-b border-white/10 mb-3">
+      {{ t('settings.groups.communications') }}
+    </h2>
+    <p class="text-xs text-ink-300 mb-4 leading-relaxed">
+      {{ t('settings.email.intro') }}
+    </p>
+    <div class="field">
+      <label for="site.admin_email" class="!mb-1 !text-ink-100 !text-sm !font-medium flex items-center gap-2">
+        {{ t('settings.email.label') }}
+        <!-- Verified tick / not-verified pill, always visible to the right
+             of the label so the admin knows the state at a glance. -->
+        <span
+          v-if="emailIsVerified"
+          class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/30"
+          :title="t('settings.email.verifiedTickTitle')"
+        >
+          <iconify-icon icon="lucide:badge-check" width="14"></iconify-icon>
+          {{ t('settings.email.verifiedTick') }}
+        </span>
+        <span
+          v-else-if="getStr('site.admin_email') !== ''"
+          class="inline-flex items-center gap-1 text-xs font-medium rounded-full px-2 py-0.5 bg-ink-800 text-ink-300 ring-1 ring-white/10"
+          :title="t('settings.email.notVerifiedTickTitle')"
+        >
+          <iconify-icon icon="lucide:badge-alert" width="14"></iconify-icon>
+          {{ t('settings.email.notVerifiedTick') }}
+        </span>
+      </label>
+      <p class="text-xs text-ink-300 mb-2 leading-relaxed">{{ t('settings.email.help') }}</p>
+      <input
+        id="site.admin_email"
+        type="email"
+        autocomplete="email"
+        :value="getStr('site.admin_email')"
+        :placeholder="t('settings.email.placeholder')"
+        :class="{ 'input-invalid': fieldErrors['site.admin_email'] }"
+        :aria-invalid="fieldErrors['site.admin_email'] ? 'true' : undefined"
+        @input="setStr('site.admin_email', ($event.target as HTMLInputElement).value)"
+      />
+      <p
+        v-if="getStr('site.admin_email') !== '' && getStr('site.admin_email') !== (emailVerification?.email ?? '')"
+        class="text-xs mt-1"
+        :class="fieldErrors['site.admin_email'] ? 'text-red-300' : 'text-ink-300 italic opacity-80'"
+      >
+        {{ t('settings.email.changedHint') }}
+      </p>
+      <p v-if="fieldErrors['site.admin_email']" class="text-xs text-red-300 mt-1">
+        {{ fieldErrors['site.admin_email'] }}
+      </p>
+    </div>
+
+    <!-- Pending-code widget. Visible when an unverified address has an
+         active verification row (issued by the server on the last save). -->
+    <div
+      v-if="!emailIsVerified && emailHasPending"
+      class="field pt-4 border-t border-white/5"
+    >
+      <label for="email-verify-code" class="!mb-1 !text-ink-100 !text-sm !font-medium">
+        {{ t('settings.email.codeInputLabel') }}
+      </label>
+      <p class="text-xs text-ink-300 mb-2 leading-relaxed">
+        {{ t('settings.email.codeInputHelp', { email: emailVerification?.email ?? '' }) }}
+      </p>
+      <div class="flex flex-wrap gap-2 items-start">
+        <input
+          id="email-verify-code"
+          v-model="emailVerifyCode"
+          type="text"
+          inputmode="text"
+          autocapitalize="characters"
+          spellcheck="false"
+          maxlength="6"
+          minlength="6"
+          pattern="[23456789ABCDEFGHJKMNPQRSTVWXYZ]{6}"
+          :placeholder="t('settings.email.codePlaceholder')"
+          class="!w-44 !bg-ink-900 text-center tracking-[0.4em] uppercase"
+          @input="emailVerifyCode = ($event.target as HTMLInputElement).value.toUpperCase()"
+        />
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="emailVerifyBusy || emailVerifyCode.trim().length !== 6"
+          @click="submitEmailVerifyCode"
+        >
+          <iconify-icon
+            :icon="emailVerifyBusy ? 'lucide:loader-circle' : 'lucide:check'"
+            :class="emailVerifyBusy ? 'animate-spin' : ''"
+            width="18"
+          ></iconify-icon>
+          {{ t('settings.email.verifyBtn') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-ghost"
+          :disabled="emailVerifyBusy || emailCooldownRemaining > 0"
+          @click="requestNewEmailCode"
+        >
+          <iconify-icon icon="lucide:refresh-ccw" width="16"></iconify-icon>
+          {{ emailCooldownRemaining > 0
+            ? t('settings.email.resendCooldown', { time: emailCooldownLabel })
+            : t('settings.email.resendBtn')
+          }}
+        </button>
+      </div>
+      <p v-if="emailVerifyError" class="text-xs text-red-300 mt-2">{{ emailVerifyError }}</p>
+      <p v-if="emailJustResent" class="text-xs mt-2 text-emerald-300">
+        {{ t('settings.email.resentToast') }}
+      </p>
+      <p v-if="emailVerifyJustOk" class="text-xs mt-2 text-emerald-300">
+        {{ t('settings.email.verifiedToast') }}
+      </p>
+    </div>
+  </section>
 
   <!-- "Language" section: pick the admin UI language. Default is auto
        (browser detection); choose a specific locale to override. -->

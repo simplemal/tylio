@@ -401,6 +401,31 @@
       "notifyEmailHelp": "Se compilata, ogni messaggio inviato dal form Contatti ti viene inoltrato anche via email (oltre a essere salvato in \"Messaggi\"). Lascia vuoto per ricevere solo nell’admin. Per essere sicuro di ricevere i messaggi, aggiungi nei tuoi contatti accettati l’indirizzo configurato come MAIL_FROM_ADDRESS sul server.",
       "notifyEmailHint": "Dove ricevere i messaggi inviati dal form contatti."
     },
+    "email": {
+      "intro": "L’email di chi gestisce il sito. Serve a ricevere i messaggi dal form contatti, a riassumerti i dati di accesso e (in futuro) a reimpostare la password se la dimentichi. Finché non è verificata, non inviamo nessuna notifica a questo indirizzo.",
+      "label": "Email admin",
+      "placeholder": "tu{'@'}esempio.it",
+      "help": "Scrivi o incolla un indirizzo. Dopo aver salvato, ti mandiamo un codice di 6 caratteri per confermare che è tuo. La mail di benvenuto con URL e username parte solo dopo la verifica.",
+      "verifiedTick": "Verificata",
+      "verifiedTickTitle": "Questo indirizzo è verificato e riceve le notifiche.",
+      "notVerifiedTick": "Da verificare",
+      "notVerifiedTickTitle": "Incolla il codice che ti abbiamo mandato per email per verificare questo indirizzo.",
+      "changedHint": "Dopo il salvataggio ti manderemo un nuovo codice per confermare il nuovo indirizzo.",
+      "codeInputLabel": "Codice di verifica",
+      "codeInputHelp": "Incolla il codice di 6 caratteri che ti abbiamo inviato a {email}. Solo lettere e cifre (niente zero, uno, I e L maiuscole).",
+      "codePlaceholder": "XXXXXX",
+      "verifyBtn": "Verifica",
+      "resendBtn": "Reinvia codice",
+      "resendCooldown": "Reinvia fra {time}",
+      "resentToast": "Ti sta arrivando un codice nuovo.",
+      "verifiedToast": "Email verificata. Le notifiche sono attive.",
+      "errors": {
+        "codeShape": "Il codice è di 6 caratteri.",
+        "codeWrong": "Codice errato. Ricontrolla la mail e riprova. Dopo 5 tentativi sbagliati dovrai richiederne uno nuovo.",
+        "rateLimited": "Aspetta: si può richiedere un codice nuovo ogni 30 minuti.",
+        "network": "Errore di rete. Riprova."
+      }
+    },
     "language": {
       "title": "Lingua dell’admin",
       "hint": "L’interfaccia admin si adatta al browser. Puoi forzare la lingua qui.",
@@ -574,6 +599,7 @@
       "sentLabel": "Inoltrata via email",
       "noServer": "Server non configurato per inviare email",
       "noEmailSet": "Email per i messaggi non configurata in Impostazioni",
+      "unverifiedRecipient": "Non inoltrata: email admin non ancora verificata (Impostazioni → Comunicazioni)",
       "deliveryErrorPrefix": "Errore nell’inoltro: ",
       "deliveryErrorUnknown": "sconosciuto"
     }

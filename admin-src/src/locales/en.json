@@ -401,6 +401,31 @@
       "notifyEmailHelp": "If filled in, every message sent from the Contacts form is also forwarded to you via email (in addition to being saved in \"Messages\"). Leave empty to receive only in the admin. To make sure messages reach you, whitelist the address configured as MAIL_FROM_ADDRESS on this server in your accepted contacts.",
       "notifyEmailHint": "Where contact-form submissions are forwarded."
     },
+    "email": {
+      "intro": "Your admin email. Used to receive contact-form messages, to send you a recap of your installation, and (in the future) to reset your password if you forget it. Until verified, no notifications are sent to this address.",
+      "label": "Admin email",
+      "placeholder": "you{'@'}example.com",
+      "help": "Type or paste an address. After saving, we send a 6-char code to confirm it belongs to you. The welcome mail with your URL and username only ships after you verify.",
+      "verifiedTick": "Verified",
+      "verifiedTickTitle": "This address has been verified and receives notifications.",
+      "notVerifiedTick": "Not verified",
+      "notVerifiedTickTitle": "Paste the code we sent by email to verify this address.",
+      "changedHint": "After you save, we will send a new code to confirm the new address.",
+      "codeInputLabel": "Verification code",
+      "codeInputHelp": "Paste the 6-char code we sent to {email}. Letters and digits only (no zero, one, capital I or L).",
+      "codePlaceholder": "XXXXXX",
+      "verifyBtn": "Verify",
+      "resendBtn": "Resend code",
+      "resendCooldown": "Resend in {time}",
+      "resentToast": "A fresh code is on its way.",
+      "verifiedToast": "Email verified. Notifications are now enabled.",
+      "errors": {
+        "codeShape": "The code is 6 characters long.",
+        "codeWrong": "Wrong code. Check the email and try again. After 5 wrong attempts you'll need to request a new code.",
+        "rateLimited": "Slow down: a fresh code can only be requested every 30 minutes.",
+        "network": "Network error. Try again."
+      }
+    },
     "language": {
       "title": "Admin language",
       "hint": "The admin interface adapts to your browser. You can override it here.",
@@ -574,6 +599,7 @@
       "sentLabel": "Forwarded via email",
       "noServer": "Server not configured for sending email",
       "noEmailSet": "No email for messages set in Settings",
+      "unverifiedRecipient": "Not forwarded: admin email not verified yet (Settings → Communications)",
       "deliveryErrorPrefix": "Forwarding error: ",
       "deliveryErrorUnknown": "unknown"
     }
