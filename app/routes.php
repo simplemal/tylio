@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use Tylio\Controllers\AuthController;
 use Tylio\Controllers\BlocksController;
+use Tylio\Controllers\EmailVerificationController;
 use Tylio\Controllers\ExportController;
 use Tylio\Controllers\FaviconController;
 use Tylio\Controllers\ImportController;
@@ -116,6 +117,14 @@ return static function (App $app): void {
         // 24h cache; pass `?force=1` to bust it (e.g. when the user
         // clicks the "Verifica ora" link in Settings).
         $g->get('/admin/update-check', [UpdateController::class, 'check']);
+
+        // Admin email verification (auth + CSRF). The site.admin_email
+        // value is set elsewhere (install wizard, Settings update);
+        // these endpoints handle the interactive code-paste step plus
+        // the rate-limited resend. See EmailVerificationController.
+        $g->get('/admin/email/status', [EmailVerificationController::class, 'status']);
+        $g->post('/admin/email/verify', [EmailVerificationController::class, 'verify']);
+        $g->post('/admin/email/resend-code', [EmailVerificationController::class, 'resend']);
 
         // 2FA management endpoints (user already authenticated).
         $g->get('/2fa/status', [TwoFactorController::class, 'status']);
