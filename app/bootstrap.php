@@ -98,8 +98,15 @@ return static function (): \Slim\App {
         $c->get(DB::class),
         $config,
     ));
+    $container->set(\Tylio\Services\UpdateApplier::class, fn(Container $c) => new \Tylio\Services\UpdateApplier(
+        $c->get(DB::class),
+        $config,
+        new Migrations($c->get(DB::class), $config),
+    ));
     $container->set(\Tylio\Controllers\UpdateController::class, fn(Container $c) => new \Tylio\Controllers\UpdateController(
         $c->get(UpdateChecker::class),
+        $c->get(\Tylio\Services\UpdateApplier::class),
+        $c->get(DB::class),
     ));
 
     // Auto-migrate on boot: idempotent, safe on a fresh install too.

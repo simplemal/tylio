@@ -118,6 +118,13 @@ return static function (App $app): void {
         // clicks the "Verifica ora" link in Settings).
         $g->get('/admin/update-check', [UpdateController::class, 'check']);
 
+        // In-app upgrade flow (admin clicks "Aggiorna ora" in Settings).
+        // `state` is the read-side (idempotent, polled by SPA);
+        // `apply` performs the actual swap+migrate sync within the
+        // request. See UpdateApplier for the sequence.
+        $g->get('/admin/update/state', [UpdateController::class, 'state']);
+        $g->post('/admin/update/apply', [UpdateController::class, 'apply']);
+
         // Admin email verification (auth + CSRF). The site.admin_email
         // value is set elsewhere (install wizard, Settings update);
         // these endpoints handle the interactive code-paste step plus
