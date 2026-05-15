@@ -6,6 +6,7 @@ namespace Tylio\Controllers;
 use Tylio\Config;
 use Tylio\Services\Auth;
 use Tylio\Services\DB;
+use Tylio\Services\EmailVerification;
 use Tylio\Services\Migrations;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -20,6 +21,7 @@ final class InstallController
         private DB $db,
         private Auth $auth,
         private Config $config,
+        private EmailVerification $emailVerification,
     ) {}
 
     public function show(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
@@ -33,7 +35,7 @@ final class InstallController
         // only /admin is unreachable until `npm run build` is done.
         $adminMissing = !$this->adminShellBuilt();
         $preferredLocale = $this->detectPreferredLocale($request);
-        return $this->html($response, $this->setupForm(null, '', $adminMissing, '', $preferredLocale));
+        return $this->html($response, $this->setupForm(null, '', $adminMissing, '', $preferredLocale, ''));
     }
 
     public function submit(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
@@ -48,6 +50,7 @@ final class InstallController
         $confirm = (string)($body['password2'] ?? '');
         $siteTitle = trim((string)($body['site_title'] ?? ''));
         $locale = strtolower(trim((string)($body['locale'] ?? '')));
+        $email = trim((string)($body['email'] ?? ''));
         $systemTheme = (string)($body['system_theme'] ?? '');
 
         $err = null;
@@ -64,9 +67,15 @@ final class InstallController
             // Defense-in-depth: the form only ever submits 'it' or 'en'
             // (radio inputs). A different value here is a tamper attempt.
             $err = 'Invalid language choice.';
+        } elseif ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            // Email is optional but, if supplied, must be syntactically valid.
+            // Verified-ness is a separate concern: install only persists the
+            // candidate value and fires off a verification code. The admin
+            // can still skip and add it later from Settings.
+            $err = 'Invalid email address.';
         }
         if ($err) {
-            return $this->html($response->withStatus(422), $this->setupForm($err, $username, false, $siteTitle, $locale));
+            return $this->html($response->withStatus(422), $this->setupForm($err, $username, false, $siteTitle, $locale, $email));
         }
 
         $hash = $this->auth->hashPassword($password);
@@ -77,8 +86,20 @@ final class InstallController
         //  - site.locale → locks the public site to this language. If empty,
         //                  the renderer falls back to Accept-Language
         //                  negotiation (this is the documented OSS default).
+        //  - site.admin_email → persisted as the CANDIDATE address. We do
+        //                  NOT set `admin_email_verified_at` here: the
+        //                  welcome mail (with credentials/URL) only ships
+        //                  AFTER the admin pastes the code, so a typo'd
+        //                  recipient never receives anything sensitive.
         $this->applySiteTitle($siteTitle);
         $this->applySiteLocale($locale);
+        if ($email !== '') {
+            $this->applyAdminEmail($email);
+            // Fire-and-forget: the verification mail goes to the supplied
+            // address. We don't care about the boolean — mail.log captures
+            // failures; the admin can always resend from Settings.
+            $this->emailVerification->requestCode($email, $locale !== '' ? $locale : null);
+        }
 
         // Apply install-time theme: Nordic, light or dark based on the
         // visitor's system theme (auto-detected by the form's JS via
@@ -123,6 +144,24 @@ final class InstallController
         $this->db->pdo()->prepare(
             "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
         )->execute(['site.locale', json_encode($locale, JSON_UNESCAPED_UNICODE)]);
+    }
+
+    /**
+     * Persist the candidate admin email but leave `admin_email_verified_at`
+     * NULL — the verification flow flips that flag only after the admin
+     * pastes the code received by mail. Welcome mail is gated separately
+     * (`site.welcome_sent_at IS NULL`), so an unverified address never
+     * sees credentials or URLs.
+     */
+    private function applyAdminEmail(string $email): void
+    {
+        $stmt = $this->db->pdo()->prepare(
+            "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))"
+        );
+        $stmt->execute(['site.admin_email', json_encode($email, JSON_UNESCAPED_UNICODE)]);
+        // Defensive reset: if this is a redo (e.g. install was retried
+        // after a fix), make sure the verified flag doesn't survive.
+        $stmt->execute(['site.admin_email_verified_at', json_encode(null)]);
     }
 
     /**
@@ -287,11 +326,13 @@ final class InstallController
         string $username = '',
         bool $adminMissing = false,
         string $siteTitle = '',
-        string $preferredLocale = 'en'
+        string $preferredLocale = 'en',
+        string $email = '',
     ): string {
         $errHtml = $err ? '<p class="err">' . htmlspecialchars($err) . '</p>' : '';
         $u = htmlspecialchars($username);
         $title = htmlspecialchars($siteTitle);
+        $emailEsc = htmlspecialchars($email);
         $admin = htmlspecialchars($this->config->adminPath());
         $itChecked = $preferredLocale === 'it' ? ' checked' : '';
         $enChecked = $preferredLocale !== 'it' ? ' checked' : '';
@@ -339,6 +380,10 @@ $errHtml
   </label>
   <label>Repeat password
     <input name="password2" type="password" required minlength="10">
+  </label>
+  <label>Email <span class="optional">(optional)</span>
+    <input name="email" type="email" value="$emailEsc" autocomplete="email" placeholder="you@example.com">
+    <span class="hint">Used for the welcome mail, contact-form forwarding and (in the future) password reset. You'll receive a 6-char code to confirm the address; the welcome mail with login details only ships after you verify it. Leave empty to add it later from Settings.</span>
   </label>
   <input type="hidden" name="system_theme" id="system_theme" value="">
   <button type="submit">Create admin</button>
@@ -420,6 +465,7 @@ HTML);
   fieldset.radio-group .radio{display:inline-flex;align-items:center;gap:8px;margin-right:18px;color:#f8f8f2;font-size:14px}
   fieldset.radio-group .radio input{width:auto;margin:0;accent-color:#62aaf9}
   fieldset.radio-group .hint{margin:6px 0 0;font-size:12px;color:#97a3c2}
+  label .hint{display:block;margin-top:6px;font-size:12px;color:#97a3c2;line-height:1.5}
   .err{background:rgba(255,80,80,.1);border:1px solid rgba(255,80,80,.3);color:#ffb3a8;padding:10px 12px;border-radius:10px;margin:0 0 8px;font-size:14px}
   .warn{background:rgba(255,121,198,.08);border:1px solid rgba(255,121,198,.35);color:#ff79c6;padding:12px 14px;border-radius:12px;margin:0 0 16px;font-size:13px;line-height:1.5}
   .warn strong{display:block;margin-bottom:4px}
