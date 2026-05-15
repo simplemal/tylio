@@ -85,14 +85,41 @@ function setItem(idx: number, key: string, v: unknown) {
   value.value = arr
 }
 
+// Recursively walks a field tree and collects default values into a flat
+// object. inline_group fields don't introduce a data path of their own —
+// their `of` children write directly to the parent item — so we descend
+// into them. Used by `addItem` so newly-created repeat rows already
+// reflect the schema defaults (incl. fields inside an inline_group).
+function collectDefaults(fields: FieldDef[], out: RepeatItem) {
+  for (const f of fields) {
+    if (f.type === 'inline_group') {
+      collectDefaults(f.of || [], out)
+      continue
+    }
+    out[f.key] = f.default ?? (f.type === 'toggle' ? false : f.type === 'repeat' ? [] : '')
+  }
+}
+
 function addItem() {
   const arr = [...asArray()]
   const empty: RepeatItem = {}
-  for (const f of props.def.of || []) {
-    empty[f.key] = f.default ?? (f.type === 'toggle' ? false : f.type === 'repeat' ? [] : '')
-  }
+  collectDefaults(props.def.of || [], empty)
   arr.push(empty)
   value.value = arr
+}
+
+/**
+ * `show_when` predicate: returns true if this sub-field is visible for
+ * the given item. Evaluated only inside repeat rows (no `show_when` at
+ * top-level). Missing keys count as not-equal, except when the field has
+ * a `default` value matching `equals` and the item never explicitly set
+ * the key — handled implicitly by the value comparison below (`undefined
+ * === 'custom'` → false → field hidden, which is what we want).
+ */
+function shouldShow(sub: FieldDef, item: RepeatItem): boolean {
+  if (!sub.show_when) return true
+  const observed = item?.[sub.show_when.key]
+  return observed === sub.show_when.equals
 }
 
 function removeItem(idx: number) {
@@ -233,6 +260,36 @@ function siblingValues(key: string): string[] {
       <option v-for="o in def.options" :key="o.value" :value="o.value">{{ o.label }}</option>
     </select>
 
+    <!-- RADIO_CARDS: bigger, card-style mutually-exclusive choices. Used
+         when a select would be too quiet — typically a "mode" switch
+         that visibly toggles which downstream fields are shown. The
+         underlying value is still a plain string; this is just a
+         render override. -->
+    <div v-else-if="def.type === 'radio_cards'" class="radio-cards">
+      <label
+        v-for="o in def.options"
+        :key="o.value"
+        class="radio-cards__card"
+        :class="{ 'is-active': selectValue === o.value }"
+      >
+        <input
+          type="radio"
+          :name="`rc-${def.key}-${datalistId}`"
+          :value="o.value"
+          :checked="selectValue === o.value"
+          class="radio-cards__input"
+          @change="selectValue = o.value"
+        />
+        <span class="radio-cards__dot" aria-hidden="true">
+          <span class="radio-cards__dot-inner"></span>
+        </span>
+        <span class="radio-cards__body">
+          <span class="radio-cards__title">{{ o.label }}</span>
+          <span v-if="o.description" class="radio-cards__desc">{{ o.description }}</span>
+        </span>
+      </label>
+    </div>
+
     <!-- ICON -->
     <div v-else-if="def.type === 'icon'" class="flex items-center gap-2">
       <button
@@ -309,16 +366,33 @@ function siblingValues(key: string): string[] {
                 <iconify-icon icon="lucide:trash-2" width="14"></iconify-icon>
               </button>
             </div>
-            <Field
-              v-for="sub in def.of"
-              :key="sub.key"
-              :def="sub"
-              :model-value="item[sub.key]"
-              :suggestions="
-                sub.autocomplete_from === 'siblings' ? siblingValues(sub.key) : []
-              "
-              @update:model-value="(v: unknown) => setItem(index, sub.key, v)"
-            />
+            <template v-for="sub in def.of" :key="sub.key">
+              <!-- inline_group: render its children side-by-side, each
+                   still bound to the parent item (the group itself does
+                   NOT introduce a data path). The container reserves room
+                   for the text input first and lets the toggle settle on
+                   the right at its natural width. -->
+              <div v-if="sub.type === 'inline_group'" class="inline-group">
+                <Field
+                  v-for="ig in sub.of"
+                  :key="ig.key"
+                  :def="ig"
+                  :model-value="item[ig.key]"
+                  :class="ig.type === 'toggle' ? 'inline-group__toggle' : 'inline-group__main'"
+                  @update:model-value="(v: unknown) => setItem(index, ig.key, v)"
+                />
+              </div>
+              <!-- regular sub-field with show_when filter -->
+              <Field
+                v-else-if="shouldShow(sub, item)"
+                :def="sub"
+                :model-value="item[sub.key]"
+                :suggestions="
+                  sub.autocomplete_from === 'siblings' ? siblingValues(sub.key) : []
+                "
+                @update:model-value="(v: unknown) => setItem(index, sub.key, v)"
+              />
+            </template>
           </div>
         </template>
       </draggable>
@@ -328,7 +402,12 @@ function siblingValues(key: string): string[] {
       </button>
     </div>
 
-    <p v-if="def.help" class="text-xs text-ink-300 mt-1">{{ def.help }}</p>
+    <!-- Generic help line under non-toggle fields. Toggles render their
+         own help inline (inside the label, right of the switch), so we
+         skip it here to avoid the double-help duplication. radio_cards
+         have a description PER option (not at the field level), so the
+         field-level help still applies when present. -->
+    <p v-if="def.help && def.type !== 'toggle'" class="text-xs text-ink-300 mt-1">{{ def.help }}</p>
   </div>
 </template>
 
@@ -392,5 +471,107 @@ function siblingValues(key: string): string[] {
 }
 .md-help__code-sample {
   /* Inherits .md-help__body code */
+}
+
+/* ----- radio_cards -------------------------------------------------- */
+.radio-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+.radio-cards__card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  background: rgb(var(--ink-800-rgb));
+  border: 1px solid rgb(var(--ink-700-rgb));
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.radio-cards__card:hover {
+  border-color: rgb(var(--ink-700-rgb) / 1.2);
+  background: rgb(var(--ink-800-rgb) / 1.4);
+}
+.radio-cards__card.is-active {
+  border-color: rgb(var(--accent-rgb));
+  background: rgb(var(--accent-rgb) / 0.08);
+}
+.radio-cards__input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 0;
+  height: 0;
+}
+.radio-cards__card:focus-within {
+  outline: 2px solid rgb(var(--accent-rgb));
+  outline-offset: 2px;
+}
+.radio-cards__dot {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgb(var(--ink-300-rgb));
+  display: grid;
+  place-items: center;
+  margin-top: 1px;
+  transition: border-color 0.15s ease;
+}
+.radio-cards__card.is-active .radio-cards__dot {
+  border-color: rgb(var(--accent-rgb));
+}
+.radio-cards__dot-inner {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.radio-cards__card.is-active .radio-cards__dot-inner {
+  background: rgb(var(--accent-rgb));
+}
+.radio-cards__body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.radio-cards__title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgb(var(--ink-100-rgb));
+  line-height: 1.3;
+}
+.radio-cards__desc {
+  font-size: 11.5px;
+  color: rgb(var(--ink-300-rgb));
+  margin-top: 3px;
+  line-height: 1.35;
+}
+
+/* ----- inline_group ------------------------------------------------- */
+/* Children render side-by-side: main input takes the free space, the
+   toggle settles on the right at its natural width. The container reuses
+   `.field`'s bottom margin so spacing matches surrounding rows. */
+.inline-group {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 1rem;
+}
+.inline-group :deep(.field) {
+  margin-bottom: 0;
+}
+.inline-group :deep(.inline-group__main) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.inline-group :deep(.inline-group__toggle) {
+  flex: 0 0 auto;
 }
 </style>

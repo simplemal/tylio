@@ -30,6 +30,29 @@ const isDirty = computed(() => {
   return JSON.stringify(block.value) !== savedSnapshot.value
 })
 
+/**
+ * Forward-compatibility migration applied to a block's `data` after the
+ * load but BEFORE the dirty snapshot. Patches legacy items that lack
+ * fields introduced later, so they show up correctly in the editor
+ * without tripping `isDirty` on open.
+ *
+ * Per-type rules:
+ *   - links: each item gets `icon_mode = 'custom'` if it has a non-empty
+ *     `icon` string, 'favicon' otherwise. Older blocks were saved before
+ *     `icon_mode` existed.
+ */
+function normalizeLegacyData(b: Block): void {
+  if (b.type === 'links') {
+    const data = b.data as { items?: Array<Record<string, unknown>> }
+    const items = Array.isArray(data.items) ? data.items : []
+    for (const item of items) {
+      if (item.icon_mode === undefined) {
+        item.icon_mode = typeof item.icon === 'string' && item.icon !== '' ? 'custom' : 'favicon'
+      }
+    }
+  }
+}
+
 onMounted(async () => {
   const [{ blocks }, { types }] = await Promise.all([api.listBlocks(), api.types()])
   const b = blocks.find((x) => x.id === Number(props.id))
@@ -37,6 +60,7 @@ onMounted(async () => {
     router.push('/')
     return
   }
+  normalizeLegacyData(b)
   block.value = b
   type.value = types.find((tt) => tt.id === b.type) || null
   savedSnapshot.value = JSON.stringify(b)

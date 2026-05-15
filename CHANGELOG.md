@@ -6,6 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.2.4 — 2026-05-15
+
+### Changed — admin editor della tessera Link (UX revision)
+
+- **Icona scelta tramite due card radio**: `Usa favicon del sito` (selezionata di default) e `Usa icona personalizzata`. Il campo Iconify compare SOLO se si seleziona "personalizzata". Niente più placeholder `lucide:link` sempre visibile.
+- **Badge + "Rendi copiabile" su una sola riga**: input badge a larghezza naturale + toggle a destra. Rimosso il blocco di help duplicato che appariva due volte sotto il toggle.
+- **Bugfix: help duplicato sotto i toggle**. `Field.vue` rendering del tipo `toggle` emetteva l'help SIA dentro la label SIA nel `<p>` generico finale. Ora il `<p>` generico è soppresso per i toggle (l'help inline è già sufficiente). Effetto laterale benefico su tutti gli altri toggle con help nel sistema (es. social/contact dove c'era la stessa duplicazione silente).
+
+### Added — schema field types (riusabili)
+
+- **`radio_cards`**: nuovo tipo di campo, alternativa più grafica al `select` per scelte modali. Ogni opzione ha `label` + `description` opzionale, rendering a card con dot stile macOS, palette accent. Definibile da `BlockRegistry`.
+- **`inline_group`**: nuovo tipo "virtuale" che renderizza i suoi figli affiancati su un'unica riga (es. text-input + toggle). Non introduce path nei dati — i figli scrivono direttamente sul record parent. Utile per coppie input+toggle correlate.
+- **`show_when`**: clausola di visibilità condizionale per i campi dentro un `repeat`. Forma `{ key: 'altro_campo', equals: 'valore' }`. Il campo si renderizza solo se la sibling chiave matcha.
+- **Migrazione legacy in EditBlock**: blocchi `links` salvati prima dell'introduzione di `icon_mode` ricevono `icon_mode='custom'` se hanno un'icona impostata, `'favicon'` altrimenti. Patch applicata PRIMA dello snapshot di dirty, così l'apertura di un blocco vecchio non risulta "modified" senza interazione utente.
+
 ## v0.2.3 — 2026-05-15
 
 ### Changed — tessera Link

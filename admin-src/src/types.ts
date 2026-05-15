@@ -6,6 +6,23 @@
 export interface FieldOption {
   value: string
   label: string
+  /**
+   * Long-form text shown under the option label. Only consumed by
+   * `radio_cards` fields (rendered as the secondary explanatory line on
+   * each card). Ignored by other field types.
+   */
+  description?: string
+}
+
+/**
+ * Conditional visibility predicate: render the field only when, within
+ * the same repeat item, the value at `key` equals `equals`. Used for
+ * fields whose meaning depends on a "mode" switch sibling (e.g.
+ * `icon_mode` toggling between favicon and a custom Iconify icon).
+ */
+export interface FieldShowWhen {
+  key: string
+  equals: string | boolean
 }
 
 export interface FieldDef {
@@ -26,6 +43,8 @@ export interface FieldDef {
     | 'repeat'
     | 'icon'
     | 'range'
+    | 'radio_cards'
+    | 'inline_group'
   help?: string
   options?: FieldOption[]
   of?: FieldDef[]
@@ -39,6 +58,12 @@ export interface FieldDef {
    * free-form "category" you want to keep consistent across items.
    */
   autocomplete_from?: 'siblings'
+  /**
+   * Show this field only when a sibling key inside the SAME repeat item
+   * matches `equals`. Currently evaluated only at the repeat sub-field
+   * level; ignored on top-level fields.
+   */
+  show_when?: FieldShowWhen
 }
 
 export interface BlockType {
@@ -103,8 +128,18 @@ export interface HeroData {
 export interface LinkItem {
   label?: string
   url?: string
+  /**
+   * Whether the row uses the linked site's favicon (default) or a
+   * user-picked Iconify icon. Legacy rows omit this field — the admin
+   * editor infers 'custom' if `icon` is non-empty (see
+   * `normalizeLegacyData` in EditBlock.vue) and the public template
+   * does the same fallback.
+   */
+  icon_mode?: 'favicon' | 'custom'
   icon?: string
   badge?: string
+  /** Public-site clicks on the badge copy its text to the clipboard. */
+  badge_copyable?: boolean
   description?: string
 }
 export interface LinksData {

@@ -131,9 +131,19 @@ final class BlockRegistry
                         'of' => [
                             ['key' => 'label', 'label' => 'blocks.links.fields.items.of.label.label', 'type' => 'text'],
                             ['key' => 'url', 'label' => 'blocks.links.fields.items.of.url.label', 'type' => 'url'],
-                            ['key' => 'icon', 'label' => 'blocks.links.fields.items.of.icon.label', 'type' => 'icon', 'help' => 'blocks.links.fields.items.of.icon.help'],
-                            ['key' => 'badge', 'label' => 'blocks.links.fields.items.of.badge.label', 'type' => 'text', 'help' => 'blocks.links.fields.items.of.badge.help'],
-                            ['key' => 'badge_copyable', 'label' => 'blocks.links.fields.items.of.badge_copyable.label', 'type' => 'toggle', 'default' => false, 'help' => 'blocks.links.fields.items.of.badge_copyable.help'],
+                            ['key' => 'icon_mode', 'label' => 'blocks.links.fields.items.of.icon_mode.label', 'type' => 'radio_cards', 'default' => 'favicon',
+                                'options' => [
+                                    ['value' => 'favicon', 'label' => 'blocks.links.fields.items.of.icon_mode.options.favicon.label', 'description' => 'blocks.links.fields.items.of.icon_mode.options.favicon.description'],
+                                    ['value' => 'custom', 'label' => 'blocks.links.fields.items.of.icon_mode.options.custom.label', 'description' => 'blocks.links.fields.items.of.icon_mode.options.custom.description'],
+                                ],
+                            ],
+                            ['key' => 'icon', 'label' => 'blocks.links.fields.items.of.icon.label', 'type' => 'icon', 'help' => 'blocks.links.fields.items.of.icon.help', 'show_when' => ['key' => 'icon_mode', 'equals' => 'custom']],
+                            ['key' => '_badge_group', 'label' => 'blocks.links.fields.items.of.badge.label', 'type' => 'inline_group',
+                                'of' => [
+                                    ['key' => 'badge', 'label' => 'blocks.links.fields.items.of.badge.label', 'type' => 'text', 'placeholder' => 'blocks.links.fields.items.of.badge.placeholder'],
+                                    ['key' => 'badge_copyable', 'label' => 'blocks.links.fields.items.of.badge_copyable.label', 'type' => 'toggle', 'default' => false],
+                                ],
+                            ],
                             ['key' => 'description', 'label' => 'blocks.links.fields.items.of.description.label', 'type' => 'text'],
                         ],
                     ],

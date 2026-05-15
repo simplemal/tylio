@@ -25,8 +25,15 @@ foreach ($items as $it) {
     $label = (string)($it['label'] ?? '');
     if ($label === '') $label = $url;
     $external = (bool)preg_match('#^https?://#i', $url);
-    $iconName = (string)($it['icon'] ?? '');
-    // Favicon fallback: only for absolute http(s) URLs with a real host.
+    // `icon_mode` is the user's explicit choice (favicon vs custom);
+    // when missing on legacy items (saved before the field existed) we
+    // infer 'custom' if there's an icon string, 'favicon' otherwise.
+    $iconRaw = (string)($it['icon'] ?? '');
+    $iconMode = isset($it['icon_mode'])
+        ? (string)$it['icon_mode']
+        : ($iconRaw !== '' ? 'custom' : 'favicon');
+    $iconName = ($iconMode === 'custom') ? $iconRaw : '';
+    // Favicon: only for absolute http(s) URLs with a real host.
     // DuckDuckGo's privacy-friendly favicon service avoids leaking visitor
     // IPs to Google. `referrerpolicy=no-referrer` further trims metadata,
     // and an inline SVG fallback covers domains the service can't resolve.
