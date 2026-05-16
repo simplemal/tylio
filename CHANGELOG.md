@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.3 — 2026-05-16
+
+### Fixed — In-app updater rejected every new release on v0.3.1 installs
+
+Il `UpdateApplier::stagingLooksValid()` di v0.3.1 cercava `public/index.php` come check del tarball scaricato, ma tylio ha l'entry point a `index.php` (root) — `public/` contiene solo asset statici (`public/admin/` per la SPA). Risultato: **ogni release** da v0.3.2 in poi veniva rifiutata con HTTP 422 `staging_invalid` cliccando "Aggiorna ora" da un install v0.3.1.
+
+Tre modifiche per fixare + permettere agli install v0.3.1 di aggiornarsi senza re-installazione manuale:
+
+1. **`stagingLooksValid` cerca ora `index.php` al root** del tarball — quello giusto.
+2. **Nuovo stub `public/index.php`** (301 redirect a `/`). Inerte se mai servito (non lo è — `.htaccess` al root rotta tutto su `index.php`), ma soddisfa il check buggato della v0.3.1 → un install su v0.3.1 può applicare v0.3.3 dalla GUI senza tocchi manuali.
+3. **`.gitignore`**: il vecchio `/public/` ignorava tutta la directory (incluso il nuovo sentinel). Cambiato a `/public/*` + `!/public/index.php` per re-includere il file specifico mantenendo ignored il resto (asset legacy di vecchi build SPA).
+
+**Per maurizionatali.it / installazioni su v0.3.1**: niente da fare manualmente. Click "Verifica ora" → "Aggiorna ora" pesca v0.3.3, lo stub passa il check di v0.3.1, swap a v0.3.3, da qui in poi gli update funzionano cleanly. Dalla v0.3.4 in poi il check è giusto e lo stub diventa puramente decorativo.
+
 ## v0.3.2 — 2026-05-16
 
 ### Changed — Block edit page: width labels + new universal Align widget
