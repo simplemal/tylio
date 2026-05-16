@@ -367,7 +367,7 @@ async function runMailTest(): Promise<void> {
       mailTestResult.value = { ok: false, message: saveError.value }
       return
     }
-    const to = getStr('site.admin_email')
+    const to = getStr('site.admin_email') || getStr('mail.from_address')
     const r = await api.mailTest(to !== '' ? to : undefined)
     if (r.ok) {
       mailTestResult.value = {

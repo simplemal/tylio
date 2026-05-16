@@ -366,24 +366,53 @@ class UpdateApplier
     protected function downloadTarball(string $url, string $version): ?string
     {
         $tmpPath = $this->tempBase() . '/' . $version . '-' . bin2hex(random_bytes(4)) . '.tar.gz';
-        $in = @fopen($url, 'rb', false, stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'timeout' => 60,
-                'header' => 'User-Agent: tylio-update-applier/1.0',
-                'follow_location' => 1,
-            ],
-        ]));
-        if ($in === false) return null;
-        $out = @fopen($tmpPath, 'wb');
-        if ($out === false) { fclose($in); return null; }
-        while (!feof($in)) {
-            $chunk = fread($in, 65536);
-            if ($chunk === false) break;
-            fwrite($out, $chunk);
+
+        if (function_exists('curl_init')) {
+            $out = @fopen($tmpPath, 'wb');
+            if ($out === false) return null;
+            $ch = curl_init($url);
+            curl_setopt_array($ch, [
+                CURLOPT_FILE => $out,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS => 5,
+                CURLOPT_TIMEOUT => 120,
+                CURLOPT_CONNECTTIMEOUT => 10,
+                CURLOPT_USERAGENT => 'tylio-update-applier/1.0',
+                CURLOPT_SSL_VERIFYPEER => true,
+                CURLOPT_FAILONERROR => true,
+            ]);
+            $ok = curl_exec($ch);
+            $err = curl_error($ch);
+            $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+            fclose($out);
+            if ($ok === false || $code >= 400) {
+                @unlink($tmpPath);
+                error_log("[tylio updater] curl download fallito ($code): $err — $url");
+                return null;
+            }
+        } else {
+            $in = @fopen($url, 'rb', false, stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 60,
+                    'header' => 'User-Agent: tylio-update-applier/1.0',
+                    'follow_location' => 1,
+                    'max_redirects' => 5,
+                ],
+            ]));
+            if ($in === false) return null;
+            $out = @fopen($tmpPath, 'wb');
+            if ($out === false) { fclose($in); return null; }
+            while (!feof($in)) {
+                $chunk = fread($in, 65536);
+                if ($chunk === false) break;
+                fwrite($out, $chunk);
+            }
+            fclose($in);
+            fclose($out);
         }
-        fclose($in);
-        fclose($out);
+
         if (!is_file($tmpPath) || filesize($tmpPath) < 1024) {
             @unlink($tmpPath);
             return null;

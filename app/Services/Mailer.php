@@ -203,6 +203,23 @@ class Mailer
             return false;
         }
 
+        @ini_set('default_socket_timeout', '10');
+
+        $host = $this->settingsString('mail.host');
+        if ($host !== '') {
+            $port = (int)($this->settingsString('mail.port') ?: '587');
+            $errno = 0;
+            $errstr = '';
+            $probe = @stream_socket_client("tcp://$host:$port", $errno, $errstr, 5);
+            if ($probe === false) {
+                $this->lastError = "Impossibile contattare $host:$port entro 5s ($errstr).";
+                $this->logToFile('error: ' . $this->lastError, $to, $subject, $textBody);
+                error_log('[tylio mailer] preflight failed: ' . $this->lastError);
+                return false;
+            }
+            fclose($probe);
+        }
+
         try {
             $email = (new Email())
                 ->from(new Address($this->fromAddress(), $this->fromName()))
