@@ -330,13 +330,29 @@ class UpdateApplier
             $this->rmrf($stagingDir);
             return null;
         }
-        // Collapse single wrapper dir if present.
-        $entries = array_values(array_diff(scandir($stagingDir) ?: [], ['.', '..']));
+        // Collapse single wrapper dir if present. Filter out the
+        // AppleDouble sidecar files (`._*`) that BSD `tar` on macOS
+        // emits alongside each entry by default — they would otherwise
+        // make `count($entries) > 1` and skip the collapse on tarballs
+        // built from a Mac without `COPYFILE_DISABLE=1`. We also remove
+        // them outright so they never reach the swap step.
+        $real = static fn(string $n): bool => $n !== '.' && $n !== '..' && !str_starts_with($n, '._');
+        foreach (scandir($stagingDir) ?: [] as $name) {
+            if ($name !== '.' && $name !== '..' && str_starts_with($name, '._')) {
+                @unlink($stagingDir . '/' . $name);
+            }
+        }
+        $entries = array_values(array_filter(scandir($stagingDir) ?: [], $real));
         if (count($entries) === 1) {
             $first = $stagingDir . '/' . $entries[0];
             if (is_dir($first)) {
-                // Move everything from $first up into $stagingDir.
-                foreach (array_diff(scandir($first) ?: [], ['.', '..']) as $name) {
+                // Same AppleDouble cleanup one level deeper.
+                foreach (scandir($first) ?: [] as $name) {
+                    if ($name !== '.' && $name !== '..' && str_starts_with($name, '._')) {
+                        @unlink($first . '/' . $name);
+                    }
+                }
+                foreach (array_filter(scandir($first) ?: [], $real) as $name) {
                     rename($first . '/' . $name, $stagingDir . '/' . $name);
                 }
                 @rmdir($first);

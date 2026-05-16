@@ -192,7 +192,9 @@ ASSET=""
 if [[ -d admin ]]; then
   ASSET="tylio-admin-bundle-$VERSION.tar.gz"
   log "Packaging admin/ → $ASSET"
-  tar -czf "$ASSET" admin
+  # See the source-bundle tar invocation below for why these flags exist.
+  COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -czf "$ASSET" admin 2>/dev/null \
+    || COPYFILE_DISABLE=1 tar -czf "$ASSET" admin
 else
   warn "admin/ not built — the release will not ship an admin bundle asset."
 fi
@@ -225,7 +227,7 @@ if command -v rsync >/dev/null 2>&1; then
     --exclude='.phpstan-cache/' \
     --exclude='.phpunit.cache/' \
     --exclude='tests/' \
-    --exclude='*.swp' --exclude='*.bak' --exclude='.DS_Store' \
+    --exclude='*.swp' --exclude='*.bak' --exclude='.DS_Store' --exclude='._*' \
     "$PROJECT_ROOT/" "$SOURCE_STAGING_TYLIO/"
 else
   warn "rsync not installed — using cp for source staging (slower)"
@@ -247,7 +249,16 @@ fi
 [[ -d "$SOURCE_STAGING_TYLIO/admin" ]] || warn "Source staging missing admin/ — in-app upgrade will deploy without the SPA"
 # Tar with the wrapper "tylio/" dir so UpdateApplier's collapse-single-
 # top-level step DTRT.
-( cd "$SOURCE_STAGING" && tar -czf "$PROJECT_ROOT/$SOURCE_ASSET" tylio )
+#
+# COPYFILE_DISABLE=1 + --no-mac-metadata + --no-xattrs neutralise BSD
+# tar's default behavior on macOS: without them every regular entry
+# gets a sibling `._*` AppleDouble file with HFS metadata. PharData
+# extracts those as real files, breaking UpdateApplier's
+# "single top-level wrapper" detection (count(entries) becomes 2, the
+# collapse skips, the stagingLooksValid check fails). On Linux these
+# flags are a no-op.
+( cd "$SOURCE_STAGING" && COPYFILE_DISABLE=1 tar --no-mac-metadata --no-xattrs -czf "$PROJECT_ROOT/$SOURCE_ASSET" tylio 2>/dev/null \
+  || ( cd "$SOURCE_STAGING" && COPYFILE_DISABLE=1 tar -czf "$PROJECT_ROOT/$SOURCE_ASSET" tylio ) )
 rm -rf "$SOURCE_STAGING"
 log "Source asset ready: $SOURCE_ASSET ($(du -h "$SOURCE_ASSET" | cut -f1))"
 
