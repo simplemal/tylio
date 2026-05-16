@@ -41,6 +41,18 @@ const tenantSlug = computed<string>(() => {
   return m ? m[1] : ''
 })
 
+// OSS fallback pill: on a self-hosted install we don't have a tenant
+// slug, but the user still benefits from a quick "which site is this"
+// hint under the brand — especially on multi-environment workflows
+// (staging.example.com vs example.com). We show site.title if set;
+// otherwise we fall back to the bare hostname (no www. prefix).
+const ossHeaderLabel = computed<string>(() => {
+  if (tenantSlug.value) return '' // SaaS path: not used
+  if (site.title) return site.title
+  const host = (typeof window !== 'undefined' ? window.location.hostname : '').toLowerCase()
+  return host.replace(/^www\./, '')
+})
+
 const nav = computed(() => [
   { to: '/', label: t('nav.dashboard'), icon: 'lucide:layout-grid' },
   { to: '/theme', label: t('nav.theme'), icon: 'lucide:palette' },
@@ -113,6 +125,13 @@ router.afterEach(() => refreshShellState())
               :title="tenantSlug + '.tylio.app'"
             >
               <span class="font-semibold text-ink-100">{{ tenantSlug }}</span>
+            </span>
+            <span
+              v-else-if="ossHeaderLabel"
+              class="text-xs text-ink-300 font-medium truncate"
+              :title="ossHeaderLabel"
+            >
+              <span class="font-semibold text-ink-100">{{ ossHeaderLabel }}</span>
             </span>
           </span>
         </router-link>
@@ -202,6 +221,32 @@ router.afterEach(() => refreshShellState())
 
     <!-- Main content -->
     <main class="flex-1 md:ml-64 p-5 md:p-8 max-w-6xl">
+      <!-- Admin email banner: shown until the admin sets AND verifies
+           an email. Two messages share the same warn-box chrome:
+             - `needsEmailSet`     → "Non è stata impostata una email…"
+             - `needsEmailVerify`  → "Non è stata verificata l'email…"
+           Both link to Settings (anchor `#email`) so the user can act
+           in one click. Persistent (no dismiss) by design — the email
+           is the only password-reset / 2FA-fallback channel. -->
+      <router-link
+        v-if="site.needsEmailSet || site.needsEmailVerify"
+        :to="{ name: 'settings', hash: '#email' }"
+        class="warn-box mb-5 rounded-xl px-4 py-3 flex items-start gap-3 hover:no-underline"
+        role="alert"
+      >
+        <iconify-icon icon="lucide:mail-warning" width="20" class="warn-icon mt-0.5 shrink-0"></iconify-icon>
+        <div class="text-sm leading-snug flex-1">
+          <p class="warn-strong font-medium">
+            <template v-if="site.needsEmailSet">{{ t('shell.emailMissingTitle') }}</template>
+            <template v-else>{{ t('shell.emailUnverifiedTitle', { email: site.adminEmail }) }}</template>
+          </p>
+          <p class="mt-0.5 opacity-90">{{ t('shell.emailBannerBody') }}</p>
+        </div>
+        <span class="warn-strong self-center text-xs underline-offset-2 underline whitespace-nowrap">
+          {{ t('shell.emailBannerAction') }}
+        </span>
+      </router-link>
+
       <!-- Maintenance banner: only shown when the site is in maintenance
            mode. Uses the theme-aware `.warn-box` utility so the text /
            border / background all stay readable on every palette (the
