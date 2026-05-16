@@ -6,6 +6,43 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.7 — 2026-05-16
+
+### Added — Toggle "Usa il tuo server di posta" (SaaS-driven)
+
+Su SaaS i tenant tylio.app per default mandano email via il mailer centralizzato della piattaforma. Un nuovo toggle in Settings → SMTP "Usa il tuo server di posta per inviare le email" (default OFF) consente al singolo tenant di switcharsi a un SMTP custom. Su OSS standalone il toggle non appare: l'admin DEVE configurare SMTP (è l'unica via).
+
+- Migration `0012_mail_use_custom.sql`: seed `mail.use_custom_smtp = false`.
+- `Mailer::settingsBool` helper aggiunto (per la subclass platform `TenantMailer`).
+- Mailer ctor props da `private` a `protected` (subclass access).
+- `Settings.vue`: hostname-based `isSaas` → su SaaS box col toggle prima della card SMTP, su OSS sezione always-on. Banner shell-wide "SMTP non configurato" gated su SaaS dal toggle.
+
+### Added — Link block: accordion sui sub-item
+
+I link items del block `links` ora sono drawer collapsibili: header sempre visibile (drag + label cliccabile + delete), body con i sub-field appare solo se espanso. Al mount tutti chiusi; `addItem` apre il nuovo item. Header dinamico: `item.label` (se non vuoto) altrimenti `Link #N`. Risolve le tessere con tanti link non navigabili.
+
+Generalizzato via `FieldDef.collapsible: bool` + `FieldDef.collapsible_label_field: string` — riusabile per altri block types con repeat. State locale al componente Field.vue, NON persistito (richiesta Maurizio: fresh chiuso a ogni mount).
+
+### Changed — OSS pill: dominio invece del titolo sito
+
+`AppShell.vue` mostra ora il bare hostname (`maurizionatali.it`) sotto il logo `tylio.app`, niente più fallback su `site.title`. Più utile per multi-environment (staging.example.com vs example.com).
+
+### Changed — `m-app__name`: halo soft per leggibilità accent-su-tint
+
+Il fondo card di `m-app` è un gradient dello stesso accent del titolo → su progetti con accent saturo (rosso, ecc.) il titolo si fondeva col fondo. Aggiunto `text-shadow` doppio dello stesso colore del fondo card (close + blurry) come halo: stacca le lettere quando serve, invisibile quando il contrasto è già buono.
+
+### Fixed — `UpdateApplier`: temp dir sotto rootPath (no più cross-fs rename)
+
+Su molti server `/tmp` e `/var/www/...` sono filesystem separati. `PharData::extractTo` su `/tmp` + swap-rename su `/var/www/.../vendor` falliva con "Invalid cross-device link" → swap parziale + lock stuck. Fix: `tempBase()` ritorna `$rootPath/data/.tylio-update-tmp/` — stesso filesystem del target di swap. `rename` intra-fs OK. (Stesso fix sul `OssDependencyUpdater` lato platform).
+
+### Fixed — Favicon upload: error handling specifico + supporto `media_id`
+
+`FaviconController` riscritto in try/catch step-by-step. Ogni failure point ha codice + `detail` italiano leggibile + HTTP status mirato. 13 codici: `no_input`, `media_not_found`, `media_file_missing`, `invalid_mime`, `image_decode_failed`, `gd_unavailable`, `dest_not_writable`, `resize_failed`, `write_failed`, `upload_failed`, `tmp_alloc_failed`, `db_failed`, `exception`. **BUG FIX**: l'endpoint ora supporta DAVVERO il path `media_id` (body JSON) che il "scegli da galleria" del SPA usa — prima leggeva solo `$_FILES['file']` e ritornava sempre `no_file`. `FaviconUploader.vue` legge `e.data.detail` per mostrare il messaggio del server.
+
+### Fixed — Media → "Copia URL" copia URL assoluto
+
+`Media.vue::copy()` faceva `clipboard.writeText(m.url)` dove `m.url` è path relativo (`/uploads/abc.jpg`). Inutilizzabile fuori dall'origin. Ora pre-pende `window.location.origin` → si copia `https://maurizionatali.it/uploads/abc.jpg`.
+
 ## v0.3.6 — 2026-05-16
 
 ### Added — Configurazione SMTP da Settings + endpoint test
