@@ -529,6 +529,8 @@
       "hostHelp": "Es. smtp.gmail.com, smtp.aruba.it, smtp.mailgun.org.",
       "port": "Porta",
       "security": "Sicurezza",
+      "securityTls": "STARTTLS",
+      "securitySsl": "SSL/TLS",
       "securityNone": "Nessuna (sconsigliato)",
       "user": "Utente",
       "pass": "Password",
@@ -537,7 +539,7 @@
       "fromName": "Mittente (nome)",
       "testButton": "Invia email di prova",
       "testing": "Invio in corso…",
-      "testHint": "Spedisce un’email a site.admin_email usando le impostazioni salvate. Salva prima per testare l’ultima versione.",
+      "testHint": "Salva e spedisce un’email di prova a site.admin_email usando i dati appena inseriti.",
       "testSuccess": "Email di prova inviata a {to}. Controlla la casella (inclusa la cartella spam)."
     },
     "archive": {

@@ -599,24 +599,71 @@ class UpdateApplier
     {
         $preserve = array_flip(self::PRESERVE);
         $stagingEntries = array_values(array_diff(scandir($stagingDir) ?: [], ['.', '..']));
-        $deprecated = [];
+        $moved = [];
 
-        foreach ($stagingEntries as $name) {
-            if (isset($preserve[$name])) continue;
-            $rootPath = $root . '/' . $name;
-            $stagingPath = $stagingDir . '/' . $name;
-            if (file_exists($rootPath)) {
-                $depPath = $root . '/.deprecated-' . $name . '-' . bin2hex(random_bytes(3));
-                rename($rootPath, $depPath);
-                $deprecated[] = $depPath;
+        try {
+            foreach ($stagingEntries as $name) {
+                if (isset($preserve[$name])) continue;
+                $rootPath = $root . '/' . $name;
+                $stagingPath = $stagingDir . '/' . $name;
+                $depPath = null;
+                if (file_exists($rootPath)) {
+                    $depPath = $root . '/.deprecated-' . $name . '-' . bin2hex(random_bytes(3));
+                    if (!$this->safeMove($rootPath, $depPath)) {
+                        throw new \RuntimeException("Swap fallito: impossibile rinominare $rootPath in $depPath");
+                    }
+                }
+                if (!$this->safeMove($stagingPath, $rootPath)) {
+                    if ($depPath !== null) @rename($depPath, $rootPath);
+                    throw new \RuntimeException("Swap fallito: impossibile spostare $stagingPath in $rootPath");
+                }
+                $moved[] = [$rootPath, $depPath];
             }
-            rename($stagingPath, $rootPath);
+            foreach ($moved as [$_, $dep]) {
+                if ($dep !== null) $this->rmrf($dep);
+            }
+        } catch (\Throwable $e) {
+            foreach (array_reverse($moved) as [$rootPath, $depPath]) {
+                if ($depPath !== null && is_dir($depPath)) {
+                    if (file_exists($rootPath)) $this->rmrf($rootPath);
+                    @rename($depPath, $rootPath);
+                }
+            }
+            throw $e;
         }
+    }
 
-        // Cleanup deprecated dirs/files (post-swap, so a mid-swap crash
-        // leaves recoverable state under .deprecated-*).
-        foreach ($deprecated as $p) {
-            $this->rmrf($p);
+    protected function safeMove(string $src, string $dst): bool
+    {
+        if (@rename($src, $dst)) return true;
+        if (is_dir($src)) {
+            if (!is_dir($dst) && !@mkdir($dst, 0775, true)) return false;
+            $this->copyTree($src, $dst);
+            $srcCount = count(array_diff(scandir($src) ?: [], ['.', '..']));
+            $dstCount = count(array_diff(scandir($dst) ?: [], ['.', '..']));
+            if ($dstCount < $srcCount) return false;
+            $this->rmrf($src);
+            return !file_exists($src) && is_dir($dst);
+        }
+        if (!@copy($src, $dst)) return false;
+        @unlink($src);
+        return is_file($dst) && !file_exists($src);
+    }
+
+    protected function copyTree(string $src, string $dst): void
+    {
+        $it = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($src, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST,
+        );
+        $srcLen = strlen($src) + 1;
+        foreach ($it as $fi) {
+            $target = $dst . '/' . substr($fi->getPathname(), $srcLen);
+            if ($fi->isDir()) {
+                if (!is_dir($target)) @mkdir($target, 0755, true);
+            } elseif ($fi->isFile()) {
+                @copy($fi->getPathname(), $target);
+            }
         }
     }
 

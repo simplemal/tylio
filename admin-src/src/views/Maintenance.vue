@@ -19,7 +19,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 import { ApiError } from '../types'
-import type { Settings } from '../types'
+import type { Settings, UpdateCheckOk } from '../types'
 import { useSite } from '../stores/site'
 
 const { t } = useI18n()
@@ -99,6 +99,145 @@ function discardChanges(): void {
   flag.value = savedFlag.value
   message.value = savedMessage.value
 }
+
+const updateCheck = ref<UpdateCheckOk | null>(null)
+const updateCheckHidden = ref(false)
+const updateChecking = ref(false)
+const updateError = ref('')
+const showChangelog = ref(false)
+
+const updateState = ref<{
+  in_progress: boolean
+  last_update_at: string
+  last_version: string
+  last_error: string
+  last_backup: string
+} | null>(null)
+
+const applying = ref(false)
+const applyResult = ref<{
+  ok: boolean
+  message: string
+  newVersion?: string
+  backupPath?: string
+} | null>(null)
+
+async function loadUpdateCheck(force = false): Promise<void> {
+  if (updateChecking.value) return
+  updateChecking.value = true
+  updateError.value = ''
+  try {
+    const r = await api.updateCheck(force)
+    if ('disabled' in r && r.disabled) {
+      updateCheckHidden.value = true
+      updateCheck.value = null
+    } else {
+      updateCheck.value = r as UpdateCheckOk
+    }
+  } catch (e: unknown) {
+    if (e instanceof ApiError && e.status === 404) {
+      updateCheckHidden.value = true
+    } else {
+      updateError.value =
+        e instanceof ApiError
+          ? t('settings.errors.errorWithStatus', { status: e.status })
+          : t('settings.errors.networkError')
+    }
+  } finally {
+    updateChecking.value = false
+  }
+}
+
+async function loadUpdateState(): Promise<void> {
+  try {
+    const r = await api.updateState()
+    if ('disabled' in r && r.disabled) {
+      updateState.value = null
+      return
+    }
+    updateState.value = r as {
+      in_progress: boolean
+      last_update_at: string
+      last_version: string
+      last_error: string
+      last_backup: string
+    }
+  } catch {
+    updateState.value = null
+  }
+}
+
+async function applyUpdate(): Promise<void> {
+  if (applying.value) return
+  applying.value = true
+  applyResult.value = null
+  try {
+    const r = await api.updateApply()
+    if (r.ok) {
+      applyResult.value = {
+        ok: true,
+        message: t('settings.update.applySuccess', { version: r.new_version }),
+        newVersion: r.new_version,
+        backupPath: r.backup_path,
+      }
+      await loadUpdateCheck(true)
+      await loadUpdateState()
+    } else {
+      applyResult.value = {
+        ok: false,
+        message: r.detail || t('settings.update.applyGenericError'),
+        backupPath: r.backup_path,
+      }
+    }
+  } catch (e: unknown) {
+    let errMessage: string
+    if (e instanceof ApiError && typeof e.data?.detail === 'string' && e.data.detail) {
+      errMessage = e.data.detail
+    } else if (e instanceof ApiError) {
+      errMessage = t('settings.errors.errorWithStatus', { status: e.status })
+    } else {
+      errMessage = t('settings.errors.networkError')
+    }
+    applyResult.value = { ok: false, message: errMessage }
+    await loadUpdateState()
+  } finally {
+    applying.value = false
+  }
+}
+
+function relativeFromIso(iso: string): string {
+  const then = Date.parse(iso)
+  if (!Number.isFinite(then)) return ''
+  const diffMs = Date.now() - then
+  const sec = Math.max(0, Math.floor(diffMs / 1000))
+  if (sec < 60) return t('settings.update.timeSecondsAgo', { n: sec })
+  const min = Math.floor(sec / 60)
+  if (min < 60) return t('settings.update.timeMinutesAgo', { n: min })
+  const hr = Math.floor(min / 60)
+  if (hr < 24) return t('settings.update.timeHoursAgo', { n: hr })
+  const days = Math.floor(hr / 24)
+  return t('settings.update.timeDaysAgo', { n: days })
+}
+
+const updateLastCheckedLabel = computed(() => {
+  const c = updateCheck.value
+  if (!c || !c.last_checked) return ''
+  const rel = relativeFromIso(c.last_checked)
+  return rel ? t('settings.update.lastChecked', { when: rel }) : ''
+})
+
+type UpdateStatus = 'ok' | 'outdated' | 'unknown'
+const updateStatus = computed<UpdateStatus>(() => {
+  const c = updateCheck.value
+  if (!c) return 'unknown'
+  if (c.latest === null) return 'unknown'
+  return c.is_outdated ? 'outdated' : 'ok'
+})
+
+onMounted(() => {
+  void loadUpdateCheck(false)
+  void loadUpdateState()
+})
 </script>
 
 <template>
@@ -231,4 +370,241 @@ function discardChanges(): void {
       <li>{{ t('maintenance.aboutPoint3') }}</li>
     </ul>
   </section>
+
+  <section v-if="!loading && !updateCheckHidden" class="tile mt-5 update-card">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+      <div class="min-w-[200px] flex-1">
+        <h2 class="font-display text-xl mb-2">{{ t('settings.update.title') }}</h2>
+        <p class="text-xs text-ink-300 mb-3 leading-relaxed">
+          {{ t('settings.update.intro') }}
+        </p>
+        <dl class="text-sm grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 mb-2">
+          <dt class="text-ink-300">{{ t('settings.update.installed') }}</dt>
+          <dd>
+            <code class="px-1.5 py-0.5 rounded bg-ink-900 text-ink-100">{{
+              updateCheck?.current ?? t('settings.update.unknownVersion')
+            }}</code>
+          </dd>
+          <dt class="text-ink-300">{{ t('settings.update.available') }}</dt>
+          <dd>
+            <code v-if="updateCheck?.latest" class="px-1.5 py-0.5 rounded bg-ink-900 text-ink-100">{{
+              updateCheck.latest
+            }}</code>
+            <span v-else class="text-ink-300 italic">{{ t('settings.update.unknownVersion') }}</span>
+          </dd>
+        </dl>
+        <p v-if="updateLastCheckedLabel" class="text-xs text-ink-300">
+          {{ updateLastCheckedLabel }}
+          <button
+            type="button"
+            class="ml-2 underline decoration-dotted underline-offset-2 hover:text-ink-100 disabled:opacity-50"
+            :disabled="updateChecking"
+            @click="loadUpdateCheck(true)"
+          >{{ updateChecking ? t('settings.update.checking') : t('settings.update.checkNow') }}</button>
+        </p>
+        <p v-if="updateError" class="text-xs text-red-300 mt-1">{{ updateError }}</p>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 py-2 rounded-full bg-ink-900 ring-1 ring-white/10">
+        <template v-if="updateStatus === 'ok'">
+          <span class="update-dot update-dot--ok" aria-hidden="true"></span>
+          <span class="text-sm text-ink-100">{{ t('settings.update.statusUpToDate') }}</span>
+        </template>
+        <template v-else-if="updateStatus === 'outdated'">
+          <span class="warn-dot inline-block w-2.5 h-2.5 rounded-full" aria-hidden="true"></span>
+          <span class="text-sm warn-strong">{{ t('settings.update.statusOutdated') }}</span>
+        </template>
+        <template v-else>
+          <span class="update-dot update-dot--unknown" aria-hidden="true"></span>
+          <span class="text-sm text-ink-300">{{ t('settings.update.statusUnknown') }}</span>
+        </template>
+      </div>
+    </div>
+
+    <div v-if="updateStatus === 'outdated' && updateCheck" class="mt-4 space-y-3">
+      <div v-if="updateCheck.changelog_html">
+        <button
+          type="button"
+          class="btn btn-ghost update-toggle"
+          @click="showChangelog = !showChangelog"
+        >
+          <iconify-icon
+            :icon="showChangelog ? 'lucide:chevron-down' : 'lucide:chevron-right'"
+            width="16"
+          ></iconify-icon>
+          {{ showChangelog ? t('settings.update.hideChangelog') : t('settings.update.showChangelog') }}
+        </button>
+        <div
+          v-if="showChangelog"
+          class="update-changelog mt-2 text-sm leading-relaxed"
+          v-html="updateCheck.changelog_html"
+        ></div>
+        <p v-if="updateCheck.release_url && showChangelog" class="text-xs mt-2">
+          <a
+            :href="updateCheck.release_url"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-ink-300 hover:text-ink-100 underline decoration-dotted"
+          >
+            {{ t('settings.update.viewOnGithub') }}
+            <iconify-icon icon="lucide:external-link" width="12"></iconify-icon>
+          </a>
+        </p>
+      </div>
+
+      <div class="update-apply">
+        <button
+          type="button"
+          class="btn btn-primary update-apply__btn"
+          :disabled="applying"
+          @click="applyUpdate()"
+        >
+          <iconify-icon
+            :icon="applying ? 'lucide:loader-2' : 'lucide:download-cloud'"
+            :class="applying ? 'animate-spin' : ''"
+            width="16"
+          ></iconify-icon>
+          {{ applying ? t('settings.update.applying') : t('settings.update.applyNow') }}
+        </button>
+        <p class="text-xs text-ink-300 mt-2 leading-relaxed">
+          {{ t('settings.update.applyDisclaimer') }}
+        </p>
+      </div>
+    </div>
+
+    <div
+      v-if="applyResult"
+      class="update-outcome mt-4"
+      :class="applyResult.ok ? 'update-outcome--ok' : 'update-outcome--err'"
+    >
+      <iconify-icon
+        :icon="applyResult.ok ? 'lucide:check-circle-2' : 'lucide:alert-circle'"
+        width="20"
+      ></iconify-icon>
+      <div class="flex-1">
+        <p class="text-sm">{{ applyResult.message }}</p>
+        <p v-if="applyResult.backupPath" class="text-xs text-ink-300 mt-1">
+          {{ t('settings.update.backupAt', { path: applyResult.backupPath }) }}
+        </p>
+      </div>
+    </div>
+
+    <p
+      v-if="!applyResult && updateState?.last_update_at && updateState.last_version"
+      class="text-xs text-ink-300 mt-3"
+    >
+      {{ t('settings.update.lastApplied', {
+        version: updateState.last_version,
+        when: relativeFromIso(updateState.last_update_at),
+      }) }}
+    </p>
+    <p
+      v-if="!applyResult && updateState?.last_error"
+      class="text-xs text-red-300 mt-1"
+    >
+      {{ t('settings.update.lastFailure', { detail: updateState.last_error }) }}
+    </p>
+  </section>
 </template>
+
+<style scoped>
+.update-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 9999px;
+}
+.update-dot--ok {
+  background: rgb(52 211 153);
+}
+.update-dot--unknown {
+  background: rgb(var(--ink-300-rgb));
+}
+
+.update-toggle {
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.update-changelog {
+  background: rgb(var(--ink-800-rgb));
+  border: 1px solid rgb(var(--ink-100-rgb) / 0.08);
+  border-radius: 0.75rem;
+  padding: 0.9rem 1rem;
+  max-height: 360px;
+  overflow-y: auto;
+}
+.update-changelog :deep(h1),
+.update-changelog :deep(h2),
+.update-changelog :deep(h3) {
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+  font-size: 1rem;
+}
+.update-changelog :deep(p) {
+  margin: 0.4em 0;
+}
+.update-changelog :deep(ul),
+.update-changelog :deep(ol) {
+  margin: 0.4em 0;
+  padding-left: 1.4em;
+}
+.update-changelog :deep(ul) { list-style: disc; }
+.update-changelog :deep(ol) { list-style: decimal; }
+.update-changelog :deep(li) {
+  margin: 0.15em 0;
+}
+.update-changelog :deep(code) {
+  background: rgb(var(--ink-900-rgb));
+  padding: 0.05em 0.4em;
+  border-radius: 0.25em;
+  font-size: 0.85em;
+}
+.update-changelog :deep(pre) {
+  background: rgb(var(--ink-900-rgb));
+  padding: 0.7em 0.9em;
+  border-radius: 0.5em;
+  overflow-x: auto;
+  font-size: 0.85em;
+  margin: 0.5em 0;
+}
+.update-changelog :deep(pre code) {
+  background: transparent;
+  padding: 0;
+}
+.update-changelog :deep(a) {
+  color: rgb(var(--accent-rgb));
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+
+.update-apply {
+  margin-top: 0.5rem;
+}
+.update-apply__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.update-outcome {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid rgb(var(--ink-100-rgb) / 0.08);
+}
+.update-outcome--ok {
+  background: rgb(var(--accent-rgb) / 0.08);
+  border-color: rgb(var(--accent-rgb) / 0.35);
+  color: rgb(var(--ink-100-rgb));
+}
+.update-outcome--err {
+  background: rgb(220 38 38 / 0.08);
+  border-color: rgb(220 38 38 / 0.45);
+  color: rgb(252 165 165);
+}
+</style>

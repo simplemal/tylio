@@ -107,7 +107,7 @@ class FaviconController
                 if (!$dst) {
                     imagedestroy($src);
                     return $this->err($response, 'resize_failed',
-                        "GD ha fallito ad allocare un buffer ${size}x${size}px. "
+                        "GD ha fallito ad allocare un buffer {$size}x{$size}px. "
                         . "Probabile memory_limit di PHP troppo basso (è "
                         . ini_get('memory_limit') . "). Aumentalo a 256M.",
                         500);
@@ -118,7 +118,7 @@ class FaviconController
                     imagedestroy($dst);
                     imagedestroy($src);
                     return $this->err($response, 'resize_failed',
-                        "GD ha fallito il resampling a ${size}x${size}px.",
+                        "GD ha fallito il resampling a {$size}x{$size}px.",
                         500);
                 }
                 $outPath = $destDir . "/icon-$size.png";
@@ -204,12 +204,12 @@ class FaviconController
                 . "(JSON body) per usare un'immagine già in galleria.", 400);
         }
 
-        $row = $this->db->one('SELECT path FROM media WHERE id = ? LIMIT 1', [$mediaId]);
+        $row = $this->db->one('SELECT filename FROM media WHERE id = ? LIMIT 1', [$mediaId]);
         if (!$row) {
             return $this->err(new \Slim\Psr7\Response(), 'media_not_found',
                 "Nessun media in galleria con id=$mediaId.", 404);
         }
-        $path = $this->config->path('uploads/' . ltrim((string)$row['path'], '/'));
+        $path = $this->config->path('uploads/' . ltrim((string)$row['filename'], '/'));
         if (!is_file($path)) {
             return $this->err(new \Slim\Psr7\Response(), 'media_file_missing',
                 "Il media id=$mediaId esiste nel DB ma il file `$path` è sparito da disco. "

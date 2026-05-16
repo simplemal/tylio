@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 import { ApiError } from '../types'
-import type { EmailVerificationStatus, Settings, UpdateCheckOk } from '../types'
+import type { EmailVerificationStatus, Settings } from '../types'
 import { useAuth } from '../stores/auth'
 import {
   SUPPORTED_LOCALES,
@@ -260,186 +260,6 @@ const known: FieldDef[] = [
 // flipping the switch is a one-purpose, urgent action and shouldn't
 // share UI real estate with the rest of the settings.
 
-// ===== Update check =====
-// Hits GET /api/admin/update-check on mount. The card hides itself
-// entirely when the API returns 404 (OSS install without the endpoint
-// deployed) or when the body has `disabled: true` (SaaS overlay: the
-// platform operator updates centrally, tenants must not see this UI).
-// On a transient network failure (`latest === null`) we keep the card
-// visible but show a neutral "couldn't verify" status with a retry
-// link — distinct from the explicit SaaS-disabled signal.
-const updateCheck = ref<UpdateCheckOk | null>(null)
-const updateCheckHidden = ref(false)
-const updateChecking = ref(false)
-const updateError = ref('')
-const showChangelog = ref(false)
-
-// ===== In-app upgrade flow =====
-// Read-side state surfaced by GET /api/admin/update/state.
-const updateState = ref<{
-  in_progress: boolean
-  last_update_at: string
-  last_version: string
-  last_error: string
-  last_backup: string
-} | null>(null)
-
-// Write-side flags for the click handler. While `applying` is true the
-// "Aggiorna ora" button is disabled and the card shows a spinner +
-// "Aggiornamento in corso..." message. The request is sync (the server
-// blocks until backup+swap+migrate complete), so the SPA can't show
-// per-step progress — only an overall spinner.
-const applying = ref(false)
-const applyResult = ref<{
-  ok: boolean
-  message: string
-  newVersion?: string
-  backupPath?: string
-} | null>(null)
-
-async function loadUpdateCheck(force = false): Promise<void> {
-  if (updateChecking.value) return
-  updateChecking.value = true
-  updateError.value = ''
-  try {
-    const r = await api.updateCheck(force)
-    if ('disabled' in r && r.disabled) {
-      // SaaS overlay (or any future operator-disabled deployment).
-      updateCheckHidden.value = true
-      updateCheck.value = null
-    } else {
-      // After narrowing with `'disabled' in r`, TS still keeps the union
-      // here because the discriminant is OPTIONAL on the OK shape (it
-      // simply doesn't appear). Cast to the OK type explicitly.
-      updateCheck.value = r as UpdateCheckOk
-    }
-  } catch (e: unknown) {
-    if (e instanceof ApiError && e.status === 404) {
-      // OSS install on a version older than this SPA — endpoint not
-      // deployed yet. Hide the card silently.
-      updateCheckHidden.value = true
-    } else {
-      // Network or other transient failure: surface a short error so the
-      // user can retry, but keep the card visible.
-      updateError.value =
-        e instanceof ApiError
-          ? t('settings.errors.errorWithStatus', { status: e.status })
-          : t('settings.errors.networkError')
-    }
-  } finally {
-    updateChecking.value = false
-  }
-}
-
-async function loadUpdateState(): Promise<void> {
-  try {
-    const r = await api.updateState()
-    if ('disabled' in r && r.disabled) {
-      updateState.value = null
-      return
-    }
-    // Same union-narrowing limitation as loadUpdateCheck (the discriminant
-    // is optional on the OK shape): explicit cast after the disabled check.
-    updateState.value = r as {
-      in_progress: boolean
-      last_update_at: string
-      last_version: string
-      last_error: string
-      last_backup: string
-    }
-  } catch {
-    // Older OSS builds (pre-v0.3.1) don't have this endpoint — fail
-    // silently. The "Aggiorna ora" button will still POST and surface
-    // a 404 to the user if the apply endpoint is also missing.
-    updateState.value = null
-  }
-}
-
-async function applyUpdate(): Promise<void> {
-  if (applying.value) return
-  // We let the server pick `releases/latest` (no version body).
-  applying.value = true
-  applyResult.value = null
-  try {
-    const r = await api.updateApply()
-    if (r.ok) {
-      applyResult.value = {
-        ok: true,
-        message: t('settings.update.applySuccess', { version: r.new_version }),
-        newVersion: r.new_version,
-        backupPath: r.backup_path,
-      }
-      // Refresh the version dl (current should now equal latest).
-      await loadUpdateCheck(true)
-      await loadUpdateState()
-    } else {
-      applyResult.value = {
-        ok: false,
-        message: r.detail || t('settings.update.applyGenericError'),
-        backupPath: r.backup_path,
-      }
-    }
-  } catch (e: unknown) {
-    // Pull the server's detail message out of the ApiError body when
-    // present — without this the user only sees "Errore (500)" and
-    // has to dig the actual reason out of `site.last_update_error`
-    // in the DB. The shape mirrors what UpdateController::apply
-    // serialises on failure: `{ ok: false, error, detail }`.
-    let message: string
-    if (e instanceof ApiError && typeof e.data?.detail === 'string' && e.data.detail) {
-      message = e.data.detail
-    } else if (e instanceof ApiError) {
-      message = t('settings.errors.errorWithStatus', { status: e.status })
-    } else {
-      message = t('settings.errors.networkError')
-    }
-    applyResult.value = { ok: false, message }
-    // Refresh persisted state too so the banner shows the latest
-    // error from the server's POV (in case the catch was triggered
-    // by something other than the apply itself, e.g. a 502 from a
-    // proxy mid-request — the server may still have written its
-    // own outcome before the client saw the failure).
-    await loadUpdateState()
-  } finally {
-    applying.value = false
-  }
-}
-
-// "Verificato Xs/min/h/d fa" relative timestamp. Locale-aware via the
-// existing i18n setup; pure client-side (the server timestamp is the
-// reference instant).
-function relativeFromIso(iso: string): string {
-  const then = Date.parse(iso)
-  if (!Number.isFinite(then)) return ''
-  const diffMs = Date.now() - then
-  const sec = Math.max(0, Math.floor(diffMs / 1000))
-  if (sec < 60) return t('settings.update.timeSecondsAgo', { n: sec })
-  const min = Math.floor(sec / 60)
-  if (min < 60) return t('settings.update.timeMinutesAgo', { n: min })
-  const hr = Math.floor(min / 60)
-  if (hr < 24) return t('settings.update.timeHoursAgo', { n: hr })
-  const days = Math.floor(hr / 24)
-  return t('settings.update.timeDaysAgo', { n: days })
-}
-
-const updateLastCheckedLabel = computed(() => {
-  const c = updateCheck.value
-  if (!c || !c.last_checked) return ''
-  const rel = relativeFromIso(c.last_checked)
-  return rel ? t('settings.update.lastChecked', { when: rel }) : ''
-})
-
-// Status of the card: drives the colored dot + the headline message.
-// 'ok' (green), 'outdated' (warning amber), 'unknown' (grey, network
-// failure or no GitHub release yet).
-type UpdateStatus = 'ok' | 'outdated' | 'unknown'
-const updateStatus = computed<UpdateStatus>(() => {
-  const c = updateCheck.value
-  if (!c) return 'unknown'
-  if (c.latest === null) return 'unknown'
-  return c.is_outdated ? 'outdated' : 'ok'
-})
-
 onMounted(async () => {
   settings.value = (await api.getSettings()).settings
   for (const k of known) {
@@ -459,15 +279,7 @@ onMounted(async () => {
     if (k.type === 'text') validateField(k.key, getStr(k.key))
   }
   validateField('site.admin_email', getStr('site.admin_email'))
-  // Load 2FA status in parallel (doesn't block the form render).
   void load2faStatus()
-  // Update check: GitHub release lookup. Cached server-side for 24h.
-  void loadUpdateCheck(false)
-  // Update state: persisted markers from the last apply() (if any).
-  void loadUpdateState()
-  // Admin email verification status (drives the verified tick / pending
-  // code widget). Independent from the settings fetch above so a slow
-  // call doesn't gate the rest of the form.
   void loadEmailVerification()
 })
 
@@ -550,7 +362,13 @@ async function runMailTest(): Promise<void> {
   mailTesting.value = true
   mailTestResult.value = null
   try {
-    const r = await api.mailTest()
+    await save()
+    if (saveError.value) {
+      mailTestResult.value = { ok: false, message: saveError.value }
+      return
+    }
+    const to = getStr('site.admin_email')
+    const r = await api.mailTest(to !== '' ? to : undefined)
     if (r.ok) {
       mailTestResult.value = {
         ok: true,
@@ -918,162 +736,6 @@ async function performDelete() {
     {{ saveError }}
   </p>
 
-  <!-- ===== "Aggiornamenti tylio" card =====
-       Compares the locally installed version with the latest GitHub
-       release. Hidden entirely when the API returns 404 (route not
-       deployed) or `{disabled: true}` (SaaS overlay disables it so
-       tenants don't see admin commands they can't run — the platform
-       operator updates centrally). -->
-  <section v-if="!updateCheckHidden" class="tile mb-5 update-card">
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <div class="min-w-[200px] flex-1">
-        <h2 class="font-display text-xl mb-2">{{ t('settings.update.title') }}</h2>
-        <p class="text-xs text-ink-300 mb-3 leading-relaxed">
-          {{ t('settings.update.intro') }}
-        </p>
-        <dl class="text-sm grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 mb-2">
-          <dt class="text-ink-300">{{ t('settings.update.installed') }}</dt>
-          <dd>
-            <code class="px-1.5 py-0.5 rounded bg-ink-900 text-ink-100">{{
-              updateCheck?.current ?? t('settings.update.unknownVersion')
-            }}</code>
-          </dd>
-          <dt class="text-ink-300">{{ t('settings.update.available') }}</dt>
-          <dd>
-            <code v-if="updateCheck?.latest" class="px-1.5 py-0.5 rounded bg-ink-900 text-ink-100">{{
-              updateCheck.latest
-            }}</code>
-            <span v-else class="text-ink-300 italic">{{ t('settings.update.unknownVersion') }}</span>
-          </dd>
-        </dl>
-        <p v-if="updateLastCheckedLabel" class="text-xs text-ink-300">
-          {{ updateLastCheckedLabel }}
-          <button
-            type="button"
-            class="ml-2 underline decoration-dotted underline-offset-2 hover:text-ink-100 disabled:opacity-50"
-            :disabled="updateChecking"
-            @click="loadUpdateCheck(true)"
-          >{{ updateChecking ? t('settings.update.checking') : t('settings.update.checkNow') }}</button>
-        </p>
-        <p v-if="updateError" class="text-xs text-red-300 mt-1">{{ updateError }}</p>
-      </div>
-
-      <!-- Status badge: green / amber / grey depending on the compare result. -->
-      <div class="flex items-center gap-2 px-3 py-2 rounded-full bg-ink-900 ring-1 ring-white/10">
-        <template v-if="updateStatus === 'ok'">
-          <span class="update-dot update-dot--ok" aria-hidden="true"></span>
-          <span class="text-sm text-ink-100">{{ t('settings.update.statusUpToDate') }}</span>
-        </template>
-        <template v-else-if="updateStatus === 'outdated'">
-          <span class="warn-dot inline-block w-2.5 h-2.5 rounded-full" aria-hidden="true"></span>
-          <span class="text-sm warn-strong">{{ t('settings.update.statusOutdated') }}</span>
-        </template>
-        <template v-else>
-          <span class="update-dot update-dot--unknown" aria-hidden="true"></span>
-          <span class="text-sm text-ink-300">{{ t('settings.update.statusUnknown') }}</span>
-        </template>
-      </div>
-    </div>
-
-    <!-- Changelog + how-to-update: shown ONLY when the local version is
-         behind the latest release. The two collapsibles are independent
-         so the user can read the changelog without committing to the
-         upgrade flow, or vice versa. -->
-    <div v-if="updateStatus === 'outdated' && updateCheck" class="mt-4 space-y-3">
-      <div v-if="updateCheck.changelog_html">
-        <button
-          type="button"
-          class="btn btn-ghost update-toggle"
-          @click="showChangelog = !showChangelog"
-        >
-          <iconify-icon
-            :icon="showChangelog ? 'lucide:chevron-down' : 'lucide:chevron-right'"
-            width="16"
-          ></iconify-icon>
-          {{ showChangelog ? t('settings.update.hideChangelog') : t('settings.update.showChangelog') }}
-        </button>
-        <div
-          v-if="showChangelog"
-          class="update-changelog mt-2 text-sm leading-relaxed"
-          v-html="updateCheck.changelog_html"
-        ></div>
-        <p v-if="updateCheck.release_url && showChangelog" class="text-xs mt-2">
-          <a
-            :href="updateCheck.release_url"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-ink-300 hover:text-ink-100 underline decoration-dotted"
-          >
-            {{ t('settings.update.viewOnGithub') }}
-            <iconify-icon icon="lucide:external-link" width="12"></iconify-icon>
-          </a>
-        </p>
-      </div>
-
-      <!-- In-app upgrade trigger. The button POSTs to /api/admin/update/apply
-           and blocks until backup + swap + migrate complete (typically
-           10-30s). The user is kept on this page; on success we refresh
-           the version dl above and surface a green confirmation. -->
-      <div class="update-apply">
-        <button
-          type="button"
-          class="btn btn-primary update-apply__btn"
-          :disabled="applying"
-          @click="applyUpdate()"
-        >
-          <iconify-icon
-            :icon="applying ? 'lucide:loader-2' : 'lucide:download-cloud'"
-            :class="applying ? 'animate-spin' : ''"
-            width="16"
-          ></iconify-icon>
-          {{ applying ? t('settings.update.applying') : t('settings.update.applyNow') }}
-        </button>
-        <p class="text-xs text-ink-300 mt-2 leading-relaxed">
-          {{ t('settings.update.applyDisclaimer') }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Outcome banner: shown after an apply() completes (success or
-         failure). Persists in this session — user dismisses it implicitly
-         by reloading or by triggering another update. -->
-    <div
-      v-if="applyResult"
-      class="update-outcome mt-4"
-      :class="applyResult.ok ? 'update-outcome--ok' : 'update-outcome--err'"
-    >
-      <iconify-icon
-        :icon="applyResult.ok ? 'lucide:check-circle-2' : 'lucide:alert-circle'"
-        width="20"
-      ></iconify-icon>
-      <div class="flex-1">
-        <p class="text-sm">{{ applyResult.message }}</p>
-        <p v-if="applyResult.backupPath" class="text-xs text-ink-300 mt-1">
-          {{ t('settings.update.backupAt', { path: applyResult.backupPath }) }}
-        </p>
-      </div>
-    </div>
-
-    <!-- Persistent "last update" line: shown when no in-session outcome
-         is active and the server has a recorded last_update_at. Helps
-         the admin remember "yes, I already updated this morning". -->
-    <p
-      v-if="!applyResult && updateState?.last_update_at && updateState.last_version"
-      class="text-xs text-ink-300 mt-3"
-    >
-      {{ t('settings.update.lastApplied', {
-        version: updateState.last_version,
-        when: relativeFromIso(updateState.last_update_at),
-      }) }}
-    </p>
-    <p
-      v-if="!applyResult && updateState?.last_error"
-      class="text-xs text-red-300 mt-1"
-    >
-      {{ t('settings.update.lastFailure', { detail: updateState.last_error }) }}
-    </p>
-  </section>
-
   <div class="tile space-y-5">
     <template v-for="(f, i) in known" :key="f.key">
       <!-- Section heading. `id` is the last dotted segment of the key
@@ -1165,34 +827,38 @@ async function performDelete() {
     </template>
   </div>
 
-  <!-- "Communications" section: the admin email + verification widget.
-       Replaces the legacy contact.notify_email field. The verification
-       request is auto-fired on email change (server-side) — the SPA
-       never has a "send code" button, only "Verify" + "Resend (X:YY)". -->
-  <!-- ===== SMTP card =====
-       Su OSS: sempre visibile, il self-hoster deve configurare SMTP.
-       Su SaaS: gated da un toggle "Usa il tuo server di posta" (default
-       OFF) — i tenant tylio.app usano l'SMTP della piattaforma per
-       default e non vedono niente in questa sezione finché non
-       attivano il toggle. -->
-  <section v-if="isSaas" id="smtp-toggle" class="tile mt-5 scroll-mt-24">
-    <label class="flex items-center gap-3 cursor-pointer">
-      <input v-model="useCustomSmtp" type="checkbox" class="shrink-0" />
-      <span class="font-medium">{{ t('settings.smtp.useCustomToggle') }}</span>
-    </label>
-    <p class="text-xs text-ink-300 mt-2 leading-relaxed">
-      {{ t('settings.smtp.useCustomHint') }}
-    </p>
-  </section>
-  <section v-if="showSmtpSection" id="smtp" class="tile mt-5 scroll-mt-24">
+  <section v-if="isSaas || showSmtpSection" id="smtp" class="tile mt-5 scroll-mt-24">
     <h2 class="font-display text-xl mt-2 pb-1 border-b border-white/10 mb-3">
       {{ t('settings.smtp.title') }}
     </h2>
-    <p class="text-xs text-ink-300 mb-4 leading-relaxed">
+
+    <label v-if="isSaas" class="!flex items-start gap-4 cursor-pointer !mb-4 !pb-0">
+      <span class="settings-switch" :class="{ 'is-on': useCustomSmtp }">
+        <input
+          type="checkbox"
+          class="settings-switch__input"
+          :checked="useCustomSmtp"
+          @change="useCustomSmtp = ($event.target as HTMLInputElement).checked"
+        />
+        <span class="settings-switch__track" aria-hidden="true">
+          <span class="settings-switch__thumb"></span>
+        </span>
+      </span>
+      <span class="flex-1 min-w-0">
+        <span class="block !text-ink-100 !text-base !font-medium">
+          {{ t('settings.smtp.useCustomToggle') }}
+        </span>
+        <span class="block text-sm text-ink-300 mt-1 leading-relaxed">
+          {{ t('settings.smtp.useCustomHint') }}
+        </span>
+      </span>
+    </label>
+
+    <p v-if="showSmtpSection" class="text-xs text-ink-300 mb-4 leading-relaxed">
       {{ t('settings.smtp.intro') }}
     </p>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div v-if="showSmtpSection" class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div class="field">
         <label for="mail.host">{{ t('settings.smtp.host') }}</label>
         <input
@@ -1222,8 +888,8 @@ async function performDelete() {
         <div class="field">
           <label for="mail.security">{{ t('settings.smtp.security') }}</label>
           <select id="mail.security" v-model="settings['mail.security']">
-            <option value="tls">STARTTLS (587)</option>
-            <option value="ssl">SMTPS (465)</option>
+            <option value="tls">{{ t('settings.smtp.securityTls') }}</option>
+            <option value="ssl">{{ t('settings.smtp.securitySsl') }}</option>
             <option value="none">{{ t('settings.smtp.securityNone') }}</option>
           </select>
         </div>
@@ -1275,11 +941,7 @@ async function performDelete() {
       </div>
     </div>
 
-    <!-- Test button + inline outcome. The test ALWAYS hits the server
-         with the SAVED settings (not the in-form state) — that's a
-         feature: it forces the admin to "Salva" first and confirms
-         the persisted DSN works. -->
-    <div class="mt-4 flex items-center gap-3 flex-wrap">
+    <div v-if="showSmtpSection" class="mt-4 flex items-center gap-3 flex-wrap">
       <button
         type="button"
         class="btn btn-ghost smtp-test-btn"
@@ -1298,7 +960,7 @@ async function performDelete() {
       </p>
     </div>
     <div
-      v-if="mailTestResult"
+      v-if="showSmtpSection && mailTestResult"
       class="mt-3 rounded-xl px-4 py-3 flex items-start gap-3"
       :class="mailTestResult.ok ? 'smtp-test-outcome--ok' : 'smtp-test-outcome--err'"
     >
@@ -1803,128 +1465,7 @@ async function performDelete() {
 </template>
 
 <style scoped>
-/* Status dots inside the "Aggiornamenti tylio" card. The amber one
-   reuses the existing `.warn-dot` utility (rgb(var(--warning-rgb)));
-   here we add the green ("up to date") + grey ("couldn't verify")
-   variants, both derived from the active palette so they stay
-   consistent across themes. */
-.update-dot {
-  display: inline-block;
-  width: 0.625rem;
-  height: 0.625rem;
-  border-radius: 9999px;
-}
-.update-dot--ok {
-  /* Tailwind emerald-400 (#34d399). The fixed hue is fine because the
-     [data-theme-mode="light"] override in the global style.css already
-     rewrites emerald-300/400 to a darker variant for light palettes. */
-  background: rgb(52 211 153);
-}
-.update-dot--unknown {
-  background: rgb(var(--ink-300-rgb));
-}
-
-/* Compact ghost-button used by the collapsible toggles in the card. */
-.update-toggle {
-  padding-top: 0.4rem;
-  padding-bottom: 0.4rem;
-  font-size: 0.85rem;
-}
-
-/* Changelog rendered from the GitHub release body. The Markdown was
-   sanitized server-side by Util\Markdown (commonmark with
-   html_input=strip), so v-html is safe. Styling: keep it readable on
-   the Neon · scuro surface, tighten the default Tailwind base
-   resets so headings inside the changelog don't tower over the card. */
-.update-changelog {
-  background: rgb(var(--ink-800-rgb));
-  border: 1px solid rgb(var(--ink-100-rgb) / 0.08);
-  border-radius: 0.75rem;
-  padding: 0.9rem 1rem;
-  max-height: 360px;
-  overflow-y: auto;
-}
-.update-changelog :deep(h1),
-.update-changelog :deep(h2),
-.update-changelog :deep(h3) {
-  font-weight: 600;
-  margin: 0.6em 0 0.3em;
-  font-size: 1rem;
-}
-.update-changelog :deep(p) {
-  margin: 0.4em 0;
-}
-.update-changelog :deep(ul),
-.update-changelog :deep(ol) {
-  margin: 0.4em 0;
-  padding-left: 1.4em;
-}
-.update-changelog :deep(ul) { list-style: disc; }
-.update-changelog :deep(ol) { list-style: decimal; }
-.update-changelog :deep(li) {
-  margin: 0.15em 0;
-}
-.update-changelog :deep(code) {
-  background: rgb(var(--ink-900-rgb));
-  padding: 0.05em 0.4em;
-  border-radius: 0.25em;
-  font-size: 0.85em;
-}
-.update-changelog :deep(pre) {
-  background: rgb(var(--ink-900-rgb));
-  padding: 0.7em 0.9em;
-  border-radius: 0.5em;
-  overflow-x: auto;
-  font-size: 0.85em;
-  margin: 0.5em 0;
-}
-.update-changelog :deep(pre code) {
-  background: transparent;
-  padding: 0;
-}
-.update-changelog :deep(a) {
-  color: rgb(var(--accent-rgb));
-  text-decoration: underline;
-  text-decoration-style: dotted;
-  text-underline-offset: 2px;
-}
-
-/* "Aggiorna ora" wrapper: keeps the button + small disclaimer line
-   visually grouped beneath the changelog accordion. */
-.update-apply {
-  margin-top: 0.5rem;
-}
-.update-apply__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* Outcome banner shown right after apply() returns. Success uses the
-   theme's accent (--accent-rgb) so it doesn't clash with whatever the
-   user picked; failure uses a neutral red bound to the dark theme. */
-.update-outcome {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  padding: 0.85rem 1rem;
-  border-radius: 0.75rem;
-  border: 1px solid rgb(var(--ink-100-rgb) / 0.08);
-}
-.update-outcome--ok {
-  background: rgb(var(--accent-rgb) / 0.08);
-  border-color: rgb(var(--accent-rgb) / 0.35);
-  color: rgb(var(--ink-100-rgb));
-}
-.update-outcome--err {
-  background: rgb(220 38 38 / 0.08);
-  border-color: rgb(220 38 38 / 0.45);
-  color: rgb(252 165 165);
-}
-
-/* SMTP test inline outcome — same two-state visual as the update
-   outcome but on its own pair of classes so the test result can
-   coexist with a parallel update outcome on the page. */
+/* SMTP test inline outcome */
 .smtp-test-outcome--ok {
   background: rgb(var(--accent-rgb) / 0.08);
   border: 1px solid rgb(var(--accent-rgb) / 0.35);
