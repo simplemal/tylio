@@ -446,7 +446,9 @@ const emailCooldownLabel = computed(() => {
 
 async function loadEmailVerification(): Promise<void> {
   try {
-    emailVerification.value = await api.emailVerificationStatus()
+    const status = await api.emailVerificationStatus()
+    emailVerification.value = status
+    site.setEmailStatus(status.email ?? '', status.verified_at ?? null)
   } catch {
     /* silent: the widget hides itself when state is unknown */
   }
