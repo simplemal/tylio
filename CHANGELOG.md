@@ -6,6 +6,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.5 — 2026-05-16
+
+### Fixed — "Versione installata" mostrava `build-<timestamp>` invece del semver
+
+Bug visibile nella card "Aggiornamenti tylio" in Settings: dopo un'installazione (manuale o via "Aggiorna ora"), il campo "Versione installata" leggeva `build-2026-05-16-073343` invece di `v0.3.4`. `Util\Build::candidatePaths()` cerca `.version` (timestamp del deploy, usato come cachebuster) prima di `BUILD` (semver tag della release), e `UpdateChecker::currentVersion()` delegava a quel lookup. Effetto collaterale serio: il compare semver trattava `build-…` come "più vecchio di qualsiasi tag" → `"Aggiorna ora"` restava sempre disponibile anche su install già aggiornate.
+
+Fix: `UpdateChecker::currentVersion()` adesso legge `BUILD` direttamente come prima fonte se contiene un semver. `Util\Build::version()` resta come fallback (è il cachebuster, vuole un valore che cambia ad ogni deploy — il timestamp è giusto lì).
+
+### Tested end-to-end before publishing
+
+Per la prima volta da v0.3.1, ho fatto un test integrato locale di `apply()` prima di pubblicare: install fake a `/tmp/tylio-e2e/install` con BUILD=v0.3.4, driver PHP che istanzia `UpdateApplier` reale, chiama `apply()`, verifica backup + swap + migrate + settings persisted. Risultato: 2.02s, peak memory 12MB, backup ok (1.4MB .tar.gz), DB pulito, swap riuscito. Stop alle release alla cieca.
+
 ## v0.3.4 — 2026-05-16
 
 ### Fixed — In-app updater OOM-killed mid-backup, leaving lock stuck
