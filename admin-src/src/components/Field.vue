@@ -344,7 +344,13 @@ function siblingValues(key: string): string[] {
         @update:model-value="moveItems"
       >
         <template #item="{ element: item, index }">
-          <div class="bg-ink-800 border border-white/5 rounded-xl p-3">
+          <!-- repeat-item-card: bordo 1px = text-color a 50% così il box
+               resta distinguibile anche sui temi dove il fondo dell'item
+               (ink-800 = surface_alt) collassa sul fondo della tessera
+               (es. Pink Lady · light: surface_alt = surface = #ffffff,
+               border-white/5 di prima era invisibile). Sui temi normali
+               quel border è soft e non disturba. -->
+          <div class="bg-ink-800 rounded-xl p-3 repeat-item-card">
             <div class="flex items-center gap-2 mb-3">
               <button
                 class="grip btn-icon !w-7 !h-7 !cursor-grab active:!cursor-grabbing"
@@ -412,6 +418,13 @@ function siblingValues(key: string): string[] {
 </template>
 
 <style scoped>
+/* Repeat-item card: bordo 1px col primary text al 50%. Vedi il
+   commento nel template — soft sui temi normali, ma vivibile sui
+   temi dove fondo item collassa sul fondo della tessera. */
+.repeat-item-card {
+  border: 1px solid rgb(var(--ink-100-rgb) / 0.5);
+}
+
 /* Compact Markdown legend below markdown-type textareas.
    Uses native <details> for no-JS expansion. */
 .md-help {

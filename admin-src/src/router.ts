@@ -14,6 +14,22 @@ const Submissions = () => import('./views/Submissions.vue')
 
 export const router = createRouter({
   history: createWebHistory('/admin/'),
+  scrollBehavior(to, _from, savedPosition) {
+    // Hash-link support: when the target URL has `#anchor`, scroll the
+    // anchor into view. The async view (Settings, etc.) only mounts
+    // after a tick, so we wait one animation frame so the element
+    // exists when we query it. Falls back to the top of the page if
+    // the anchor isn't found by then.
+    if (to.hash) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          const el = document.querySelector(to.hash)
+          resolve(el ? { el: to.hash, behavior: 'smooth', top: 80 } : { top: 0 })
+        }, 50)
+      })
+    }
+    return savedPosition || { top: 0 }
+  },
   routes: [
     { path: '/', name: 'dashboard', component: Dashboard, meta: { auth: true } },
     {

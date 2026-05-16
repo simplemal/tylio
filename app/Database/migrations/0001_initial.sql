@@ -124,7 +124,8 @@ INSERT OR IGNORE INTO theme (id, data) VALUES (1, json_object(
         'gap', 14,
         'border', 1,
         'shadow', 'soft',
-        'tessellate', 1
+        'tessellate', 1,
+        'mobile_spacing', 'minimal'
     ),
     'background', json_object(
         'pattern', 'mosaic',
