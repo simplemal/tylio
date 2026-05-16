@@ -35,6 +35,7 @@ class MailController
 
     public function test(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
+        @set_time_limit(20);
         $body = (array)$request->getParsedBody();
         $to = trim((string)($body['to'] ?? ''));
         if ($to === '') {

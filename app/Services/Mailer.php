@@ -60,7 +60,6 @@ class Mailer
      */
     protected function dsn(): string
     {
-        // Settings-first: if the admin filled the SMTP form, those win.
         $host = $this->settingsString('mail.host');
         if ($host !== '') {
             $port = $this->settingsString('mail.port');
@@ -69,14 +68,14 @@ class Mailer
             if ($security === '') $security = 'tls';
             $user = rawurlencode($this->settingsString('mail.user'));
             $pass = rawurlencode($this->settingsString('mail.pass'));
-            // smtps:// for implicit-TLS on 465; smtp:// + ?encryption=tls
-            // for STARTTLS on 587. 'none' = plain SMTP on 25 / 2525.
             $scheme = $security === 'ssl' ? 'smtps' : 'smtp';
             $auth = ($user !== '' || $pass !== '') ? "$user:$pass@" : '';
-            $query = $security === 'tls' ? '?encryption=tls' : '';
+            $params = [];
+            if ($security === 'tls') $params[] = 'encryption=tls';
+            $params[] = 'timeout=10';
+            $query = '?' . implode('&', $params);
             return "$scheme://$auth$host:$port$query";
         }
-        // Fallback to env DSN (legacy installs + dev convenience).
         return (string)$this->config->get('MAIL_DSN', '');
     }
 
