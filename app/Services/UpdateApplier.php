@@ -72,6 +72,16 @@ class UpdateApplier
     ) {}
 
     /**
+     * Set true by `apply()`'s finally when the controlled cleanup
+     * (lock release, maintenance restore) has completed. The
+     * shutdown handler reads this and bails out if it's true —
+     * avoids double-writes on a clean exit. Set false at start of
+     * every apply(). Public for the closure capture (PHP < 8.4
+     * can't reach private from a Closure::bind dance).
+     */
+    public bool $cleanedUp = false;
+
+    /**
      * Single entry-point. Returns a result array that the controller
      * serialises straight to JSON. Never throws — all failures surface
      * as `['ok' => false, 'error' => ..., 'detail' => ...]` and are
@@ -100,10 +110,43 @@ class UpdateApplier
                 'Un altro aggiornamento è già in corso. Aspetta che termini.');
         }
 
+        // Disable PHP execution-time limit for the duration of the apply
+        // — download + extract + backup + swap can run 30-60s on slower
+        // self-hosts and we don't want the request to die mid-swap
+        // because of the default Apache/PHP-FPM cap.
+        @set_time_limit(0);
+        // Bump memory limit too: PharData::compress historically loaded
+        // the whole archive in memory. We now prefer shell gzip when
+        // available (see compressTarball), but the fallback path still
+        // needs headroom. 256M is generous for the typical OSS install.
+        $currentMem = (string)ini_get('memory_limit');
+        if ($currentMem !== '-1' && self::memToBytes($currentMem) < 256 * 1024 * 1024) {
+            @ini_set('memory_limit', '256M');
+        }
+
         // --- 2. Acquire lock + force maintenance -------------------------
         $this->setSetting('site.update_in_progress', true);
         $prevMaintenance = $this->getSettingBool('site.maintenance');
         $this->setSetting('site.maintenance', true);
+        // Safety net: if the PHP request is killed mid-flight (OOM,
+        // PHP fatal error, FPM `request_terminate_timeout`) before
+        // our `finally` block runs, this shutdown handler still
+        // releases the in-progress lock so the user can retry
+        // without a manual SQL fix. Maintenance is INTENTIONALLY
+        // left ON on a kill — a half-swapped install is not safe to
+        // serve, and the admin can flip it back from Settings →
+        // Maintenance when they've checked the state.
+        // On a clean exit `$this->cleanedUp` flips true in `finally`
+        // and the shutdown function becomes a no-op.
+        $this->cleanedUp = false;
+        register_shutdown_function(function (): void {
+            if ($this->cleanedUp) return;
+            try {
+                $this->setSetting('site.update_in_progress', false);
+            } catch (\Throwable) {
+                // best-effort; DB might be in a bad state on a fatal kill
+            }
+        });
 
         $tarballPath = null;
         $stagingDir = null;
@@ -188,7 +231,30 @@ class UpdateApplier
             // maintenance before apply() returns to live state).
             $this->setSetting('site.maintenance', $prevMaintenance);
             $this->setSetting('site.update_in_progress', false);
+            // Signal the shutdown handler that we cleaned up cleanly
+            // — it must not re-write the lock flag.
+            $this->cleanedUp = true;
         }
+    }
+
+    /**
+     * Parse a `php.ini` memory-limit string (`128M`, `1G`, `-1`,
+     * raw byte int) to a byte count. Returns PHP_INT_MAX for `-1`
+     * (unlimited). Used by `apply()` to decide whether to bump
+     * `memory_limit` for the backup step.
+     */
+    private static function memToBytes(string $s): int
+    {
+        $s = trim($s);
+        if ($s === '' || $s === '-1') return PHP_INT_MAX;
+        $unit = strtolower(substr($s, -1));
+        $n = (int)$s;
+        return match ($unit) {
+            'g' => $n * 1024 * 1024 * 1024,
+            'm' => $n * 1024 * 1024,
+            'k' => $n * 1024,
+            default => $n,
+        };
     }
 
     /**
@@ -384,13 +450,23 @@ class UpdateApplier
     // -------------------------------------------------------------------
 
     /**
-     * Tar up the current install root (excluding the preserve set) into
-     * `data/.backup/<oldver>-<ts>.tar.gz`. Returns the absolute path.
+     * Tar+gzip the current install root (excluding the preserve set)
+     * into `data/.backup/<oldver>-<ts>.tar.gz`. Returns the absolute
+     * path of the resulting `.tar.gz`.
      *
-     * Uses PharData for zero shell dependency. The backup IS scoped to
-     * the swappable bits — keeping `data/`, `uploads/`, `favicons/`,
-     * `.env` out keeps the backup small (a fresh install is ~10MB
-     * source + ~50MB vendor, vs. potentially gigabytes of uploads).
+     * v0.3.4: prefer shell `tar -czf` when available (no memory cost,
+     * 5-10× faster, mature C implementation) and fall back to
+     * `PharData::compress` only on hosts where exec/shell_exec are
+     * disabled. The pure-PHP path used to OOM PHP-FPM workers
+     * mid-compress on installs with a 128M `memory_limit` (PharData
+     * reads the whole archive into memory) — a fatal kill that bypasses
+     * the `finally` cleanup and leaves the lock flag stuck. Shell `tar`
+     * streams without buffering, eliminating that failure mode.
+     *
+     * The backup IS scoped to the swappable bits — keeping `data/`,
+     * `uploads/`, `favicons/`, `.env` out keeps the backup small (a
+     * fresh install is ~10MB source + ~50MB vendor, vs. potentially
+     * gigabytes of uploads).
      */
     protected function backupCurrentRoot(string $root): string
     {
@@ -400,13 +476,39 @@ class UpdateApplier
         $oldVersion = trim(@file_get_contents($root . '/BUILD') ?: '') ?: 'unknown';
         $oldVersion = preg_replace('/[^a-zA-Z0-9.\-]/', '_', $oldVersion) ?? 'unknown';
         $timestamp = gmdate('Ymd-His');
-        $tarPath = $backupDir . '/' . $oldVersion . '-' . $timestamp . '.tar';
-        $gzPath = $tarPath . '.gz';
+        $gzPath = $backupDir . '/' . $oldVersion . '-' . $timestamp . '.tar.gz';
 
+        // --- Path 1: shell `tar -czf` (preferred) -------------------
+        if ($this->shellTarAvailable()) {
+            // Build the exclude list — paths are relative to $root because
+            // we cd there. We also exclude the backup target itself so a
+            // half-finished file from a previous attempt doesn't get tar'd
+            // into the new backup.
+            $excludes = '';
+            foreach (self::PRESERVE as $p) {
+                $excludes .= ' --exclude=' . escapeshellarg('./' . $p);
+            }
+            $cmd = 'cd ' . escapeshellarg($root) . ' && '
+                . 'tar -czf ' . escapeshellarg($gzPath)
+                . $excludes
+                . ' --exclude=' . escapeshellarg('./data')
+                . ' --exclude=' . escapeshellarg('./tylio-source-*.tar.gz')
+                . ' --exclude=' . escapeshellarg('./tylio-admin-bundle-*.tar.gz')
+                . ' . 2>&1';
+            $out = []; $code = 1;
+            @exec($cmd, $out, $code);
+            if ($code === 0 && is_file($gzPath) && filesize($gzPath) > 0) {
+                return $gzPath;
+            }
+            // Shell path failed — fall through to PharData (and surface
+            // the shell error via exception so fail() sees it).
+            $err = implode("\n", array_slice($out, -5));
+            error_log('[tylio.update] shell tar backup failed (' . $code . '): ' . $err);
+        }
+
+        // --- Path 2: PharData fallback (slower, memory-bound) -------
+        $tarPath = substr($gzPath, 0, -3); // strip ".gz"
         $phar = new \PharData($tarPath);
-        // PharData::buildFromIterator with our own filter — we walk
-        // ourselves so we can skip the preserve set and follow
-        // RecursiveDirectoryIterator's standard ordering.
         $preserve = array_flip(self::PRESERVE);
         $entries = array_values(array_diff(scandir($root) ?: [], ['.', '..']));
         foreach ($entries as $name) {
@@ -431,11 +533,27 @@ class UpdateApplier
             }
         }
         $phar->compress(\Phar::GZ);
-        // PharData::compress writes a new .tar.gz alongside the .tar —
-        // delete the uncompressed one.
         unset($phar);
         if (is_file($tarPath)) @unlink($tarPath);
         return $gzPath;
+    }
+
+    /**
+     * Whether shell `tar` is reachable AND `exec()` is not disabled.
+     * The check is cheap and runs per apply() call.
+     */
+    protected function shellTarAvailable(): bool
+    {
+        if (!function_exists('exec')) return false;
+        $disabled = (string)ini_get('disable_functions');
+        if ($disabled !== '') {
+            foreach (explode(',', $disabled) as $f) {
+                if (strcasecmp(trim($f), 'exec') === 0) return false;
+            }
+        }
+        $out = []; $code = 1;
+        @exec('command -v tar 2>/dev/null', $out, $code);
+        return $code === 0 && !empty($out);
     }
 
     // -------------------------------------------------------------------

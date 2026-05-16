@@ -380,13 +380,26 @@ async function applyUpdate(): Promise<void> {
       }
     }
   } catch (e: unknown) {
-    applyResult.value = {
-      ok: false,
-      message:
-        e instanceof ApiError
-          ? t('settings.errors.errorWithStatus', { status: e.status })
-          : t('settings.errors.networkError'),
+    // Pull the server's detail message out of the ApiError body when
+    // present — without this the user only sees "Errore (500)" and
+    // has to dig the actual reason out of `site.last_update_error`
+    // in the DB. The shape mirrors what UpdateController::apply
+    // serialises on failure: `{ ok: false, error, detail }`.
+    let message: string
+    if (e instanceof ApiError && typeof e.data?.detail === 'string' && e.data.detail) {
+      message = e.data.detail
+    } else if (e instanceof ApiError) {
+      message = t('settings.errors.errorWithStatus', { status: e.status })
+    } else {
+      message = t('settings.errors.networkError')
     }
+    applyResult.value = { ok: false, message }
+    // Refresh persisted state too so the banner shows the latest
+    // error from the server's POV (in case the catch was triggered
+    // by something other than the apply itself, e.g. a 502 from a
+    // proxy mid-request — the server may still have written its
+    // own outcome before the client saw the failure).
+    await loadUpdateState()
   } finally {
     applying.value = false
   }
