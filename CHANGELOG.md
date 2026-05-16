@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.11 — 2026-05-16
+
+### Changed — Resend codice verifica email: cooldown 30 min → 5 min
+
+`EmailVerification::RESEND_COOLDOWN` da 1800s a 300s. Mezz'ora bloccava lo user case "ho sbagliato a digitare il codice 5 volte → invalidato → devo aspettare 30 min prima di ricevere il nuovo" che è quasi sempre user-error e non scenario di attacco. 5 minuti è abbastanza per scoraggiare flooding outbound + tollera tipi-test umani.
+
+### Changed — Messaggio rate-limited: countdown live mm:ss
+
+Prima: "Aspetta: si può richiedere un codice nuovo ogni 30 minuti." (statico, inutile per capire quando riprovare). Ora: "Aspetta: puoi richiedere un nuovo codice tra X:XX." — il countdown è preso dal `pending.can_resend_at` server-side e si auto-aggiorna ogni secondo (`emailCooldownLabel` reactive su `emailCooldownTick`). Refactor SPA: `emailVerifyError` da `ref<string>` a `computed` che traduce una `kind` ref (`'codeWrong' | 'rateLimited' | …`) — l'i18n call avviene al render time, quindi il countdown rimane vivo finché l'errore è visibile.
+
+
 ## v0.3.10 — 2026-05-16
 
 ### Fixed — `site.admin_email_verified_at` cancellato dal Salva successivo
