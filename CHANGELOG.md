@@ -6,6 +6,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.9 — 2026-05-16
+
+### Fixed — `UpdateApplier::downloadTarball`: cURL con fallback fopen
+
+`fopen()` su stream HTTP non gestiva bene il redirect 302 di GitHub release-asset → S3 (su alcuni server PHP-FPM tornava `false` senza apparente motivo). Sostituito con `curl_init` + `CURLOPT_FOLLOWLOCATION` + maxredirs 5 + connect timeout 10s. Fallback su `fopen` se l'estensione cURL non è installata (raro). Stesso fix lato platform per `OssDependencyUpdater`.
+
+### Fixed — `OssDependencyUpdater::tempBase`: cascade su 3 path
+
+Il fix precedente puntava `tempBase` sotto `vendor/tylio/.tylio-update-tmp` per garantire stesso filesystem del target di swap, ma su molti deploy quella parent dir non è scrivibile da `www-data` → `mkdir` fallisce silent → tutto downstream esplode con "impossibile aprire ... in scrittura". Ora la funzione prova in cascata: `vendor/tylio/.tylio-update-tmp` → `data/.tylio-update-tmp` → `sys_get_temp_dir()/tylio-oss-update`, prende il primo writable. `safeMove` continua a gestire cross-fs nel caso peggiore.
+
+### Fixed — `OssDependencyUpdater`: detail error message sul download fail
+
+Il `download_failed` ora riporta `curl(#NN HTTP NNN)`, l'errore di sistema e l'URL effettivo (post-redirect). Niente più troubleshooting al buio: l'admin vede subito se è SSL, DNS, 404, ecc.
+
+### Fixed — `Mailer::send`: preflight TCP + socket timeout 10s
+
+`stream_socket_client("tcp://$host:$port", …, 5)` come check preliminare prima di passare a Symfony Mailer. Se l'host SMTP non risponde in 5s si torna `false` con detail leggibile invece di lasciare il worker PHP bloccato 30-60s sul TLS handshake (che su Cloudflare-fronted setup genera 502). Plus `ini_set('default_socket_timeout', 10)` per assicurarsi che TUTTI i syscall socket rispettino il cap.
+
+### Fixed — SMTP test: fallback su `mail.from_address` se `site.admin_email` è vuoto
+
+Il SPA ora passa esplicitamente al server `to = site.admin_email || mail.from_address`. Su tenant SaaS appena creati `site.admin_email` può essere vuoto: prima il test falliva con "Indirizzo destinatario non valido", ora invia un test al mittente che hai appena impostato.
+
+### Added — `scripts/deploy-saas.sh` (platform)
+
+Hotfix-style deploy verso `tylio.app` SaaS: sftp upload + stampa del blocco `sudo` da incollare in ssh. Usabile per ogni file modificato del repo platform — risparmia il pattern manuale "carica → chown → reload" che facevamo a mano ogni volta.
+
+
 ## v0.3.8 — 2026-05-16
 
 ### Fixed — SMTP test: timeout 10s e cap a 20s su PHP execution
