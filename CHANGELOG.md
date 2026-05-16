@@ -6,6 +6,33 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.8 — 2026-05-16
+
+### Fixed — Favicon upload da galleria (no_such_column: path)
+
+`FaviconController::resolveInput()` cercava `SELECT path FROM media` ma la tabella `media` non ha mai avuto una colonna `path` (lo schema è `filename`). Effetto: scegliendo un'immagine da Media → "Scegli dalla libreria" usciva `SQLSTATE[HY000]: 1 no such column: path`. Fix banale: `path` → `filename`, identico a `MediaController`.
+
+### Fixed — UpdateApplier: rename cross-fs ora non distrugge l'install
+
+`swapInPlace()` ora chiama `safeMove()` (rename con fallback `copy + rmrf`) invece di `rename()` cieco. Se il `rename()` cross-fs fallisce, ricade automaticamente su una copia ricorsiva e cancellazione della sorgente. Inoltre se un singolo swap fallisce a metà, ROLLBACK automatico: rimette tutti i `.deprecated-*` al posto originale invece di lasciare un vendor con solo `.deprecated-*` e niente codice (che è esattamente il disastro che ha rotto tylio.app). Stesso fix applicato lato platform (`OssDependencyUpdater`).
+
+### Changed — Sezione Aggiornamenti spostata in Manutenzione
+
+La card "Aggiornamenti tylio" non vive più sopra le Impostazioni: l'admin la trova in Manutenzione, sotto il toggle del maintenance mode e l'esplicazione "About". Riduce il rumore in Settings (dove la card era visibile sempre, anche quando non si stava aggiornando nulla) e tiene insieme le due azioni operative ("metti offline" + "aggiorna codice").
+
+### Changed — SMTP test fa auto-save prima del send
+
+Il bottone "Invia email di prova" persisteva i campi prima di chiamare `/api/admin/mail/test`. Eliminato il classico "ho compilato tutto ma mi dice non configurato": l'admin non deve più cliccare "Salva" in cima alla pagina prima di testare. Il SPA passa anche `to` esplicito (= `site.admin_email` del tenant corrente) per evitare che su SaaS il MailController peschi un admin_email di un altro tenant via SELECT non-scoped.
+
+### Changed — Toggle SMTP usa lo stile globale `.settings-switch`
+
+Il toggle SaaS "Usa il tuo server di posta" era reso con un button custom Tailwind; ora usa lo stesso pattern `.settings-switch` del toggle Manutenzione, in modo che i colori (track/thumb) seguano il tema attivo invece di restare grigio fissi.
+
+### Changed — Dropdown "Sicurezza" SMTP: tolto il duplicato porta
+
+Le opzioni del select erano "STARTTLS (587)", "SMTPS (465)", "Nessuna (sconsigliato)" — la porta è già un campo separato a fianco, ripeterla nei nomi confonde. Ora: "STARTTLS", "SSL/TLS", "Nessuna (sconsigliato)".
+
+
 ## v0.3.7 — 2026-05-16
 
 ### Added — Toggle "Usa il tuo server di posta" (SaaS-driven)
