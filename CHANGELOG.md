@@ -6,6 +6,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.18 — 2026-05-16
+
+### Fixed — `attempt to write a readonly database` su shared-group setup
+
+Sintomo (Maurizio, ladyglow.it): install fresh, prima richiesta HTTP a `/install`. Apache → PHP-FPM (www-data) → bootstrap → SQLite crea `data/db.sqlite` con mode 644. Subito dopo, una qualunque scrittura schema (es. `CREATE TABLE migrations`) fallisce: `PDOException SQLSTATE[HY000]: 8 attempt to write a readonly database`. Causa: il file appartiene al gruppo www-data (via setgid sul parent), ma 644 = group ha solo read.
+
+Su hosting "shared group" (sftp user `ladyglow` + PHP-FPM `www-data` nello stesso gruppo `www-data`) la cosa peggiora: ogni file scritto da uno dei due è read-only per l'altro, e si rompe alternato.
+
+Fix: `umask(0007)` come prima istruzione del bootstrap (OSS + SaaS). I file nuovi creati dal worker PHP nascono `660`, le dir nuove `770`, il setgid sul parent preserva il group. Idempotente: dove le permission erano già giuste non cambia niente; dove erano sbagliate il nuovo file le indirizza correttamente.
+
+NB: i file PRE-ESISTENTI con mode 644 non vengono toccati. Su install fresh con `data/` vuota non è un problema; su istanze già attive con `db.sqlite` 644 serve un singolo `chmod 0664 data/db.sqlite` una tantum.
+
+
 ## v0.3.17 — 2026-05-16
 
 ### Fixed — `Migrations::run` skippava su stamp stale (DB ricreato a mano)
