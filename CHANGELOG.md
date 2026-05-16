@@ -6,6 +6,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.14 — 2026-05-16
+
+### Fixed — Export/Import non migravano gli utenti (post-import: login impossibile)
+
+Sintomo (Maurizio, ladyglow.it): dopo `/install/import` di un archivio tenant SaaS, la login admin NON accettava username/password che funzionavano sul sorgente — perché la tabella `users` era rimasta vuota.
+
+Causa: `Export::writeData` produceva un `data.json` con `blocks`, `theme`, `settings`, `media` ma NESSUN `users`. `Import` di conseguenza non aveva niente da inserire. Bug presente fin dalla prima versione di export/import (v0.2.x), emerso solo ora che qualcuno ha effettivamente fatto un round-trip completo.
+
+Fix in 3 punti:
+- `Export::exportUsers` (nuovo): seleziona `id, username, password_hash, totp_secret, totp_enabled_at, totp_backup_codes, created_at, last_login_at` e li serializza in `data['users']`. La password arriva già hashata (argon2id), nessun clear-text è mai esportato.
+- `TenantExport::exportUsers` (SaaS overlay): override scoped su `tenant_id`, stessa lista colonne (la colonna SaaS-only `must_change_password` viene esclusa di proposito — perdere quel flag su un import OSS è il comportamento giusto: il nuovo install non ha quella nozione).
+- `Import::insertUsers`: `DELETE FROM users` + INSERT delle righe dell'archivio, preservando l'ID per mantenere coerenti gli eventuali `audit_log.user_id`. Salta righe senza `username` o `password_hash`.
+
+### Notes
+
+- "Recupera password" sulla login: non implementato. `Mailer::sendPasswordReset()` esiste ma il flow UI (form + token + reset) è in TODO ([memory/tylio_todo.md](https://github.com/simplemal/tylio/issues)). Non risolvibile in questa patch.
+
+
 ## v0.3.13 — 2026-05-16
 
 ### Fixed — Export/Import non preservava `parent_id` (group blocks)
