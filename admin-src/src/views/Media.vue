@@ -38,7 +38,15 @@ async function uploadFiles(files: FileList | null) {
 }
 
 async function copy(url: string) {
-  await navigator.clipboard.writeText(url)
+  // L'API ritorna `m.url` come path relativo (es. `/uploads/abc.jpg`).
+  // Per il copia-incolla in editor / email / Slack serve un URL
+  // assoluto — incollare `/uploads/abc.jpg` da solo è inutilizzabile
+  // fuori dall'origin del sito. Costruiamo l'URL completo
+  // antemettendo l'origin corrente.
+  const absolute = /^https?:\/\//i.test(url)
+    ? url
+    : window.location.origin + (url.startsWith('/') ? url : '/' + url)
+  await navigator.clipboard.writeText(absolute)
 }
 
 async function remove(m: MediaItem) {

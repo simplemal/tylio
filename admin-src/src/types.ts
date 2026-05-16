@@ -64,6 +64,21 @@ export interface FieldDef {
    * level; ignored on top-level fields.
    */
   show_when?: FieldShowWhen
+  /**
+   * Solo per `type: 'repeat'`. Quando true, ogni item del repeat è
+   * un drawer cliccabile (chiuso di default al mount). Il body con i
+   * sub-field appare solo se l'utente espande l'header. `addItem`
+   * apre il nuovo item per facilitarne la compilazione. State NON
+   * persistito — fresh chiuso a ogni mount.
+   */
+  collapsible?: boolean
+  /**
+   * Solo per `type: 'repeat'` collapsibili. Chiave del sub-field il
+   * cui valore va mostrato nell'header quando l'item è chiuso
+   * (es. 'label' per i link → "YouTube" invece di "Link #1"). Se la
+   * chiave è vuota / non esiste, fallback a `${label} #${N}`.
+   */
+  collapsible_label_field?: string
 }
 
 export interface BlockType {

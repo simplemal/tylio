@@ -523,6 +523,8 @@
     "smtp": {
       "title": "SMTP server",
       "intro": "Without an SMTP server configured, tylio can't send any email (verification codes, welcome, password reset, contact form notifications). Fill in the fields, save, then click \"Send test email\".",
+      "useCustomToggle": "Use your own mail server to send emails",
+      "useCustomHint": "By default emails are sent through the tylio.app platform mailer. Enable this to use your own SMTP (e.g. Gmail business, Mailgun, Postmark) — useful for sender branding or higher sending quotas.",
       "host": "Host",
       "hostHelp": "E.g. smtp.gmail.com, smtp.mailgun.org, smtp.fastmail.com.",
       "port": "Port",

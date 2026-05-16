@@ -41,14 +41,12 @@ const tenantSlug = computed<string>(() => {
   return m ? m[1] : ''
 })
 
-// OSS fallback pill: on a self-hosted install we don't have a tenant
-// slug, but the user still benefits from a quick "which site is this"
-// hint under the brand — especially on multi-environment workflows
-// (staging.example.com vs example.com). We show site.title if set;
-// otherwise we fall back to the bare hostname (no www. prefix).
+// OSS pill: il dominio del sito (es. maurizionatali.it). Richiesta
+// Maurizio: voglio il dominio sotto il logo, non il titolo del sito.
+// Per multi-environment (staging.example.com vs example.com) il
+// dominio è il discriminante naturale.
 const ossHeaderLabel = computed<string>(() => {
-  if (tenantSlug.value) return '' // SaaS path: not used
-  if (site.title) return site.title
+  if (tenantSlug.value) return '' // SaaS path: pill resa altrove
   const host = (typeof window !== 'undefined' ? window.location.hostname : '').toLowerCase()
   return host.replace(/^www\./, '')
 })

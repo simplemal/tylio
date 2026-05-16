@@ -128,6 +128,13 @@ final class BlockRegistry
                 'fields' => [
                     ['key' => 'title', 'label' => 'blocks.links.fields.title.label', 'type' => 'text', 'default' => 'blocks.links.fields.title.default'],
                     ['key' => 'items', 'label' => 'blocks.links.fields.items.label', 'type' => 'repeat', 'default' => [],
+                        // Collapsible accordion: ogni item del repeat è
+                        // un drawer chiuso di default. L'header mostra
+                        // il valore di `collapsible_label_field` (se
+                        // non vuoto), altrimenti "Link #N". Le tessere
+                        // con tanti link diventano gestibili.
+                        'collapsible' => true,
+                        'collapsible_label_field' => 'label',
                         'of' => [
                             ['key' => 'label', 'label' => 'blocks.links.fields.items.of.label.label', 'type' => 'text'],
                             ['key' => 'url', 'label' => 'blocks.links.fields.items.of.url.label', 'type' => 'url'],

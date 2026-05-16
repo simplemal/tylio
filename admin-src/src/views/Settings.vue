@@ -513,6 +513,30 @@ async function save() {
   }
 }
 
+// ===== Distinzione SaaS vs OSS per la sezione SMTP =====
+// Su SaaS (tenant *.tylio.app) il Mailer è centralizzato — l'admin
+// del tenant NON deve configurare SMTP per ricevere email. Mostriamo
+// un toggle "Usa il tuo server di posta" (default OFF) che, quando
+// attivato, scopre la sezione SMTP completa. Su OSS standalone NON
+// c'è toggle: il self-hoster DEVE configurare SMTP.
+//
+// Pattern identico a `tenantSlug` in AppShell — hostname-based check.
+const isSaas = computed<boolean>(() => {
+  const host = (typeof window !== 'undefined' ? window.location.hostname : '').toLowerCase()
+  return /\.tylio\.app$/.test(host)
+})
+// Toggle value: bool sopra `settings['mail.use_custom_smtp']`. Su OSS
+// è logicamente "sempre true" (il Mailer ignora il flag); su SaaS è
+// quello che gata la visibilità della sezione SMTP.
+const useCustomSmtp = computed<boolean>({
+  get() { return Boolean(settings.value['mail.use_custom_smtp']) },
+  set(v: boolean) { settings.value['mail.use_custom_smtp'] = v },
+})
+// Sezione SMTP visibile?
+//   - OSS: sempre (no toggle, l'admin DEVE configurare)
+//   - SaaS: solo se il toggle è ON
+const showSmtpSection = computed(() => !isSaas.value || useCustomSmtp.value)
+
 // ===== SMTP test =====
 // `runMailTest()` POSTs to /api/admin/mail/test which dispatches a real
 // email to `site.admin_email` (or to a body-supplied address) using the
@@ -1146,14 +1170,21 @@ async function performDelete() {
        request is auto-fired on email change (server-side) — the SPA
        never has a "send code" button, only "Verify" + "Resend (X:YY)". -->
   <!-- ===== SMTP card =====
-       Configurazione del trasporto email. Senza queste impostazioni il
-       Mailer è in no-op mode: ogni invio (verifica admin, welcome,
-       password reset, notifica form) viene loggato in
-       `data/logs/mail.log` ma NON arriva. La sezione è renderizzata
-       sopra Communications perché — senza SMTP — l'email admin
-       sottostante è priva di valore (nessun codice di verifica può
-       essere consegnato). -->
-  <section id="smtp" class="tile mt-5 scroll-mt-24">
+       Su OSS: sempre visibile, il self-hoster deve configurare SMTP.
+       Su SaaS: gated da un toggle "Usa il tuo server di posta" (default
+       OFF) — i tenant tylio.app usano l'SMTP della piattaforma per
+       default e non vedono niente in questa sezione finché non
+       attivano il toggle. -->
+  <section v-if="isSaas" id="smtp-toggle" class="tile mt-5 scroll-mt-24">
+    <label class="flex items-center gap-3 cursor-pointer">
+      <input v-model="useCustomSmtp" type="checkbox" class="shrink-0" />
+      <span class="font-medium">{{ t('settings.smtp.useCustomToggle') }}</span>
+    </label>
+    <p class="text-xs text-ink-300 mt-2 leading-relaxed">
+      {{ t('settings.smtp.useCustomHint') }}
+    </p>
+  </section>
+  <section v-if="showSmtpSection" id="smtp" class="tile mt-5 scroll-mt-24">
     <h2 class="font-display text-xl mt-2 pb-1 border-b border-white/10 mb-3">
       {{ t('settings.smtp.title') }}
     </h2>

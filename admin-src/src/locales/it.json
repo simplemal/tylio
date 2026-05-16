@@ -523,6 +523,8 @@
     "smtp": {
       "title": "Server SMTP",
       "intro": "Senza un server SMTP configurato tylio non può inviare email (codici di verifica, welcome, reset password, notifiche del form contatti). Compila i campi e poi prova con \"Invia email di prova\".",
+      "useCustomToggle": "Usa il tuo server di posta per inviare le email",
+      "useCustomHint": "Per default le email partono dal server della piattaforma tylio.app. Attiva il toggle per usare il tuo SMTP (es. Gmail business, Aruba, Mailgun) — utile per branding del mittente o quote di invio più alte.",
       "host": "Host",
       "hostHelp": "Es. smtp.gmail.com, smtp.aruba.it, smtp.mailgun.org.",
       "port": "Porta",

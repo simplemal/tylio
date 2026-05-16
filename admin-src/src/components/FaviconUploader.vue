@@ -67,7 +67,16 @@ async function pickFromLibrary(m: MediaItem) {
 }
 
 function errorMessage(e: unknown, fallback: string): string {
-  if (e instanceof ApiError) return String(e.data.message ?? e.message)
+  // Server-side: FaviconController ritorna { ok:false, error: <code>,
+  // detail: <human readable> }. Mostriamo `detail`, fallback su
+  // `message` legacy + fallback locale.
+  if (e instanceof ApiError) {
+    const d = e.data?.detail
+    if (typeof d === 'string' && d) return d
+    const m = e.data?.message
+    if (typeof m === 'string' && m) return m
+    return fallback
+  }
   if (e instanceof Error) return e.message
   return fallback
 }

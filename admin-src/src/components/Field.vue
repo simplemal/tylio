@@ -106,6 +106,41 @@ function addItem() {
   collectDefaults(props.def.of || [], empty)
   arr.push(empty)
   value.value = arr
+  // Per i repeat collapsibili, apri il nuovo item (l'utente vuole
+  // poterlo compilare subito). Items già esistenti restano nello
+  // stato in cui erano.
+  if (props.def.collapsible) {
+    const s = new Set(openIndices.value)
+    s.add(arr.length - 1)
+    openIndices.value = s
+  }
+}
+
+// ===== Accordion state per repeat collapsibili =====
+// State LOCALE al componente, NON persistito: ogni mount riparte
+// con tutti gli item chiusi (richiesta Maurizio: "quando entri
+// nella tessera, i link devono essere sempre chiusi come condizione
+// di partenza"). addItem apre il nuovo item, removeItem ri-allinea
+// gli indici, moveItems chiude tutto (l'index degli open dopo un
+// drag punterebbe a item diversi — preferiamo reset esplicito a un
+// mapping fragile basato su __id).
+const openIndices = ref(new Set<number>())
+function isItemOpen(idx: number): boolean {
+  return openIndices.value.has(idx)
+}
+function toggleItem(idx: number): void {
+  const s = new Set(openIndices.value)
+  if (s.has(idx)) s.delete(idx)
+  else s.add(idx)
+  openIndices.value = s
+}
+function collapsibleHeaderLabel(def: FieldDef, item: RepeatItem, idx: number): string {
+  const field = def.collapsible_label_field
+  if (field) {
+    const raw = item[field]
+    if (typeof raw === 'string' && raw.trim() !== '') return raw
+  }
+  return `${def.label} #${idx + 1}`
 }
 
 /**
@@ -126,10 +161,19 @@ function removeItem(idx: number) {
   const arr = [...asArray()]
   arr.splice(idx, 1)
   value.value = arr
+  // Ri-allinea gli openIndices: gli item > idx scorrono di -1.
+  const s = new Set<number>()
+  for (const i of openIndices.value) {
+    if (i < idx) s.add(i)
+    else if (i > idx) s.add(i - 1)
+  }
+  openIndices.value = s
 }
 
 function moveItems(arr: RepeatItem[]) {
   value.value = arr
+  // Drag reset opens — vedi commento su openIndices.
+  openIndices.value = new Set()
 }
 
 /**
@@ -344,14 +388,14 @@ function siblingValues(key: string): string[] {
         @update:model-value="moveItems"
       >
         <template #item="{ element: item, index }">
-          <!-- repeat-item-card: bordo 1px = text-color a 50% così il box
-               resta distinguibile anche sui temi dove il fondo dell'item
-               (ink-800 = surface_alt) collassa sul fondo della tessera
-               (es. Pink Lady · light: surface_alt = surface = #ffffff,
-               border-white/5 di prima era invisibile). Sui temi normali
-               quel border è soft e non disturba. -->
-          <div class="bg-ink-800 rounded-xl p-3 repeat-item-card">
-            <div class="flex items-center gap-2 mb-3">
+          <!-- repeat-item-card: bordo 1px = text-color a 50% (vedi
+               commit precedente). Se `def.collapsible`, l'header è
+               cliccabile e il body si mostra solo quando isItemOpen. -->
+          <div
+            class="bg-ink-800 rounded-xl p-3 repeat-item-card"
+            :class="def.collapsible && !isItemOpen(index) ? 'repeat-item-card--collapsed' : ''"
+          >
+            <div class="flex items-center gap-2" :class="def.collapsible && !isItemOpen(index) ? '' : 'mb-3'">
               <button
                 class="grip btn-icon !w-7 !h-7 !cursor-grab active:!cursor-grabbing"
                 type="button"
@@ -360,9 +404,25 @@ function siblingValues(key: string): string[] {
               >
                 <iconify-icon icon="lucide:grip-vertical" width="16"></iconify-icon>
               </button>
-              <span class="text-xs uppercase tracking-widest text-ink-300"
-                >{{ def.label }} #{{ index + 1 }}</span
+              <button
+                v-if="def.collapsible"
+                type="button"
+                class="flex-1 flex items-center gap-2 text-left text-xs uppercase tracking-widest text-ink-300 hover:text-ink-100 transition-colors"
+                :aria-expanded="isItemOpen(index)"
+                @click="toggleItem(index)"
               >
+                <iconify-icon
+                  :icon="isItemOpen(index) ? 'lucide:chevron-down' : 'lucide:chevron-right'"
+                  width="14"
+                ></iconify-icon>
+                <span class="truncate normal-case tracking-normal text-sm text-ink-100">
+                  {{ collapsibleHeaderLabel(def, item, index) }}
+                </span>
+              </button>
+              <span
+                v-else
+                class="text-xs uppercase tracking-widest text-ink-300"
+              >{{ def.label }} #{{ index + 1 }}</span>
               <button
                 type="button"
                 class="ml-auto btn-icon !w-7 !h-7 hover:!text-red-300"
@@ -372,32 +432,32 @@ function siblingValues(key: string): string[] {
                 <iconify-icon icon="lucide:trash-2" width="14"></iconify-icon>
               </button>
             </div>
-            <template v-for="sub in def.of" :key="sub.key">
-              <!-- inline_group: render its children side-by-side, each
-                   still bound to the parent item (the group itself does
-                   NOT introduce a data path). The container reserves room
-                   for the text input first and lets the toggle settle on
-                   the right at its natural width. -->
-              <div v-if="sub.type === 'inline_group'" class="inline-group">
+            <template v-if="!def.collapsible || isItemOpen(index)">
+              <template v-for="sub in def.of" :key="sub.key">
+                <!-- inline_group: render its children side-by-side, each
+                     still bound to the parent item (the group itself does
+                     NOT introduce a data path). -->
+                <div v-if="sub.type === 'inline_group'" class="inline-group">
+                  <Field
+                    v-for="ig in sub.of"
+                    :key="ig.key"
+                    :def="ig"
+                    :model-value="item[ig.key]"
+                    :class="ig.type === 'toggle' ? 'inline-group__toggle' : 'inline-group__main'"
+                    @update:model-value="(v: unknown) => setItem(index, ig.key, v)"
+                  />
+                </div>
+                <!-- regular sub-field with show_when filter -->
                 <Field
-                  v-for="ig in sub.of"
-                  :key="ig.key"
-                  :def="ig"
-                  :model-value="item[ig.key]"
-                  :class="ig.type === 'toggle' ? 'inline-group__toggle' : 'inline-group__main'"
-                  @update:model-value="(v: unknown) => setItem(index, ig.key, v)"
+                  v-else-if="shouldShow(sub, item)"
+                  :def="sub"
+                  :model-value="item[sub.key]"
+                  :suggestions="
+                    sub.autocomplete_from === 'siblings' ? siblingValues(sub.key) : []
+                  "
+                  @update:model-value="(v: unknown) => setItem(index, sub.key, v)"
                 />
-              </div>
-              <!-- regular sub-field with show_when filter -->
-              <Field
-                v-else-if="shouldShow(sub, item)"
-                :def="sub"
-                :model-value="item[sub.key]"
-                :suggestions="
-                  sub.autocomplete_from === 'siblings' ? siblingValues(sub.key) : []
-                "
-                @update:model-value="(v: unknown) => setItem(index, sub.key, v)"
-              />
+              </template>
             </template>
           </div>
         </template>
@@ -423,6 +483,12 @@ function siblingValues(key: string): string[] {
    temi dove fondo item collassa sul fondo della tessera. */
 .repeat-item-card {
   border: 1px solid rgb(var(--ink-100-rgb) / 0.5);
+}
+/* Padding ridotto quando collapsed (l'header occupa già abbastanza
+   verticale) — la sensazione è una riga compatta cliccabile. */
+.repeat-item-card.repeat-item-card--collapsed {
+  padding-top: 0.4rem;
+  padding-bottom: 0.4rem;
 }
 
 /* Compact Markdown legend below markdown-type textareas.

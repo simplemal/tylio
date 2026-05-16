@@ -26,7 +26,9 @@ export const useSite = defineStore('site', {
     maintenance: false,
     title: '',
     mailHost: '',
+    mailUseCustomSmtp: false,
     mailFromEnvOnly: false, // true when env MAIL_DSN is set but no settings.mail.host
+    isSaas: false,
     adminEmail: '',
     adminEmailVerifiedAt: '' as string | null | '',
     loaded: false,
@@ -34,15 +36,25 @@ export const useSite = defineStore('site', {
   }),
   getters: {
     /**
-     * SMTP isn't configured from the admin's POV: no `settings.mail.host`
-     * AND the legacy env `MAIL_DSN` (if any) is unknown to the SPA. We
-     * conservatively treat this as "needs setup" — the banner shows.
-     * If the admin DID set an env-only DSN historically, they can clear
-     * the banner by filling `mail.host` in the UI (which the Mailer
-     * will then prefer anyway).
+     * SMTP "needs setup" banner. Le regole sono diverse per OSS e SaaS:
+     *
+     *   - **OSS** (self-host standalone): l'admin DEVE configurare SMTP
+     *     altrimenti nessuna email parte. Banner visibile se `mail.host`
+     *     è vuoto.
+     *   - **SaaS** (tenant `*.tylio.app`): il Mailer della piattaforma
+     *     copre tutto di default. L'admin può abilitare un toggle
+     *     "Usa il tuo server" (`mail.use_custom_smtp`) per overridarlo;
+     *     SOLO in quel caso un `mail.host` vuoto è un problema, quindi
+     *     SOLO in quel caso mostriamo il banner.
      */
     needsSmtpConfig(): boolean {
-      return this.loaded && this.mailHost === '' && !this.mailFromEnvOnly
+      if (!this.loaded) return false
+      if (this.mailHost !== '') return false
+      if (this.mailFromEnvOnly) return false
+      // SaaS senza opt-in al custom mailer: nessun warning, è il
+      // comportamento di default attendibile.
+      if (this.isSaas && !this.mailUseCustomSmtp) return false
+      return true
     },
     /**
      * The admin still needs to set an email. `''` (the seed value when
@@ -89,6 +101,10 @@ export const useSite = defineStore('site', {
         this.title = typeof t === 'string' ? t : ''
         const mh = r.settings['mail.host']
         this.mailHost = typeof mh === 'string' ? mh : ''
+        this.mailUseCustomSmtp = Boolean(r.settings['mail.use_custom_smtp'])
+        // Hostname-based SaaS detection — stesso pattern di AppShell.
+        const host = (typeof window !== 'undefined' ? window.location.hostname : '').toLowerCase()
+        this.isSaas = /\.tylio\.app$/.test(host)
         this.loaded = true
       } catch {
         // silent: banners aren't critical
@@ -114,6 +130,7 @@ export const useSite = defineStore('site', {
       this.title = typeof t === 'string' ? t : ''
       const mh = settings['mail.host']
       this.mailHost = typeof mh === 'string' ? mh : ''
+      this.mailUseCustomSmtp = Boolean(settings['mail.use_custom_smtp'])
       this.loaded = true
     },
     setEmailStatus(email: string, verifiedAt: string | null) {
@@ -125,7 +142,9 @@ export const useSite = defineStore('site', {
       this.maintenance = false
       this.title = ''
       this.mailHost = ''
+      this.mailUseCustomSmtp = false
       this.mailFromEnvOnly = false
+      this.isSaas = false
       this.adminEmail = ''
       this.adminEmailVerifiedAt = ''
       this.loaded = false
