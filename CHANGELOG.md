@@ -6,6 +6,30 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.4 — 2026-05-16
+
+### Fixed — In-app updater OOM-killed mid-backup, leaving lock stuck
+
+Su un install OSS reale (21MB di source, `memory_limit = 128M`), il primo "Aggiorna ora" arrivava fino allo step di backup, poi PHP veniva killato dal kernel/PHP-FPM dentro `PharData::compress(\Phar::GZ)` perché Phar carica l'intero archivio in memoria. Il SIGKILL bypassa il `finally` → `site.update_in_progress = true` resta forever → l'utente non può ritentare senza fix SQL manuale.
+
+Quattro fix:
+
+1. **`backupCurrentRoot()` ora preferisce shell `tar -czf`** quando disponibile (check `function_exists('exec')` + `disable_functions` + `command -v tar`). Tar shell streamma senza buffering — zero memoria, 5-10× più veloce, niente OOM. `PharData` resta come fallback su host che disabilitano `exec()`.
+
+2. **`set_time_limit(0)` + bump di `memory_limit` a 256M** all'inizio di `apply()`. Niente più timeout o memory-cap mid-flight.
+
+3. **`register_shutdown_function` rilascia il lock anche su PHP fatal kill** (OOM, `request_terminate_timeout`, segfault). La maintenance mode INTENZIONALMENTE resta ON dopo un kill — uno stato semi-swappato non va servito; l'admin la sblocca dalla pagina Manutenzione una volta verificato.
+
+4. **SPA `applyUpdate` legge `e.data.detail`** dal body della risposta invece di mostrare solo `Errore (500)`. Il messaggio diagnostico arriva all'utente in chiaro. Refresha anche `updateState` su failure così il banner persistente riflette l'errore vero del server.
+
+**Per installazioni già a v0.3.1-v0.3.3 con lock stucked** (`update_in_progress = true` permanente):
+
+```sql
+UPDATE settings SET value = json('false') WHERE key = 'site.update_in_progress';
+```
+
+E rimuovere eventuali backup parziali in `data/.backup/*.tar` (senza estensione `.gz`).
+
 ## v0.3.3 — 2026-05-16
 
 ### Fixed — In-app updater rejected every new release on v0.3.1 installs
