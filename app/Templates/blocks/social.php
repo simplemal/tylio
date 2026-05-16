@@ -6,7 +6,13 @@
 $items = $data['items'] ?? [];
 $title = $data['title'] ?? '';
 $display = $data['display'] ?? 'icon_platform';
-$align = ($data['align'] ?? 'left') === 'center' ? 'center' : 'left';
+// Pre-v0.3.2 stored align under data.align; v0.3.2+ uses the universal
+// style.align widget. Read style first, fall back to data.align for
+// legacy blocks. Three valid values now (left/center/right); the
+// data-align attribute is bridged to the .m-tile--align-{x} class via
+// CSS in public.css so the visual outcome matches either way.
+$alignRaw = (string)($style['align'] ?? $data['align'] ?? 'left');
+$align = in_array($alignRaw, ['center', 'right'], true) ? $alignRaw : 'left';
 
 // Map: platform → [iconify icon name, display name]
 // Icons are loaded dynamically via <iconify-icon> from the Iconify CDN.

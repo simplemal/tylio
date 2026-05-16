@@ -263,6 +263,29 @@ a{color:inherit;text-decoration:none}
   padding-right:0;
 }
 
+/* Per-block content alignment override — style.align ∈ {center, right}.
+ * Default 'left' has no class (and therefore no CSS), preserving the
+ * intrinsic alignment of every block type. The classes apply globally
+ * to ANY block via descendant text-align; some blocks (hero, social)
+ * also have their own block-aware rules below that cascade more
+ * specifically. */
+.m-tile.m-tile--align-center{ text-align:center; }
+.m-tile.m-tile--align-right{ text-align:right; }
+/* For blocks whose content is laid out via flexbox/grid (e.g. list
+ * items, link rows) text-align alone is not enough — also realign the
+ * cross-axis so the row/column flows toward the requested edge. */
+.m-tile.m-tile--align-center > *{ margin-left:auto; margin-right:auto; }
+.m-tile.m-tile--align-right > *{ margin-left:auto; margin-right:0; }
+/* Hero special-case: when the user picks 'right' we mirror the
+ * existing m-hero--center treatment (preserve the avatar|title /
+ * avatar|desc grid, just push the whole cluster). */
+.m-tile.m-tile--align-right .m-hero{ grid-template-columns:auto auto; justify-content:flex-end; }
+.m-tile.m-tile--align-center .m-hero{ grid-template-columns:auto auto; justify-content:center; }
+/* Social rows already react to [data-align="…"]. Bridge the new class
+ * to the existing attribute so we don't duplicate the rules. */
+.m-tile.m-tile--align-right .m-social-wrap{ justify-content:flex-end; }
+.m-tile.m-tile--align-center .m-social-wrap{ justify-content:center; }
+
 /* ============= MOBILE GEOMETRY: "save space" mode =============
  * When the user picks data-mobile-spacing="minimal" in the theme, on
  * mobile (≤779px) tiles lose their visual chrome: no background, no
@@ -618,6 +641,8 @@ a{color:inherit;text-decoration:none}
 .m-social-wrap{display:flex;flex-direction:column;gap:14px}
 .m-social-wrap[data-align="center"]{align-items:center;text-align:center}
 .m-social-wrap[data-align="center"] .m-social{justify-content:center}
+.m-social-wrap[data-align="right"]{align-items:flex-end;text-align:right}
+.m-social-wrap[data-align="right"] .m-social{justify-content:flex-end}
 .m-social{display:flex;flex-wrap:wrap;gap:10px}
 /* Social pills. Color map declared and controllable from the palette:
    bg = accent-soft (primary-family chip), icon = accent-alt (secondary),

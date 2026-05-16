@@ -261,13 +261,22 @@ $tileCard = (
         // Per-block "No background" override: removes the tile's bg/border/shadow
         // ignoring the theme's tile-style. Set on block.style.no_bg.
         $noBgClass = !empty($block['style']['no_bg']) ? ' m-tile--no-bg' : '';
+        // Per-block content alignment override. Default 'left' is not
+        // persisted in style — so no class for left. center/right add
+        // .m-tile--align-{x}. The actual CSS effect is block-type-aware:
+        // some blocks (hero/social) have their own grid-level handling
+        // that reads the class, others just apply text-align to their
+        // own content.
+        $alignRaw = $block['style']['align'] ?? '';
+        $alignClass = ($alignRaw === 'center' || $alignRaw === 'right')
+            ? ' m-tile--align-' . $alignRaw : '';
         // Grid placement: when the page contains groups, the planner emits
         // a `--ga` custom property (a `grid-area` shorthand) so .m-tile's
         // CSS rule can read it. Mobile resets `grid-area: auto` via media
         // query, falling back to natural document order.
         $gridStyle = !empty($u['grid']) ? ' style="' . $renderer->escape($u['grid']) . '"' : '';
     ?>
-      <section class="m-tile m-tile--span<?= $span ?> m-tile--<?= $renderer->escape($block['type']) ?><?= $disabledClass ?><?= $orphanClass ?><?= $noBgClass ?>" data-block-id="<?= (int)$block['id'] ?>" data-block-type="<?= $renderer->escape($block['type']) ?>"<?= $gridStyle ?>>
+      <section class="m-tile m-tile--span<?= $span ?> m-tile--<?= $renderer->escape($block['type']) ?><?= $disabledClass ?><?= $orphanClass ?><?= $noBgClass ?><?= $alignClass ?>" data-block-id="<?= (int)$block['id'] ?>" data-block-type="<?= $renderer->escape($block['type']) ?>"<?= $gridStyle ?>>
         <?= $renderer->renderBlock($block, $theme) ?>
       </section>
     <?php endforeach; ?>

@@ -7,13 +7,17 @@
 $subtitle = (string)($data['subtitle'] ?? '');
 $titleText = trim((string)($data['title'] ?? ''));
 $titleImage = trim((string)($data['title_image'] ?? ''));
-// `align` mirrors the social block's option:
-//   - 'left'   (default) → desktop split: large avatar left + text right
-//   - 'center'           → desktop keeps the mobile vertical-stack layout
-// Mobile (<780px) is always centered regardless.
-$align = ($data['align'] ?? 'left') === 'center' ? 'center' : 'left';
+// `align` is the universal block alignment override (style.align ∈
+// {left,center,right}). Pre-v0.3.2 hero blocks stored align under
+// data.align — read that as a fallback so legacy blocks keep their
+// centered layout after migration. The outer .m-tile--align-{x} class
+// emitted by layout.php handles 'right' and the desktop centering; this
+// local class is kept for the existing m-hero--center CSS rule used by
+// the pre-v0.3.2 css that runs without the new wrapper.
+$align = (string)($style['align'] ?? $data['align'] ?? 'left');
+$alignCenter = $align === 'center';
 ?>
-<div class="m-hero<?= $align === 'center' ? ' m-hero--center' : '' ?>">
+<div class="m-hero<?= $alignCenter ? ' m-hero--center' : '' ?>">
   <?php if (!empty($data['avatar'])): ?>
     <img class="m-hero__avatar" src="<?= $renderer->escape($data['avatar']) ?>" alt="" loading="eager" decoding="async">
   <?php endif; ?>
