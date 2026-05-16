@@ -99,10 +99,12 @@ class Import
                 $this->insertTheme($data['theme'] ?? []);
                 $settingsN = $this->insertSettings($data['settings'] ?? []);
                 $mediaN = $this->insertMedia($data['media'] ?? []);
+                $usersN = $this->insertUsers($data['users'] ?? []);
                 return [
                     'blocks' => $blocksN,
                     'settings' => $settingsN,
                     'media' => $mediaN,
+                    'users' => $usersN,
                 ];
             });
 
@@ -398,6 +400,42 @@ class Import
             $n++;
         }
         $this->log("insert.media n=$n");
+        return $n;
+    }
+
+    /**
+     * Replace the users table with the archive's payload. Critical: an
+     * archive without users => login impossible after import. Each row
+     * carries the argon2id password_hash + TOTP fields (if 2FA was
+     * enabled). The ID is preserved so any future referential link
+     * (audit_log.user_id, ecc.) stays consistent.
+     *
+     * @param list<array<string,mixed>> $users
+     */
+    protected function insertUsers(array $users): int
+    {
+        if ($users === []) return 0;
+        $this->db->exec('DELETE FROM users');
+        $n = 0;
+        foreach ($users as $u) {
+            $username = (string)($u['username'] ?? '');
+            $hash = (string)($u['password_hash'] ?? '');
+            if ($username === '' || $hash === '') continue;
+            $row = [
+                'username' => $username,
+                'password_hash' => $hash,
+                'totp_secret' => (string)($u['totp_secret'] ?? ''),
+                'totp_enabled_at' => $u['totp_enabled_at'] ?? null,
+                'totp_backup_codes' => (string)($u['totp_backup_codes'] ?? '[]'),
+                'created_at' => (string)($u['created_at'] ?? date('Y-m-d H:i:s')),
+                'last_login_at' => $u['last_login_at'] ?? null,
+            ];
+            $sourceId = isset($u['id']) ? (int)$u['id'] : 0;
+            if ($sourceId > 0) $row['id'] = $sourceId;
+            $this->db->insert('users', $row);
+            $n++;
+        }
+        $this->log("insert.users n=$n");
         return $n;
     }
 

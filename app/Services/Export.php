@@ -119,6 +119,7 @@ class Export
             'theme' => $this->exportTheme(),
             'settings' => $this->exportSettings(),
             'media' => $this->exportMedia(),
+            'users' => $this->exportUsers(),
         ];
         $json = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         if ($json === false) {
@@ -148,6 +149,30 @@ class Export
                 'parent_id' => isset($r['parent_id']) ? (int)$r['parent_id'] : null,
                 'created_at' => (string)($r['created_at'] ?? ''),
                 'updated_at' => (string)($r['updated_at'] ?? ''),
+            ];
+        }
+        return $out;
+    }
+
+    /** @return list<array<string,mixed>> */
+    protected function exportUsers(): array
+    {
+        $rows = $this->db->all(
+            'SELECT id, username, password_hash, totp_secret, totp_enabled_at, totp_backup_codes,
+                    created_at, last_login_at
+             FROM users ORDER BY id ASC'
+        );
+        $out = [];
+        foreach ($rows as $r) {
+            $out[] = [
+                'id' => (int)$r['id'],
+                'username' => (string)$r['username'],
+                'password_hash' => (string)$r['password_hash'],
+                'totp_secret' => isset($r['totp_secret']) ? (string)$r['totp_secret'] : '',
+                'totp_enabled_at' => isset($r['totp_enabled_at']) ? (string)$r['totp_enabled_at'] : null,
+                'totp_backup_codes' => isset($r['totp_backup_codes']) ? (string)$r['totp_backup_codes'] : '[]',
+                'created_at' => (string)($r['created_at'] ?? ''),
+                'last_login_at' => isset($r['last_login_at']) ? (string)$r['last_login_at'] : null,
             ];
         }
         return $out;
