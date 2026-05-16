@@ -6,6 +6,31 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.2 — 2026-05-16
+
+### Changed — Block edit page: width labels + new universal Align widget
+
+- **Width control**: rimosso il suffisso "· 1/2" / "· 2/2" dalle label dei due pulsanti (ora solo "Mezza" / "Piena"). Hint mobile abbreviato a "Solo su desktop" (il "su mobile sempre piena" era ridondante).
+- **Background control**: rimossa la stringa di help redundante ("Senza sfondo rimuove bg, bordo e ombre solo per questa tessera") — i due bottoni con icona + label sono già self-explanatory.
+- **Nuovo widget Allineamento universale**: subito sotto "Larghezza", tre opzioni `Sinistra | Centro | Destra` valide per **tutte** le tessere (prima erano solo Hero/Social a livello di field schema, e senza opzione "destra"). Salvato in `style.align` con `left` come default non persistito. Effetto applicato via classe `.m-tile--align-{center|right}` emessa da `layout.php` sul wrapper della tessera, con regole CSS che bridge-ano il comportamento esistente di Hero (avatar|titolo split preservato) e Social (riga di icone allineata).
+- **Backward compat**: i blocchi Hero/Social esistenti salvati con `data.align` continuano a funzionare — i template li leggono come fallback se `style.align` non è impostato.
+
+### Added — Admin shell
+
+- **OSS: pill dominio sotto il logo `tylio.app`**. La pill di brand che fino a v0.3.1 esisteva solo nei tenant SaaS (mostrava lo slug) ora compare anche sull'OSS, mostrando `site.title` (o, fallback, l'hostname senza `www.`). Stesso treatment visivo, stessa abitudine per i self-hoster con più siti / staging.
+- **Banner persistente "email admin"**: nell'header di ogni pagina admin appare un banner warn finché l'email admin non è impostata E verificata. Due testi:
+  - `site.admin_email` vuoto → "Non è stata impostata una email per l'admin"
+  - email settata ma `verified_at` null → "Non è stata verificata l'email {x}"
+  Il banner è un `<router-link>` che porta in un click a Settings → sezione email. Persistente (no dismiss): l'email è il canale primario di password-reset e 2FA fallback, quindi resta visibile finché non è risolto.
+
+### Changed — Login 2FA UI
+
+- **Backup-codes**: il toggle checkbox "Usa un backup code (se hai perso l'app authenticator)" sopra il pulsante di accesso è stato rimosso e sostituito da un link testuale sotto il pulsante, nello stesso stile della prossima "Hai dimenticato la password" (preview). Toggle pulito che alterna TOTP ↔ backup mode senza perdere la sessione 2FA pendente.
+
+### NOT included in this release
+
+Punto 7 della lista (Forgot password flow completo: link + pagina + email temp pw + must_change_password) è rinviato a **v0.3.3**: richiede una migration users.must_change_password (da scrivere conditional per non collidere con la `1002` del SaaS overlay), un ChangePasswordController OSS (port da SaaS), un nuovo ForgotPasswordController, una vista SPA dedicata, e relativi locale strings — troppo per un'iterazione singola. La funzione `Mailer::sendPasswordReset()` esiste già, l'infrastruttura SaaS è già completa: il lavoro è isolato lato OSS.
+
 ## v0.3.1 — 2026-05-15
 
 ### Added — Aggiornamento in-app stile WordPress
