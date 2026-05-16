@@ -6,6 +6,49 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.6 — 2026-05-16
+
+### Added — Configurazione SMTP da Settings + endpoint test
+
+Un install OSS fresh non aveva SMTP configurato → nessuna mail (verifica admin, welcome, password reset, notifiche form contatti) arrivava. Ora:
+
+- **Migration `0011_mail_settings.sql`**: seed dei settings `mail.host`, `mail.port` (`587`), `mail.security` (`tls`), `mail.user`, `mail.pass`, `mail.from_address`, `mail.from_name`, `mail.privacy_address`, `mail.support_address`. Tutti vuoti tranne `port`/`security`.
+- **`Mailer` refactored**: nuovo `dsn()` che costruisce `smtp://USER:PASS@HOST:PORT?encryption=tls` (o `smtps://` per `ssl`) da settings se `mail.host` non vuoto, altrimenti fallback su env `MAIL_DSN`. Tutti i metodi `fromAddress/fromName/privacyAddress/supportAddress` leggono da settings con fallback env. Param `?DB $db` aggiunto al ctor (nullable per back-compat).
+- **`MailController` nuovo**: `POST /api/admin/mail/test` invia una mail di prova all'admin email (o `body.to`) e ritorna `{ok: true, to}` o `{ok: false, error, detail}` con detail = `$mailer->lastError()` — niente più bisogno di `tail -f data/logs/mail.log` per capire perché SMTP non gira.
+- **`Settings.vue` → nuova sezione SMTP** PRIMA di `#email`: host/port/security/user/pass/from_address/from_name + bottone "Invia email di prova" con outcome inline (verde/rosso).
+
+Tested e2e locally con un PHP driver: empty→disabled; settings filled→DSN URL-encodato correttamente; clear→fallback env; ssl→`smtps://`.
+
+### Added — Priorità banner shell admin
+
+Quando il banner "SMTP non configurato" e quello "email admin non impostata/non verificata" sarebbero entrambi attivi, l'admin shell ne mostra **solo uno** — quello a priorità più alta. Ordine:
+
+1. **SMTP non configurato** (blocca tutto il flusso email — gli altri warning sarebbero unactionable)
+2. **Email admin non impostata**
+3. **Email admin impostata ma non verificata**
+
+`stores/site.ts` ha i nuovi getter `needsSmtpConfig` + `activeBanner` (computed). `AppShell.vue` rende UN solo `<router-link>` basato sul valore.
+
+### Changed — Palette "Pink Lady · chiaro" ribilanciata
+
+`admin-src/src/presets.ts`: `surface_alt` ora `#ffffff` (era `#efeff1`), `accent_soft` `#d45898` (era `#ff68b4` — diventa il contrasto sull'accento principale bianco), `accent_alt` `#f9d3e0` (era `#ffffff` — vero accento secondario rosa pastello), `accent_alt_fg` `#9a244f` (era `#ff68b4` — contrasto bordeaux sul secondario). Testo magenta su carta, accento bianco con testo rosa, badge rosa pallido con testo bordeaux.
+
+### Changed — `tile.mobile_spacing: minimal` default per fresh install
+
+`app/Database/migrations/0001_initial.sql`: il theme seedato sui nuovi install ora include `mobile_spacing: 'minimal'` — tessere edge-to-edge su mobile. Gli install esistenti non sono toccati (no backfill: chi aveva `desktop` l'aveva scelto consapevolmente). Per tornare al vecchio comportamento: Tema → Tile → spaziatura mobile = `desktop`.
+
+### Fixed — Bordo dei sub-item nel field `repeat`
+
+Sui temi dove `surface_alt` collassa su `surface` (es. Pink Lady · light: entrambi `#ffffff`), i box dei sub-item del field `repeat` (es. profili social, link items) scomparivano: `bg-ink-800 border border-white/5` non aveva contrasto. `admin-src/src/components/Field.vue`: rimosso `border border-white/5`, aggiunta classe `repeat-item-card` con `border: 1px solid rgb(var(--ink-100-rgb) / 0.5)` — sottile sui temi normali, distinguibile sui temi estremi.
+
+### Fixed — Banner email non scrollava alla sezione
+
+Il `router-link` del banner email (AppShell) puntava a `{name:'settings', hash:'#email'}` ma:
+- `router.ts` non aveva `scrollBehavior` configurato → il hash veniva ignorato.
+- `Settings.vue` aveva `id="communications"` invece di `email` → niente target.
+
+`router.ts`: nuovo `scrollBehavior` che gestisce il hash con 50ms di delay per il mount async + 80px offset dalla sticky topbar. `Settings.vue`: aggiunto `<div id="email" class="scroll-mt-24">` come anchor sibling sopra `<section id="communications">` (no rename per non rompere riferimenti futuri).
+
 ## v0.3.5 — 2026-05-16
 
 ### Fixed — "Versione installata" mostrava `build-<timestamp>` invece del semver
