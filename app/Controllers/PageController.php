@@ -128,16 +128,7 @@ class PageController
     text-align: center;
     box-shadow: 0 20px 60px rgba(0,0,0,0.45);
   }
-  .logo {
-    width: 64px; height: 64px; margin: 0 auto 18px;
-    background: linear-gradient(135deg, #ff5fbf, #6a4cff);
-    border-radius: 16px;
-    display: grid; place-items: center;
-    box-shadow: 0 10px 30px rgba(106,76,255,0.4);
-  }
-  .logo span {
-    font-weight: 700; font-size: 32px; color: #fff; letter-spacing: -0.04em;
-  }
+  .logo { width: 88px; height: 88px; margin: 0 auto 22px; display: block; }
   h1 { margin: 0 0 8px; font-size: 22px; font-weight: 600; }
   p { margin: 0 0 24px; color: #aab0c8; line-height: 1.55; font-size: 15px; }
   a.cta {
@@ -153,7 +144,18 @@ class PageController
 </head>
 <body>
   <main class="card">
-    <div class="logo" aria-hidden="true"><span>t</span></div>
+    <svg class="logo" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <rect x="150" y="200" width="724" height="140" rx="42" fill="#A85AFF"/>
+      <rect x="150" y="370" width="221.333" height="140" rx="42" fill="#54DEB8"/>
+      <rect x="401.333" y="370" width="221.333" height="140" rx="42" fill="#AA65FF"/>
+      <rect x="652.666" y="370" width="221.334" height="140" rx="42" fill="#5AE2BF"/>
+      <rect x="150" y="540" width="221.333" height="140" rx="42" fill="#FF5A66"/>
+      <rect x="401.333" y="540" width="221.333" height="140" rx="42" fill="#9A5DFF"/>
+      <rect x="652.666" y="540" width="221.334" height="140" rx="42" fill="#FF6B70"/>
+      <rect x="150" y="710" width="221.333" height="140" rx="42" fill="#FFC050"/>
+      <rect x="401.333" y="710" width="221.333" height="140" rx="42" fill="#8F62FF"/>
+      <rect x="652.666" y="710" width="221.334" height="140" rx="42" fill="#FFC450"/>
+    </svg>
     <h1>tylio è installato ma non configurato</h1>
     <p>Completa il setup creando l'utente admin o importando un archivio di un sito esistente.</p>
     <a class="cta" href="$installUrl">Avvia l'installazione</a>
