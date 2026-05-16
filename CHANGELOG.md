@@ -8,6 +8,10 @@ versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## v0.3.8 — 2026-05-16
 
+### Fixed — SMTP test: timeout 10s e cap a 20s su PHP execution
+
+`Mailer::dsn()` ora include `?timeout=10` (passa al Symfony SMTP transport) e `MailController::test()` chiama `set_time_limit(20)`. Prima un host SMTP irraggiungibile teneva il worker PHP impegnato fino al `max_execution_time` di default (>30s), spesso oltre il timeout dell'origin che fa rispondere 502 al reverse proxy (Cloudflare in questo caso) con "origin returned an invalid or incomplete response". Adesso il connect SMTP si arrende a 10s e il pipeline a 20s, restituendo un `{ok:false, error:'send_failed', detail:...}` JSON pulito che il SPA mostra inline.
+
 ### Fixed — Favicon upload da galleria (no_such_column: path)
 
 `FaviconController::resolveInput()` cercava `SELECT path FROM media` ma la tabella `media` non ha mai avuto una colonna `path` (lo schema è `filename`). Effetto: scegliendo un'immagine da Media → "Scegli dalla libreria" usciva `SQLSTATE[HY000]: 1 no such column: path`. Fix banale: `path` → `filename`, identico a `MediaController`.
