@@ -21,6 +21,18 @@ use Psr\Http\Message\ServerRequestInterface;
  */
 class SettingsController
 {
+    /**
+     * Settings keys that are written ONLY by server-internal flows
+     * (email verification, welcome mail bookkeeping, …). The Settings
+     * SPA fetches them in the same payload as user-editable settings,
+     * but the admin "Save" button must NOT round-trip them back to the
+     * DB — otherwise the next save erases the verified_at flag.
+     */
+    public const PROTECTED_SETTING_KEYS = [
+        'site.admin_email_verified_at',
+        'site.welcome_sent_at',
+    ];
+
     public function __construct(
         protected DB $db,
         protected I18n $i18n,
@@ -123,6 +135,7 @@ class SettingsController
         );
         foreach ($settings as $key => $value) {
             if (!is_string($key) || !preg_match('/^[a-z][a-z0-9._-]*$/i', $key)) continue;
+            if (in_array($key, self::PROTECTED_SETTING_KEYS, true)) continue;
             $stmt->execute([$key, json_encode($value, JSON_UNESCAPED_UNICODE)]);
         }
         if ($newAdminEmailAfterChange !== null) {
