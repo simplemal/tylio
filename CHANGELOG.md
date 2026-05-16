@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.16 — 2026-05-16
+
+### Fixed — Landing "install pending": usa il logo reale tylio
+
+La landing introdotta in v0.3.15 mostrava un quadratino gradient con una "t" inventata invece dell'identità di brand. Ora il SVG inline del logo ufficiale (10 tessere colorate, stesso file di `/logo.svg` usato dalla SPA admin e dal layout pubblico).
+
+
 ## v0.3.15 — 2026-05-16
 
 ### Changed — Pagina di benvenuto quando l'install non è ancora stato completato
