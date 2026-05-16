@@ -669,6 +669,24 @@ export interface UpdateApplyErr {
 }
 export type UpdateApplyResponse = UpdateApplyOk | UpdateApplyErr
 
+/**
+ * Response of `POST /api/admin/mail/test`.
+ * - ok=true with the resolved recipient on successful SMTP delivery
+ * - ok=false with `error` in {`not_configured`, `invalid_recipient`,
+ *   `send_failed`} + a human-readable `detail` string ready to render
+ *   inline under the "Invia email di prova" button.
+ */
+export interface MailTestOk {
+  ok: true
+  to: string
+}
+export interface MailTestErr {
+  ok: false
+  error: string
+  detail: string
+}
+export type MailTestResponse = MailTestOk | MailTestErr
+
 // =====================================================================
 // Email verification (`site.admin_email`)
 // =====================================================================

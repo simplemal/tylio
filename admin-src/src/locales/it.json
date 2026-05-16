@@ -47,7 +47,9 @@
     "emailMissingTitle": "Non è stata impostata una email per l’admin",
     "emailUnverifiedTitle": "Non è stata verificata l’email {email}",
     "emailBannerBody": "Questa è fondamentale per ricevere le informazioni di accesso o ripristinare la password.",
-    "emailBannerAction": "Imposta"
+    "emailBannerAction": "Imposta",
+    "smtpMissingTitle": "Server SMTP non configurato",
+    "smtpMissingBody": "Senza queste impostazioni nessuna email parte (verifica admin, welcome, reset password, notifiche form)."
   },
   "nav": {
     "dashboard": "Tessere",
@@ -517,6 +519,24 @@
       "timeMinutesAgo": "{n}min fa",
       "timeHoursAgo": "{n}h fa",
       "timeDaysAgo": "{n}g fa"
+    },
+    "smtp": {
+      "title": "Server SMTP",
+      "intro": "Senza un server SMTP configurato tylio non può inviare email (codici di verifica, welcome, reset password, notifiche del form contatti). Compila i campi e poi prova con \"Invia email di prova\".",
+      "host": "Host",
+      "hostHelp": "Es. smtp.gmail.com, smtp.aruba.it, smtp.mailgun.org.",
+      "port": "Porta",
+      "security": "Sicurezza",
+      "securityNone": "Nessuna (sconsigliato)",
+      "user": "Utente",
+      "pass": "Password",
+      "fromAddress": "Mittente (email)",
+      "fromAddressHelp": "L’indirizzo che apparirà nel campo \"Da:\" delle email inviate.",
+      "fromName": "Mittente (nome)",
+      "testButton": "Invia email di prova",
+      "testing": "Invio in corso…",
+      "testHint": "Spedisce un’email a site.admin_email usando le impostazioni salvate. Salva prima per testare l’ultima versione.",
+      "testSuccess": "Email di prova inviata a {to}. Controlla la casella (inclusa la cartella spam)."
     },
     "archive": {
       "title": "Esporta sito",

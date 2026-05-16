@@ -13,6 +13,7 @@ import {
   type Stats,
   type Submission,
   type Theme,
+  type MailTestResponse,
   type UpdateApplyResponse,
   type UpdateCheckResponse,
   type UpdateStateResponse,
@@ -134,6 +135,14 @@ export const api = {
   // the SPA tick + countdown without re-parsing every settings row.
   emailVerificationStatus: () =>
     request<EmailVerificationStatus>('/admin/email/status'),
+
+  // SMTP smoke-test triggered by Settings → SMTP → "Invia email di prova".
+  // If `to` is omitted the server defaults to `site.admin_email`.
+  mailTest: (to?: string) =>
+    request<MailTestResponse>('/admin/mail/test', {
+      method: 'POST',
+      body: JSON.stringify(to ? { to } : {}),
+    }),
   verifyEmailCode: (code: string) =>
     request<{ ok: true; verified_at: string }>('/admin/email/verify', {
       method: 'POST',

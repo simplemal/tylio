@@ -8,6 +8,7 @@ use Tylio\Controllers\ExportController;
 use Tylio\Controllers\FaviconController;
 use Tylio\Controllers\ImportController;
 use Tylio\Controllers\InstallController;
+use Tylio\Controllers\MailController;
 use Tylio\Controllers\MediaController;
 use Tylio\Controllers\PageController;
 use Tylio\Controllers\SettingsController;
@@ -132,6 +133,13 @@ return static function (App $app): void {
         $g->get('/admin/email/status', [EmailVerificationController::class, 'status']);
         $g->post('/admin/email/verify', [EmailVerificationController::class, 'verify']);
         $g->post('/admin/email/resend-code', [EmailVerificationController::class, 'resend']);
+
+        // SMTP smoke-test from Settings → SMTP → "Invia email di prova".
+        // Returns 200 / 4xx-5xx with a `detail` string the SPA renders
+        // inline so the admin sees the actual SMTP error (auth failed,
+        // host unreachable, certificate problem, ecc.) without digging
+        // in the mail log.
+        $g->post('/admin/mail/test', [MailController::class, 'test']);
 
         // 2FA management endpoints (user already authenticated).
         $g->get('/2fa/status', [TwoFactorController::class, 'status']);

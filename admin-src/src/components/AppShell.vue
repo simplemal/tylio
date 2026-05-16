@@ -221,15 +221,29 @@ router.afterEach(() => refreshShellState())
 
     <!-- Main content -->
     <main class="flex-1 md:ml-64 p-5 md:p-8 max-w-6xl">
-      <!-- Admin email banner: shown until the admin sets AND verifies
-           an email. Two messages share the same warn-box chrome:
-             - `needsEmailSet`     → "Non è stata impostata una email…"
-             - `needsEmailVerify`  → "Non è stata verificata l'email…"
-           Both link to Settings (anchor `#email`) so the user can act
-           in one click. Persistent (no dismiss) by design — the email
-           is the only password-reset / 2FA-fallback channel. -->
+      <!-- Shell-wide warning banner. SINGLE slot driven by the site
+           store's `activeBanner` getter — the priority order (SMTP >
+           email-missing > email-unverified) is encoded there so the
+           template only renders ONE message at a time. Banners are
+           persistent (no dismiss) by design: each is about a setup
+           step that downstream features depend on. -->
       <router-link
-        v-if="site.needsEmailSet || site.needsEmailVerify"
+        v-if="site.activeBanner === 'smtp'"
+        :to="{ name: 'settings', hash: '#smtp' }"
+        class="warn-box mb-5 rounded-xl px-4 py-3 flex items-start gap-3 hover:no-underline"
+        role="alert"
+      >
+        <iconify-icon icon="lucide:server-off" width="20" class="warn-icon mt-0.5 shrink-0"></iconify-icon>
+        <div class="text-sm leading-snug flex-1">
+          <p class="warn-strong font-medium">{{ t('shell.smtpMissingTitle') }}</p>
+          <p class="mt-0.5 opacity-90">{{ t('shell.smtpMissingBody') }}</p>
+        </div>
+        <span class="warn-strong self-center text-xs underline-offset-2 underline whitespace-nowrap">
+          {{ t('shell.emailBannerAction') }}
+        </span>
+      </router-link>
+      <router-link
+        v-else-if="site.activeBanner === 'email-missing' || site.activeBanner === 'email-unverified'"
         :to="{ name: 'settings', hash: '#email' }"
         class="warn-box mb-5 rounded-xl px-4 py-3 flex items-start gap-3 hover:no-underline"
         role="alert"
@@ -237,7 +251,7 @@ router.afterEach(() => refreshShellState())
         <iconify-icon icon="lucide:mail-warning" width="20" class="warn-icon mt-0.5 shrink-0"></iconify-icon>
         <div class="text-sm leading-snug flex-1">
           <p class="warn-strong font-medium">
-            <template v-if="site.needsEmailSet">{{ t('shell.emailMissingTitle') }}</template>
+            <template v-if="site.activeBanner === 'email-missing'">{{ t('shell.emailMissingTitle') }}</template>
             <template v-else>{{ t('shell.emailUnverifiedTitle', { email: site.adminEmail }) }}</template>
           </p>
           <p class="mt-0.5 opacity-90">{{ t('shell.emailBannerBody') }}</p>

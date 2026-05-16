@@ -46,11 +46,43 @@ class Mailer
     public function __construct(
         private Config $config,
         private I18n $i18n,
+        private ?DB $db = null,
     ) {}
+
+    /**
+     * Configured DSN. Built from `settings.mail.*` if `mail.host` is
+     * non-empty; otherwise falls back to the env `MAIL_DSN`. Returns
+     * empty string when neither path yields a usable DSN — that's the
+     * "Mailer disabled" state (no SMTP set up yet).
+     *
+     * **Extendable by design.** SaaS overlay overrides to pull from
+     * tenant-scoped settings.
+     */
+    protected function dsn(): string
+    {
+        // Settings-first: if the admin filled the SMTP form, those win.
+        $host = $this->settingsString('mail.host');
+        if ($host !== '') {
+            $port = $this->settingsString('mail.port');
+            $port = $port !== '' ? $port : '587';
+            $security = $this->settingsString('mail.security');
+            if ($security === '') $security = 'tls';
+            $user = rawurlencode($this->settingsString('mail.user'));
+            $pass = rawurlencode($this->settingsString('mail.pass'));
+            // smtps:// for implicit-TLS on 465; smtp:// + ?encryption=tls
+            // for STARTTLS on 587. 'none' = plain SMTP on 25 / 2525.
+            $scheme = $security === 'ssl' ? 'smtps' : 'smtp';
+            $auth = ($user !== '' || $pass !== '') ? "$user:$pass@" : '';
+            $query = $security === 'tls' ? '?encryption=tls' : '';
+            return "$scheme://$auth$host:$port$query";
+        }
+        // Fallback to env DSN (legacy installs + dev convenience).
+        return (string)$this->config->get('MAIL_DSN', '');
+    }
 
     public function isEnabled(): bool
     {
-        return (string)$this->config->get('MAIL_DSN', '') !== '';
+        return $this->dsn() !== '';
     }
 
     public function lastError(): ?string
@@ -60,22 +92,48 @@ class Mailer
 
     public function fromAddress(): string
     {
+        $settings = $this->settingsString('mail.from_address');
+        if ($settings !== '') return $settings;
         return (string)$this->config->get('MAIL_FROM_ADDRESS', 'hello@example.com');
     }
 
     public function fromName(): string
     {
+        $settings = $this->settingsString('mail.from_name');
+        if ($settings !== '') return $settings;
         return (string)$this->config->get('MAIL_FROM_NAME', 'tylio');
     }
 
     public function privacyAddress(): string
     {
+        $settings = $this->settingsString('mail.privacy_address');
+        if ($settings !== '') return $settings;
         return (string)$this->config->get('MAIL_PRIVACY_ADDRESS', $this->fromAddress());
     }
 
     public function supportAddress(): string
     {
+        $settings = $this->settingsString('mail.support_address');
+        if ($settings !== '') return $settings;
         return (string)$this->config->get('MAIL_SUPPORT_ADDRESS', $this->fromAddress());
+    }
+
+    /**
+     * Read a settings row value. Returns empty string if no DB was
+     * injected (legacy bootstrap), if the row is missing, or if the
+     * decoded value isn't a string.
+     */
+    protected function settingsString(string $key): string
+    {
+        if ($this->db === null) return '';
+        try {
+            $row = $this->db->one('SELECT value FROM settings WHERE key = ? LIMIT 1', [$key]);
+        } catch (\Throwable) {
+            return '';
+        }
+        if ($row === null) return '';
+        $decoded = json_decode((string)($row['value'] ?? ''), true);
+        return is_string($decoded) ? $decoded : '';
     }
 
     /**
@@ -512,7 +570,7 @@ class Mailer
     private function getMailer(): SymfonyMailer
     {
         if ($this->mailer === null) {
-            $dsn = (string)$this->config->get('MAIL_DSN', '');
+            $dsn = $this->dsn();
             $transport = Transport::fromDsn($dsn);
             $this->mailer = new SymfonyMailer($transport);
         }

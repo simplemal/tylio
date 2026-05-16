@@ -25,12 +25,25 @@ export const useSite = defineStore('site', {
   state: () => ({
     maintenance: false,
     title: '',
+    mailHost: '',
+    mailFromEnvOnly: false, // true when env MAIL_DSN is set but no settings.mail.host
     adminEmail: '',
     adminEmailVerifiedAt: '' as string | null | '',
     loaded: false,
     emailLoaded: false,
   }),
   getters: {
+    /**
+     * SMTP isn't configured from the admin's POV: no `settings.mail.host`
+     * AND the legacy env `MAIL_DSN` (if any) is unknown to the SPA. We
+     * conservatively treat this as "needs setup" — the banner shows.
+     * If the admin DID set an env-only DSN historically, they can clear
+     * the banner by filling `mail.host` in the UI (which the Mailer
+     * will then prefer anyway).
+     */
+    needsSmtpConfig(): boolean {
+      return this.loaded && this.mailHost === '' && !this.mailFromEnvOnly
+    },
     /**
      * The admin still needs to set an email. `''` (the seed value when
      * the migration ran on an existing install) is treated as "missing".
@@ -48,6 +61,24 @@ export const useSite = defineStore('site', {
         && this.adminEmail !== ''
         && (this.adminEmailVerifiedAt === null || this.adminEmailVerifiedAt === '')
     },
+    /**
+     * Priority resolver for the shell-wide warning banner. Returns the
+     * first warning to surface — DO NOT stack multiple banners. Order
+     * (Maurizio 2026-05-16):
+     *   1. SMTP not configured → without this, NO email can be sent,
+     *      so every downstream warning would be unactionable anyway.
+     *   2. Admin email not set → password reset / 2FA fallback has no
+     *      target.
+     *   3. Admin email set but not verified → can still receive mail,
+     *      just unverified.
+     * Returns the empty string when no banner should show.
+     */
+    activeBanner(): '' | 'smtp' | 'email-missing' | 'email-unverified' {
+      if (this.needsSmtpConfig) return 'smtp'
+      if (this.needsEmailSet) return 'email-missing'
+      if (this.needsEmailVerify) return 'email-unverified'
+      return ''
+    },
   },
   actions: {
     async refresh() {
@@ -56,6 +87,8 @@ export const useSite = defineStore('site', {
         this.maintenance = Boolean(r.settings['site.maintenance'])
         const t = r.settings['site.title']
         this.title = typeof t === 'string' ? t : ''
+        const mh = r.settings['mail.host']
+        this.mailHost = typeof mh === 'string' ? mh : ''
         this.loaded = true
       } catch {
         // silent: banners aren't critical
@@ -79,6 +112,8 @@ export const useSite = defineStore('site', {
       this.maintenance = Boolean(settings['site.maintenance'])
       const t = settings['site.title']
       this.title = typeof t === 'string' ? t : ''
+      const mh = settings['mail.host']
+      this.mailHost = typeof mh === 'string' ? mh : ''
       this.loaded = true
     },
     setEmailStatus(email: string, verifiedAt: string | null) {
@@ -89,6 +124,8 @@ export const useSite = defineStore('site', {
     clear() {
       this.maintenance = false
       this.title = ''
+      this.mailHost = ''
+      this.mailFromEnvOnly = false
       this.adminEmail = ''
       this.adminEmailVerifiedAt = ''
       this.loaded = false

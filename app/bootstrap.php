@@ -62,6 +62,7 @@ return static function (): \Slim\App {
     $container->set(Mailer::class, fn(Container $c) => new Mailer(
         $config,
         $c->get(I18n::class),
+        $c->get(DB::class),
     ));
     // Email verification for `site.admin_email`: code generation, hash
     // storage, rate-limited resend. See `app/Services/EmailVerification.php`.
@@ -69,6 +70,11 @@ return static function (): \Slim\App {
         $c->get(DB::class),
         $config,
         $c->get(Mailer::class),
+    ));
+    // MailController: SMTP smoke-test endpoint (`POST /api/admin/mail/test`).
+    $container->set(\Tylio\Controllers\MailController::class, fn(Container $c) => new \Tylio\Controllers\MailController(
+        $c->get(Mailer::class),
+        $c->get(DB::class),
     ));
     $container->set(Renderer::class, fn(Container $c) => new Renderer(
         $c->get(DB::class),

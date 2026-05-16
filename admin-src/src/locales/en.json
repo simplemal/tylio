@@ -47,7 +47,9 @@
     "emailMissingTitle": "No admin email is set",
     "emailUnverifiedTitle": "Email {email} hasn’t been verified",
     "emailBannerBody": "It's required to receive login info or recover your password.",
-    "emailBannerAction": "Set"
+    "emailBannerAction": "Set",
+    "smtpMissingTitle": "SMTP server is not configured",
+    "smtpMissingBody": "Without these settings no email is sent (admin verification, welcome, password reset, form notifications)."
   },
   "nav": {
     "dashboard": "Tiles",
@@ -517,6 +519,24 @@
       "timeMinutesAgo": "{n}m ago",
       "timeHoursAgo": "{n}h ago",
       "timeDaysAgo": "{n}d ago"
+    },
+    "smtp": {
+      "title": "SMTP server",
+      "intro": "Without an SMTP server configured, tylio can't send any email (verification codes, welcome, password reset, contact form notifications). Fill in the fields, save, then click \"Send test email\".",
+      "host": "Host",
+      "hostHelp": "E.g. smtp.gmail.com, smtp.mailgun.org, smtp.fastmail.com.",
+      "port": "Port",
+      "security": "Security",
+      "securityNone": "None (not recommended)",
+      "user": "User",
+      "pass": "Password",
+      "fromAddress": "From (email)",
+      "fromAddressHelp": "The address that will appear in the \"From:\" field of outgoing emails.",
+      "fromName": "From (name)",
+      "testButton": "Send test email",
+      "testing": "Sending…",
+      "testHint": "Sends an email to site.admin_email using the saved settings. Save first to test the latest version.",
+      "testSuccess": "Test email sent to {to}. Check your inbox (and the spam folder)."
     },
     "archive": {
       "title": "Export site",

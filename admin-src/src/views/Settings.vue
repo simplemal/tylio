@@ -513,6 +513,43 @@ async function save() {
   }
 }
 
+// ===== SMTP test =====
+// `runMailTest()` POSTs to /api/admin/mail/test which dispatches a real
+// email to `site.admin_email` (or to a body-supplied address) using the
+// configured DSN. The result is rendered inline beneath the button so
+// the admin sees the SMTP error verbatim when something is misconfigured
+// — without digging through `data/logs/mail.log`.
+const mailTesting = ref(false)
+const mailTestResult = ref<{ ok: boolean; message: string } | null>(null)
+async function runMailTest(): Promise<void> {
+  if (mailTesting.value) return
+  mailTesting.value = true
+  mailTestResult.value = null
+  try {
+    const r = await api.mailTest()
+    if (r.ok) {
+      mailTestResult.value = {
+        ok: true,
+        message: t('settings.smtp.testSuccess', { to: r.to }),
+      }
+    } else {
+      mailTestResult.value = { ok: false, message: r.detail }
+    }
+  } catch (e: unknown) {
+    let detail: string
+    if (e instanceof ApiError && typeof e.data?.detail === 'string' && e.data.detail) {
+      detail = e.data.detail
+    } else if (e instanceof ApiError) {
+      detail = t('settings.errors.errorWithStatus', { status: e.status })
+    } else {
+      detail = t('settings.errors.networkError')
+    }
+    mailTestResult.value = { ok: false, message: detail }
+  } finally {
+    mailTesting.value = false
+  }
+}
+
 // ===== Admin email verification =====
 // Drives the Communications section: shows the current email, a
 // verified tick OR a pending-code widget (input + countdown + resend).
@@ -1108,6 +1145,147 @@ async function performDelete() {
        Replaces the legacy contact.notify_email field. The verification
        request is auto-fired on email change (server-side) — the SPA
        never has a "send code" button, only "Verify" + "Resend (X:YY)". -->
+  <!-- ===== SMTP card =====
+       Configurazione del trasporto email. Senza queste impostazioni il
+       Mailer è in no-op mode: ogni invio (verifica admin, welcome,
+       password reset, notifica form) viene loggato in
+       `data/logs/mail.log` ma NON arriva. La sezione è renderizzata
+       sopra Communications perché — senza SMTP — l'email admin
+       sottostante è priva di valore (nessun codice di verifica può
+       essere consegnato). -->
+  <section id="smtp" class="tile mt-5 scroll-mt-24">
+    <h2 class="font-display text-xl mt-2 pb-1 border-b border-white/10 mb-3">
+      {{ t('settings.smtp.title') }}
+    </h2>
+    <p class="text-xs text-ink-300 mb-4 leading-relaxed">
+      {{ t('settings.smtp.intro') }}
+    </p>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="field">
+        <label for="mail.host">{{ t('settings.smtp.host') }}</label>
+        <input
+          id="mail.host"
+          v-model="settings['mail.host']"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="smtp.example.com"
+        />
+        <p class="text-xs text-ink-300 mt-1">{{ t('settings.smtp.hostHelp') }}</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4">
+        <div class="field">
+          <label for="mail.port">{{ t('settings.smtp.port') }}</label>
+          <input
+            id="mail.port"
+            v-model="settings['mail.port']"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]+"
+            autocomplete="off"
+            placeholder="587"
+          />
+        </div>
+        <div class="field">
+          <label for="mail.security">{{ t('settings.smtp.security') }}</label>
+          <select id="mail.security" v-model="settings['mail.security']">
+            <option value="tls">STARTTLS (587)</option>
+            <option value="ssl">SMTPS (465)</option>
+            <option value="none">{{ t('settings.smtp.securityNone') }}</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="mail.user">{{ t('settings.smtp.user') }}</label>
+        <input
+          id="mail.user"
+          v-model="settings['mail.user']"
+          type="text"
+          autocomplete="off"
+          spellcheck="false"
+        />
+      </div>
+
+      <div class="field">
+        <label for="mail.pass">{{ t('settings.smtp.pass') }}</label>
+        <input
+          id="mail.pass"
+          v-model="settings['mail.pass']"
+          type="password"
+          autocomplete="off"
+        />
+      </div>
+
+      <div class="field">
+        <label for="mail.from_address">{{ t('settings.smtp.fromAddress') }}</label>
+        <input
+          id="mail.from_address"
+          v-model="settings['mail.from_address']"
+          type="email"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="hello@example.com"
+        />
+        <p class="text-xs text-ink-300 mt-1">{{ t('settings.smtp.fromAddressHelp') }}</p>
+      </div>
+
+      <div class="field">
+        <label for="mail.from_name">{{ t('settings.smtp.fromName') }}</label>
+        <input
+          id="mail.from_name"
+          v-model="settings['mail.from_name']"
+          type="text"
+          autocomplete="off"
+          placeholder="tylio"
+        />
+      </div>
+    </div>
+
+    <!-- Test button + inline outcome. The test ALWAYS hits the server
+         with the SAVED settings (not the in-form state) — that's a
+         feature: it forces the admin to "Salva" first and confirms
+         the persisted DSN works. -->
+    <div class="mt-4 flex items-center gap-3 flex-wrap">
+      <button
+        type="button"
+        class="btn btn-ghost smtp-test-btn"
+        :disabled="mailTesting"
+        @click="runMailTest()"
+      >
+        <iconify-icon
+          :icon="mailTesting ? 'lucide:loader-2' : 'lucide:send'"
+          :class="mailTesting ? 'animate-spin' : ''"
+          width="16"
+        ></iconify-icon>
+        {{ mailTesting ? t('settings.smtp.testing') : t('settings.smtp.testButton') }}
+      </button>
+      <p class="text-xs text-ink-300 leading-relaxed flex-1 min-w-[200px]">
+        {{ t('settings.smtp.testHint') }}
+      </p>
+    </div>
+    <div
+      v-if="mailTestResult"
+      class="mt-3 rounded-xl px-4 py-3 flex items-start gap-3"
+      :class="mailTestResult.ok ? 'smtp-test-outcome--ok' : 'smtp-test-outcome--err'"
+    >
+      <iconify-icon
+        :icon="mailTestResult.ok ? 'lucide:check-circle-2' : 'lucide:alert-circle'"
+        width="18"
+        class="mt-0.5 shrink-0"
+      ></iconify-icon>
+      <p class="text-sm leading-snug">{{ mailTestResult.message }}</p>
+    </div>
+  </section>
+
+  <!-- Empty anchor target for the AppShell email banner's deep link
+       (router-link to { name: 'settings', hash: '#email' }). The whole
+       Communications section IS the email config, so the anchor is
+       semantically aligned to it but lives as a sibling div so we
+       don't have to rename the section's existing id. -->
+  <div id="email" class="scroll-mt-24" aria-hidden="true"></div>
   <section id="communications" class="tile mt-5 scroll-mt-24">
     <h2 class="font-display text-xl mt-2 pb-1 border-b border-white/10 mb-3">
       {{ t('settings.groups.communications') }}
@@ -1711,5 +1889,24 @@ async function performDelete() {
   background: rgb(220 38 38 / 0.08);
   border-color: rgb(220 38 38 / 0.45);
   color: rgb(252 165 165);
+}
+
+/* SMTP test inline outcome — same two-state visual as the update
+   outcome but on its own pair of classes so the test result can
+   coexist with a parallel update outcome on the page. */
+.smtp-test-outcome--ok {
+  background: rgb(var(--accent-rgb) / 0.08);
+  border: 1px solid rgb(var(--accent-rgb) / 0.35);
+  color: rgb(var(--ink-100-rgb));
+}
+.smtp-test-outcome--err {
+  background: rgb(220 38 38 / 0.08);
+  border: 1px solid rgb(220 38 38 / 0.45);
+  color: rgb(252 165 165);
+}
+.smtp-test-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 </style>
