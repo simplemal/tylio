@@ -88,7 +88,7 @@ final class Migrations
     public function run(): array
     {
         $fingerprint = $this->computeFingerprint();
-        if ($fingerprint !== '' && $this->fingerprintMatchesStamp($fingerprint)) {
+        if ($fingerprint !== '' && $this->fingerprintMatchesStamp($fingerprint) && $this->dbHasMigrationsTable()) {
             return [];
         }
         $this->ensureMigrationsTable();
@@ -129,6 +129,25 @@ final class Migrations
         $stamp = $this->stampPath();
         if (!is_file($stamp)) return false;
         return trim((string)@file_get_contents($stamp)) === $fingerprint;
+    }
+
+    /**
+     * Guard against a stale stamp: if someone wiped `db.sqlite` but
+     * left `data/.migrations-stamp` around (e.g. recovery from a bad
+     * import), the fingerprint would still match the files on disk
+     * and the fast-path would silently skip — leaving the new DB with
+     * zero tables. Re-running everything when the marker table is
+     * missing is cheap (idempotent migrations) and saves an hour of
+     * "no such table" debugging.
+     */
+    private function dbHasMigrationsTable(): bool
+    {
+        try {
+            $row = $this->db->one("SELECT name FROM sqlite_master WHERE type='table' AND name='migrations' LIMIT 1");
+            return $row !== null;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function writeStamp(string $fingerprint): void
