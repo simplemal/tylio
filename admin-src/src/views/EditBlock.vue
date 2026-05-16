@@ -121,6 +121,31 @@ function resetSpan() {
   block.value.style = rest
 }
 
+// "Alignment" — per-block content alignment override. Stored in
+// `style.align` ('left' | 'center' | 'right'). Default 'left' is NOT
+// persisted (keep the style object lean). Effect is applied via the
+// .m-tile--align-{x} class emitted by layout.php and styled in
+// public.css. Universal control: every block type accepts it.
+type AlignValue = 'left' | 'center' | 'right'
+const currentAlign = computed<AlignValue>({
+  get() {
+    const s = block.value?.style as Record<string, unknown> | undefined
+    const v = s?.align
+    if (v === 'center' || v === 'right') return v
+    return 'left'
+  },
+  set(v: AlignValue) {
+    if (!block.value) return
+    const cur = (block.value.style ?? {}) as Record<string, unknown>
+    if (v === 'left') {
+      const { align: _, ...rest } = cur
+      block.value.style = rest
+    } else {
+      block.value.style = { ...cur, align: v }
+    }
+  },
+})
+
 // "No background" — per-block override that ignores the theme's
 // tile-style: the tile becomes transparent (no bg, border, shadow),
 // content goes edge-to-edge. Useful for dividers, hero, blocks that
@@ -359,6 +384,43 @@ async function applyDividerToAll() {
           </span>
         </div>
 
+        <!-- Alignment: per-block content alignment (left / center / right).
+             Default left is not persisted. Applied via .m-tile--align-{x}
+             class on the public <article>. Universal — every block type
+             accepts this control. -->
+        <div class="flex items-center gap-3 pb-4 mb-4 border-b border-white/5 flex-wrap">
+          <span class="text-sm font-medium text-ink-100">{{ t('editBlock.alignLabel') }}</span>
+          <div class="span-seg" role="group" :aria-label="t('editBlock.alignLabel')">
+            <button
+              type="button"
+              class="span-seg__btn"
+              :class="{ 'is-active': currentAlign === 'left' }"
+              @click="currentAlign = 'left'"
+            >
+              <iconify-icon icon="lucide:align-left" width="14"></iconify-icon>
+              {{ t('editBlock.alignLeft') }}
+            </button>
+            <button
+              type="button"
+              class="span-seg__btn"
+              :class="{ 'is-active': currentAlign === 'center' }"
+              @click="currentAlign = 'center'"
+            >
+              <iconify-icon icon="lucide:align-center" width="14"></iconify-icon>
+              {{ t('editBlock.alignCenter') }}
+            </button>
+            <button
+              type="button"
+              class="span-seg__btn"
+              :class="{ 'is-active': currentAlign === 'right' }"
+              @click="currentAlign = 'right'"
+            >
+              <iconify-icon icon="lucide:align-right" width="14"></iconify-icon>
+              {{ t('editBlock.alignRight') }}
+            </button>
+          </div>
+        </div>
+
         <!-- Tile background: per-block override that beats the theme's
              global tile-style. "Default" = the block inherits the theme's
              tile style. "No background" = transparent, no border, no
@@ -387,9 +449,6 @@ async function applyDividerToAll() {
               {{ t('editBlock.backgroundNone') }}
             </button>
           </div>
-          <span class="text-xs text-ink-300 ml-auto">
-            {{ t('editBlock.backgroundHint') }}
-          </span>
         </div>
 
         <!-- Section title size: applicable to all blocks that have a
