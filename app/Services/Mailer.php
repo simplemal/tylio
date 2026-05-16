@@ -44,9 +44,9 @@ class Mailer
     private ?string $lastError = null;
 
     public function __construct(
-        private Config $config,
-        private I18n $i18n,
-        private ?DB $db = null,
+        protected Config $config,
+        protected I18n $i18n,
+        protected ?DB $db = null,
     ) {}
 
     /**
@@ -134,6 +134,24 @@ class Mailer
         if ($row === null) return '';
         $decoded = json_decode((string)($row['value'] ?? ''), true);
         return is_string($decoded) ? $decoded : '';
+    }
+
+    /**
+     * Lettura boolean dello stesso store. Per i settings come
+     * `mail.use_custom_smtp` che sono encoded come `json('false')` /
+     * `json('true')` — settingsString restituirebbe '' perché il
+     * JSON-decoded value non è string.
+     */
+    protected function settingsBool(string $key): bool
+    {
+        if ($this->db === null) return false;
+        try {
+            $row = $this->db->one('SELECT value FROM settings WHERE key = ? LIMIT 1', [$key]);
+        } catch (\Throwable) {
+            return false;
+        }
+        if ($row === null) return false;
+        return (bool)json_decode((string)($row['value'] ?? ''), true);
     }
 
     /**

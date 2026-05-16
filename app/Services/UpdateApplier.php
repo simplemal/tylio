@@ -345,12 +345,27 @@ class UpdateApplier
     // -------------------------------------------------------------------
 
     /**
-     * Stream the asset to a unique file under the system temp dir.
+     * Temp dir for downloads + staging — sotto `$rootPath/data/` per
+     * stare sullo stesso filesystem del target dello swap. Su molti
+     * server `/tmp` e `/var/www/...` sono mount diversi e `rename()`
+     * cross-filesystem fallisce con "Invalid cross-device link" →
+     * lo swap non avviene. (Fix dopo che è successo sul SaaS tylio.app
+     * con OssDependencyUpdater su staging in `/tmp`.)
+     */
+    protected function tempBase(): string
+    {
+        $base = rtrim($this->config->rootPath, '/') . '/data/.tylio-update-tmp';
+        if (!is_dir($base)) @mkdir($base, 0750, true);
+        return $base;
+    }
+
+    /**
+     * Stream the asset to a unique file under the in-tree temp dir.
      * Returns the absolute path, or null on failure.
      */
     protected function downloadTarball(string $url, string $version): ?string
     {
-        $tmpPath = sys_get_temp_dir() . '/tylio-update-' . $version . '-' . bin2hex(random_bytes(4)) . '.tar.gz';
+        $tmpPath = $this->tempBase() . '/' . $version . '-' . bin2hex(random_bytes(4)) . '.tar.gz';
         $in = @fopen($url, 'rb', false, stream_context_create([
             'http' => [
                 'method' => 'GET',
@@ -386,7 +401,8 @@ class UpdateApplier
      */
     protected function extractTarball(string $tarballPath): ?string
     {
-        $stagingDir = sys_get_temp_dir() . '/tylio-update-staging-' . bin2hex(random_bytes(4));
+        // Stessa filesystem del target swap — vedi tempBase().
+        $stagingDir = $this->tempBase() . '/staging-' . bin2hex(random_bytes(4));
         if (!mkdir($stagingDir, 0700, true)) return null;
         try {
             // PharData wants the .tar (not .tar.gz). Decompress first.
