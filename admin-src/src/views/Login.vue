@@ -223,10 +223,6 @@ function backToPassword() {
             {{ t('login.twoFactor.backupHelpFooter') }}
           </p>
         </div>
-        <label class="text-ink-300 text-xs mb-3 flex items-center gap-2 cursor-pointer">
-          <input v-model="useBackupCode" type="checkbox" />
-          <span>{{ t('login.twoFactor.backup') }}</span>
-        </label>
         <button class="btn btn-primary w-full justify-center" :disabled="loading">
           <iconify-icon
             v-if="loading"
@@ -238,6 +234,21 @@ function backToPassword() {
           {{ loading ? t('login.twoFactor.submitting') : t('login.twoFactor.submit') }}
         </button>
         <p v-if="error" class="text-red-300 text-sm mt-3 text-center">{{ error }}</p>
+        <!-- "Use a backup code" / "Use the authenticator code": styled
+             as a small underlined link below the primary button, in the
+             same visual register as "Hai dimenticato la password" on
+             the first step. Tapping it flips the input (TOTP ↔ backup)
+             without losing the partial 2FA session. -->
+        <div class="mt-3 text-center">
+          <button
+            type="button"
+            class="text-ink-300 hover:text-ink-100 text-sm underline decoration-dotted underline-offset-2 disabled:opacity-50"
+            :disabled="loading"
+            @click="useBackupCode = !useBackupCode; otpCode = ''"
+          >
+            {{ useBackupCode ? t('login.twoFactor.backupExit') : t('login.twoFactor.backup') }}
+          </button>
+        </div>
         <button
           type="button"
           class="btn btn-ghost w-full justify-center mt-2"
