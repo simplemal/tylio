@@ -436,7 +436,7 @@
       "errors": {
         "codeShape": "The code is 6 characters long.",
         "codeWrong": "Wrong code. Check the email and try again. After 5 wrong attempts you'll need to request a new code.",
-        "rateLimited": "Slow down: a fresh code can only be requested every 30 minutes.",
+        "rateLimited": "Slow down: a fresh code can be requested in {countdown}.",
         "network": "Network error. Try again."
       }
     },

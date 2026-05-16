@@ -13,7 +13,7 @@ use Tylio\Config;
  *   1. `requestCode($email)` — generate a 6-char Crockford-base32 code,
  *      store the hashed copy in `email_verifications`, and send it via
  *      `Mailer::sendVerificationCode()`. Rate-limited to one request per
- *      `RESEND_COOLDOWN` (30 min) per email.
+ *      `RESEND_COOLDOWN` (5 min) per email.
  *   2. `verifyCode($code)` — consume the latest pending row for the
  *      currently-configured admin email. 5 wrong attempts invalidate the
  *      row and force a new resend.
@@ -43,7 +43,7 @@ class EmailVerification
 
     public const CODE_LENGTH = 6;
     public const TTL_SECONDS = 86400;      // 24h
-    public const RESEND_COOLDOWN = 1800;   // 30 min between resends per email
+    public const RESEND_COOLDOWN = 300;    // 5 min between resends per email
     public const MAX_ATTEMPTS = 5;
 
     public function __construct(

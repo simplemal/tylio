@@ -436,7 +436,7 @@
       "errors": {
         "codeShape": "Il codice è di 6 caratteri.",
         "codeWrong": "Codice errato. Ricontrolla la mail e riprova. Dopo 5 tentativi sbagliati dovrai richiederne uno nuovo.",
-        "rateLimited": "Aspetta: si può richiedere un codice nuovo ogni 30 minuti.",
+        "rateLimited": "Aspetta: puoi richiedere un nuovo codice tra {countdown}.",
         "network": "Errore di rete. Riprova."
       }
     },

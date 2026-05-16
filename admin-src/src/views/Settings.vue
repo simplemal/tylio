@@ -405,7 +405,16 @@ async function runMailTest(): Promise<void> {
 const emailVerification = ref<EmailVerificationStatus | null>(null)
 const emailVerifyCode = ref('')
 const emailVerifyBusy = ref(false)
-const emailVerifyError = ref('')
+const emailVerifyErrorKind = ref<'' | 'codeShape' | 'codeWrong' | 'rateLimited' | 'network'>('')
+const emailVerifyError = computed(() => {
+  const k = emailVerifyErrorKind.value
+  if (!k) return ''
+  if (k === 'rateLimited') {
+    const countdown = emailCooldownLabel.value || '5:00'
+    return t('settings.email.errors.rateLimited', { countdown })
+  }
+  return t('settings.email.errors.' + k)
+})
 const emailVerifyJustOk = ref(false)
 const emailJustResent = ref(false)
 const emailCooldownTick = ref(0)
@@ -447,11 +456,11 @@ async function submitEmailVerifyCode(): Promise<void> {
   if (emailVerifyBusy.value) return
   const code = emailVerifyCode.value.trim().toUpperCase()
   if (code.length !== 6) {
-    emailVerifyError.value = t('settings.email.errors.codeShape')
+    emailVerifyErrorKind.value = 'codeShape'
     return
   }
   emailVerifyBusy.value = true
-  emailVerifyError.value = ''
+  emailVerifyErrorKind.value = ''
   try {
     await api.verifyEmailCode(code)
     emailVerifyJustOk.value = true
@@ -459,14 +468,14 @@ async function submitEmailVerifyCode(): Promise<void> {
     await loadEmailVerification()
     setTimeout(() => { emailVerifyJustOk.value = false }, 6000)
   } catch (e: unknown) {
-    if (e instanceof ApiError && e.status === 422) {
-      emailVerifyError.value = t('settings.email.errors.codeWrong')
-    } else if (e instanceof ApiError && e.status === 429) {
-      emailVerifyError.value = t('settings.email.errors.rateLimited')
-    } else {
-      emailVerifyError.value = t('settings.email.errors.network')
-    }
     await loadEmailVerification()
+    if (e instanceof ApiError && e.status === 422) {
+      emailVerifyErrorKind.value = 'codeWrong'
+    } else if (e instanceof ApiError && e.status === 429) {
+      emailVerifyErrorKind.value = 'rateLimited'
+    } else {
+      emailVerifyErrorKind.value = 'network'
+    }
   } finally {
     emailVerifyBusy.value = false
   }
@@ -476,19 +485,19 @@ async function requestNewEmailCode(): Promise<void> {
   if (emailVerifyBusy.value) return
   if (emailCooldownRemaining.value > 0) return
   emailVerifyBusy.value = true
-  emailVerifyError.value = ''
+  emailVerifyErrorKind.value = ''
   try {
     await api.requestEmailCode()
     emailJustResent.value = true
     await loadEmailVerification()
     setTimeout(() => { emailJustResent.value = false }, 6000)
   } catch (e: unknown) {
-    if (e instanceof ApiError && e.status === 429) {
-      emailVerifyError.value = t('settings.email.errors.rateLimited')
-    } else {
-      emailVerifyError.value = t('settings.email.errors.network')
-    }
     await loadEmailVerification()
+    if (e instanceof ApiError && e.status === 429) {
+      emailVerifyErrorKind.value = 'rateLimited'
+    } else {
+      emailVerifyErrorKind.value = 'network'
+    }
   } finally {
     emailVerifyBusy.value = false
   }
