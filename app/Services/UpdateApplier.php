@@ -141,7 +141,7 @@ class UpdateApplier
             }
             if (!$this->stagingLooksValid($stagingDir)) {
                 return $this->fail('staging_invalid',
-                    "L'archivio scaricato non contiene `app/` e `public/index.php` — "
+                    "L'archivio scaricato non contiene `app/` e `index.php` — "
                     . 'probabilmente non è un tylio source bundle.');
             }
 
@@ -348,11 +348,18 @@ class UpdateApplier
     /**
      * Spot-check: a real tylio source bundle must contain at least the
      * application entry-point and the Slim composer autoloader root.
+     *
+     * History: v0.3.1 wrongly checked `public/index.php` here — but
+     * tylio's canonical entry-point is `index.php` at the project root
+     * (with `.htaccess` rewriting every URL through it). The `public/`
+     * directory only holds static assets. Fixed in v0.3.3. Older v0.3.1
+     * installs can still upgrade because v0.3.3+ ships a stub at
+     * `public/index.php` that satisfies the old (buggy) check.
      */
     protected function stagingLooksValid(string $stagingDir): bool
     {
         return is_dir($stagingDir . '/app')
-            && is_file($stagingDir . '/public/index.php')
+            && is_file($stagingDir . '/index.php')
             && is_file($stagingDir . '/composer.json');
     }
 

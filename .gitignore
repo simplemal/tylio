@@ -24,7 +24,14 @@
 # to the GitHub release page as assets. Not versioned (re-built per
 # release).
 /tylio-admin-bundle-*.tar.gz
+/tylio-source-*.tar.gz
 
 # Legacy: an older Vite config wrote the admin SPA here. Ignored so
 # leftover copies on existing checkouts don't pollute commits.
-/public/
+# We ignore the CONTENTS (not the directory itself) so the exception
+# below can re-include the compat sentinel — git's negation rule
+# requires the parent dir not to be fully ignored.
+/public/*
+# Exception: keep the compat sentinel for the v0.3.1 UpdateApplier
+# (see public/index.php for the full rationale).
+!/public/index.php
