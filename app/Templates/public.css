@@ -574,8 +574,22 @@ a{color:inherit;text-decoration:none}
 }
 /* Project title: uses --app-accent (per-project color if the user set
    one; otherwise = --accent, default from .m-app). This way if the card
-   has a specific project color, the name reflects it too. */
-.m-app__name{font-family:var(--font-heading);font-size:18px;margin:0;font-weight:600;color:var(--app-accent)}
+   has a specific project color, the name reflects it too.
+   text-shadow halo: il fondo card è tinta dello stesso accent, quindi
+   il titolo "scompare" su accent saturi (es. progetto rosso su card
+   con tinta rossa). Doppia ombra dello stesso colore del fondo card
+   (close + blurry) crea un alone soft che stacca le lettere senza
+   intaccare l'accent. Invisibile quando il contrasto è già buono. */
+.m-app__name{
+  font-family:var(--font-heading);
+  font-size:18px;
+  margin:0;
+  font-weight:600;
+  color:var(--app-accent);
+  text-shadow:
+    0 0 1px var(--surface-alt),
+    0 0 6px var(--surface-alt);
+}
 .m-app__tagline{color:var(--text-muted);font-size:13px;margin:0}
 .m-app__desc{color:var(--text);font-size:14px;margin:0;line-height:1.5}
 /* Multi-tag container: the first tag inherits the card's "accent" style,
