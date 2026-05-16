@@ -124,6 +124,11 @@ class ImportController
             ]);
         }
 
+        if ($fromInstall) {
+            return $response
+                ->withStatus(303)
+                ->withHeader('Location', '/admin?imported=1');
+        }
         return AuthController::json($response, [
             'ok' => true,
             'summary' => $summary,

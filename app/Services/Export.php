@@ -133,8 +133,8 @@ class Export
     protected function exportBlocks(): array
     {
         $rows = $this->db->all(
-            'SELECT id, type, position, enabled, data, style, created_at, updated_at
-             FROM blocks ORDER BY position ASC, id ASC'
+            'SELECT id, type, position, enabled, data, style, parent_id, created_at, updated_at
+             FROM blocks ORDER BY (parent_id IS NOT NULL), parent_id, position ASC, id ASC'
         );
         $out = [];
         foreach ($rows as $r) {
@@ -145,6 +145,7 @@ class Export
                 'enabled' => (int)$r['enabled'],
                 'data' => $this->decodeJson($r['data'] ?? '{}'),
                 'style' => $this->decodeJson($r['style'] ?? '{}'),
+                'parent_id' => isset($r['parent_id']) ? (int)$r['parent_id'] : null,
                 'created_at' => (string)($r['created_at'] ?? ''),
                 'updated_at' => (string)($r['updated_at'] ?? ''),
             ];

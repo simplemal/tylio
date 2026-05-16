@@ -303,8 +303,10 @@ class Import
     {
         $this->db->exec('DELETE FROM blocks');
         $n = 0;
+        $hasIdAndParent = false;
         foreach ($blocks as $b) {
-            $this->db->insert('blocks', [
+            $sourceId = isset($b['id']) ? (int)$b['id'] : 0;
+            $row = [
                 'type' => (string)($b['type'] ?? ''),
                 'position' => (int)($b['position'] ?? 0),
                 'enabled' => (int)($b['enabled'] ?? 1),
@@ -312,8 +314,25 @@ class Import
                 'style' => json_encode($b['style'] ?? new \stdClass(), JSON_UNESCAPED_UNICODE),
                 'created_at' => (string)($b['created_at'] ?? date('Y-m-d H:i:s')),
                 'updated_at' => (string)($b['updated_at'] ?? date('Y-m-d H:i:s')),
-            ]);
+            ];
+            if ($sourceId > 0) {
+                $row['id'] = $sourceId;
+                $hasIdAndParent = true;
+            }
+            $this->db->insert('blocks', $row);
             $n++;
+        }
+        if ($hasIdAndParent) {
+            foreach ($blocks as $b) {
+                $sourceId = isset($b['id']) ? (int)$b['id'] : 0;
+                $parentId = isset($b['parent_id']) ? (int)$b['parent_id'] : 0;
+                if ($sourceId > 0 && $parentId > 0) {
+                    $this->db->query(
+                        'UPDATE blocks SET parent_id = ? WHERE id = ?',
+                        [$parentId, $sourceId],
+                    );
+                }
+            }
         }
         $this->log("insert.blocks n=$n");
         return $n;
