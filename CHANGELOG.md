@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.12 — 2026-05-16
+
+### Fixed — Banner "email non verificata" non spariva dopo verify
+
+Sintomo (Maurizio): verifico l'email con il codice, in Settings → Comunicazioni vedo subito il chip "Verificata", ma il banner shell-wide arancione "Non è stata verificata l'email…" sopra le pagine resta visibile. Cambio route, banner ancora là. Solo `Cmd+Shift+R` lo nasconde.
+
+Causa: `Settings.vue::loadEmailVerification` aggiornava solo la `ref` locale del componente, non il Pinia store `useSite()` che alimenta `site.activeBanner` (il computed che AppShell legge per scegliere quale banner mostrare). Il chip in-page e il banner shell leggevano da due fonti distinte; solo il primo si refreshava.
+
+Fix: dopo `api.emailVerificationStatus()` chiamo `site.setEmailStatus(email, verified_at)` — il store è già definito apposta in `stores/site.ts` (`setEmailStatus(email, verifiedAt)`), il bug era che Settings.vue non lo chiamava mai. Ora il banner sparisce in tempo reale.
+
+
 ## v0.3.11 — 2026-05-16
 
 ### Changed — Resend codice verifica email: cooldown 30 min → 5 min
