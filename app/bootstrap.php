@@ -22,6 +22,17 @@ use Tylio\Services\UpdateChecker;
 use Slim\Factory\AppFactory;
 
 return static function (): \Slim\App {
+    // Ensure every file/dir created by this worker is rw for the group
+    // too. Without this, the default php-fpm umask (022) makes db.sqlite,
+    // session files, logs, uploads and favicons mode 644/755 — owner rw
+    // only. On shared hosting where the sftp user (e.g. `ladyglow`)
+    // shares the www-data group with PHP-FPM, those mode bits mean
+    // either the sftp user OR www-data ends up read-only on files the
+    // other created. Result: "attempt to write a readonly database" the
+    // first time something tries to update the schema. umask(0007) =>
+    // files born 660, dirs 770, group preserved by the setgid bit on
+    // the parent.
+    umask(0007);
     $rootPath = dirname(__DIR__);
 
     if (file_exists($rootPath . '/.env')) {
