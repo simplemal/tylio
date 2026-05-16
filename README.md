@@ -33,6 +33,15 @@
 
 ## Install (first time)
 
+> **Option B — zero-dependency install from a GitHub release tarball.**
+> If you don't want to run Composer or Node at all, grab
+> `tylio-source-vX.Y.Z.tar.gz` from the
+> [latest release](https://github.com/simplemal/tylio/releases) — it
+> already ships with `vendor/` (Composer deps, no-dev) and `admin/` (built
+> SPA). Extract it on the server, run only steps 7 (runtime dirs), 8
+> (`.env`) and 9 (webserver). Same for in-app upgrades: the
+> `UpdateApplier` consumes the same tarball, no shell access required.
+
 > **Fast path for Ubuntu/Debian users:** run `sudo bash scripts/install-prereqs.sh`
 > after cloning. It installs PHP 8.3 with all extensions, Composer (official
 > installer), Node 20, and `sqlite3` — picking the right packages for your
@@ -179,12 +188,23 @@ Visit `https://your-domain.example/install` in a browser to:
 > boot — they're idempotent).
 >
 > **Migrating from a tylio.app SaaS tenant?** Drop a `.tar.gz` exported from
-> the SaaS admin into the install wizard's second card ("Importa un sito
-> esistente"). The importer rewrites the multi-tenant schema to single-tenant,
+> the SaaS admin into the install wizard's second card ("Or restore an
+> existing site"). The importer rewrites the multi-tenant schema to single-tenant,
 > moves the slug-scoped uploads to flat paths, and patches all DB references
-> in one shot. See *Troubleshooting* below for details.
+> in one shot. Edge cases (theme schema mismatch, broken `/uploads/<slug>/`
+> URLs after a manual migration) are covered in
+> [Troubleshooting → Migrated from SaaS](#migrated-from-a-tylioapp-saas-tenant-no-such-column-id-on-theme).
 
 ## Upgrade (from one version to the next)
+
+**Option A — from the admin UI (recommended, no shell needed).**
+Log in as admin → **Manutenzione → Aggiornamenti tylio → Verifica ora →
+Aggiorna ora**. The server downloads the latest source tarball from the
+GitHub release, swaps the install in place, runs pending migrations and
+resets opcache. Public visitors may see a 5xx for ~5–10s during the swap
+(recoverable on refresh); admin sessions stay logged in.
+
+**Option B — from the CLI (for shell users, or to pin a non-latest version).**
 
 ```bash
 cd my-site
@@ -253,7 +273,7 @@ script picks up where the previous run left off.
 # Pick a semver version (the leading `v` is optional, it gets added if
 # you omit it). Dry-runs aren't a thing — but every destructive step
 # (push, GitHub release) asks for explicit confirmation.
-scripts/make-release.sh v0.2.0
+scripts/make-release.sh v0.4.0
 ```
 
 What it does, in order:
