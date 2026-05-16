@@ -6,6 +6,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.13 — 2026-05-16
+
+### Fixed — Export/Import non preservava `parent_id` (group blocks)
+
+I block container di tipo `group` hanno children col `blocks.parent_id` settato (vedi migration 0008). Sia `Export::exportBlocks` (OSS) sia `TenantExport::exportBlocks` (SaaS overlay) NON includevano la colonna `parent_id` nel SELECT, e `Import::insertBlocks` non la riscriveva. Risultato: l'archivio portava i child blocks ma all'import perdevano il riferimento al group → diventavano top-level e il group restava vuoto. Layout sballato post-import (sintomo Maurizio su ladyglow.it).
+
+Fix in 3 punti:
+- `Export::exportBlocks` + `TenantExport::exportBlocks`: aggiunto `parent_id` al SELECT + al payload JSON. ORDER BY rivisto in modo che i parent vengano sempre prima dei children (`ORDER BY (parent_id IS NOT NULL), parent_id, position, id`).
+- `Import::insertBlocks`: preserva l'ID source durante l'INSERT (così `parent_id` riferisce correttamente alle nuove righe) + seconda passata `UPDATE blocks SET parent_id = ?` per riconnettere children → parent dopo che tutte le righe sono materializzate.
+
+### Fixed — `POST /install/import` rispondeva JSON al browser
+
+Quando il form HTML del wizard (`/install`, seconda card "Or restore an existing site") faceva submit, il server rispondeva `Content-Type: application/json` con `{ok:true, summary:{…}}` — il browser mostrava il JSON crudo su pagina bianca invece di portare l'utente al sito ricostruito. Ora `handleUpload($fromInstall=true)` redirige con HTTP 303 a `/admin?imported=1`. La risposta JSON resta per il path `/admin/import` (chiamato dal SPA via fetch).
+
+
 ## v0.3.12 — 2026-05-16
 
 ### Fixed — Banner "email non verificata" non spariva dopo verify
