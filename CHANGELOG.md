@@ -6,6 +6,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.15 — 2026-05-16
+
+### Changed — Pagina di benvenuto quando l'install non è ancora stato completato
+
+Prima: su un'install fresh prima di aver fatto `/install`, navigare alla home dava un Slim error generico ("A website error has occurred…") perché `PageController::home` provava a leggere blocks/settings da un DB che non esiste o senza utenti. Brutto sia come UX sia come "primo impatto" su un dominio appena live.
+
+Fix: `PageController::home` ora controlla `installPending()` (= zero utenti o tabella `users` inesistente) e in quel caso serve una pagina HTML auto-contenuta con logo, copy "tylio è installato ma non configurato — completa il setup creando l'utente admin o importando un archivio" e bottone CTA verso `/install`. Inline CSS, niente asset esterni, robots `noindex`. Nessun cambiamento al flow normale.
+
+
 ## v0.3.14 — 2026-05-16
 
 ### Fixed — Export/Import non migravano gli utenti (post-import: login impossibile)
