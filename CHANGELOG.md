@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.17 — 2026-05-16
+
+### Fixed — `Migrations::run` skippava su stamp stale (DB ricreato a mano)
+
+Sintomo (Maurizio, ladyglow.it): cancello `data/db.sqlite` per ripartire da zero, ricarico la home, vedo la landing "tylio non configurato", clicco `/install/import` e ricevo `SQLSTATE[HY000]: 1 no such table: blocks`.
+
+Causa: la fast-path di `Migrations::run` confrontava solo il fingerprint dei file di migrazione su disco col `data/.migrations-stamp`. Lo stamp era rimasto dal vecchio DB: file = uguali, fingerprint = match, skip. Il nuovo `db.sqlite` veniva creato vuoto da PDO al primo `SELECT`, ma niente migration veniva applicata.
+
+Fix: dopo il match dello stamp, controllo addizionale `SELECT name FROM sqlite_master WHERE type='table' AND name='migrations'`. Se la tabella `migrations` non c'è, il DB è nuovo e si rilanciano tutte le migration (idempotenti, costo trascurabile). Niente più "no such table" su recovery che cancella il `db.sqlite` ma scorda lo stamp.
+
+
 ## v0.3.16 — 2026-05-16
 
 ### Fixed — Landing "install pending": usa il logo reale tylio
