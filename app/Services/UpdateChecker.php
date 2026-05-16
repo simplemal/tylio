@@ -41,9 +41,14 @@ class UpdateChecker
      *   1. `git describe --tags --always` if a `.git` directory exists
      *      and `exec()` is available (returns `v0.3.0` or
      *      `v0.3.0-15-gabc1234` after extra commits past the last tag).
-     *   2. BUILD/.version file via {@see \Tylio\Util\Build::version()}
-     *      → prefixed `build-` so it never looks like a semver tag.
-     *   3. Fallback `dev`.
+     *   2. `BUILD` file at the project root — the release marker
+     *      written by `scripts/make-release.sh` (always a semver tag
+     *      like `v0.3.4`). Preferred over `.version` for the UX
+     *      label because `.version` holds a per-deploy timestamp
+     *      meant for cachebusting, NOT for human-readable version.
+     *   3. `Util\Build::version()` (timestamp from `.version`) →
+     *      prefixed `build-` so it never looks like a semver tag.
+     *   4. Fallback `dev`.
      */
     public function currentVersion(): string
     {
@@ -52,12 +57,22 @@ class UpdateChecker
             $describe = $this->gitDescribe($root);
             if ($describe !== '') return $describe;
         }
-        // Fallback: read the BUILD/.version file via the cache-buster util.
+        // Prefer the BUILD file (semver tag) over Util\Build::version's
+        // candidate search, which hits .version (timestamp) first. Was
+        // the source of the v0.3.4 install showing "build-2026-05-16-…"
+        // instead of "v0.3.4" right after a fresh install or upgrade.
+        $buildFile = $root . '/BUILD';
+        if (is_file($buildFile)) {
+            $v = trim((string)file_get_contents($buildFile));
+            if ($v !== '' && $v !== 'dev' && preg_match('/^v?\d+\.\d+\.\d+/', $v)) {
+                return $v;
+            }
+        }
+        // Fallback to the cachebuster util (typically returns the
+        // .version timestamp). Prefix `build-` so the semver compare
+        // in check() treats it as "older than every release".
         $build = \Tylio\Util\Build::version();
         if ($build !== '' && $build !== 'dev') {
-            // If the build file contains something that already looks like
-            // a semver tag (`v0.1.0`), return as-is. Otherwise prefix with
-            // `build-` to make it obvious this isn't a release tag.
             return preg_match('/^v?\d+\.\d+\.\d+/', $build) ? $build : 'build-' . $build;
         }
         return 'dev';
