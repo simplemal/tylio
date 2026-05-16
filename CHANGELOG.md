@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.10 — 2026-05-16
+
+### Fixed — `site.admin_email_verified_at` cancellato dal Salva successivo
+
+Sintomo: inserisco l'email admin, ricevo il codice, lo verifico (server marca `site.admin_email_verified_at = NOW()`), tick verde compare. Clicco "Salva" sul form Settings senza toccare l'email. Reload la pagina → tick sparito, l'email risulta di nuovo "da verificare".
+
+Causa: `SettingsController::persistSettings` iterava ogni key del payload del SPA scrivendolo nel DB. Il SPA include `site.admin_email_verified_at` (lo legge insieme alle altre settings al mount) e dopo verify NON aggiorna il proprio state locale per quel campo — quindi sul successivo Save invia `null`, sovrascrivendo il timestamp appena scritto dal flow di verifica.
+
+Fix: nuova costante `SettingsController::PROTECTED_SETTING_KEYS = ['site.admin_email_verified_at', 'site.welcome_sent_at']`. La loop di persist skippa quelle chiavi — vengono toccate ESCLUSIVAMENTE dai loro flow server-internal (verifica email, welcome mail). Lo stesso fix replicato in `TenantSettingsController` (SaaS overlay) referenziando la stessa costante.
+
+
 ## v0.3.9 — 2026-05-16
 
 ### Fixed — `UpdateApplier::downloadTarball`: cURL con fallback fopen
