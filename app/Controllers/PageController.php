@@ -31,6 +31,13 @@ class PageController
 
     public function home(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
+        if ($this->installPending()) {
+            $response->getBody()->write($this->renderInstallWelcome());
+            return $response
+                ->withStatus(200)
+                ->withHeader('Content-Type', 'text/html; charset=utf-8')
+                ->withHeader('Cache-Control', 'no-store');
+        }
         // Maintenance mode flow:
         //  - visitors → renderMaintenance() + HTTP 503
         //  - admin (logged in) → renderPage() with an injected banner at
@@ -68,6 +75,92 @@ class PageController
         return $response
             ->withHeader('Content-Type', 'text/html; charset=utf-8')
             ->withHeader('Cache-Control', 'public, max-age=60');
+    }
+
+    /**
+     * Did the install wizard run yet? `users` table either doesn't exist
+     * (migrations have never run) or is empty (no admin created yet, no
+     * archive imported). Either way the site has nothing to show and
+     * the visitor needs to be sent to `/install`.
+     */
+    protected function installPending(): bool
+    {
+        try {
+            $row = $this->db->one('SELECT COUNT(*) AS n FROM users');
+            return !$row || (int)($row['n'] ?? 0) === 0;
+        } catch (\Throwable) {
+            return true;
+        }
+    }
+
+    /**
+     * Self-contained HTML for the "site not installed yet" landing page.
+     * Inline CSS only — no static assets needed (which might not be
+     * served yet on a botched install). Logo is the same SVG used by
+     * the admin login.
+     */
+    protected function renderInstallWelcome(): string
+    {
+        $installUrl = '/install';
+        return <<<HTML
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>tylio — setup pending</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(circle at top, #232743 0%, #14161f 70%);
+    color: #f1f3fa;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+    display: grid; place-items: center; padding: 24px;
+  }
+  .card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 18px;
+    padding: 40px 36px;
+    max-width: 460px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  }
+  .logo {
+    width: 64px; height: 64px; margin: 0 auto 18px;
+    background: linear-gradient(135deg, #ff5fbf, #6a4cff);
+    border-radius: 16px;
+    display: grid; place-items: center;
+    box-shadow: 0 10px 30px rgba(106,76,255,0.4);
+  }
+  .logo span {
+    font-weight: 700; font-size: 32px; color: #fff; letter-spacing: -0.04em;
+  }
+  h1 { margin: 0 0 8px; font-size: 22px; font-weight: 600; }
+  p { margin: 0 0 24px; color: #aab0c8; line-height: 1.55; font-size: 15px; }
+  a.cta {
+    display: inline-block; padding: 12px 24px;
+    background: linear-gradient(135deg, #ff5fbf, #6a4cff);
+    color: #fff; text-decoration: none; border-radius: 999px;
+    font-weight: 600; font-size: 15px;
+    box-shadow: 0 8px 24px rgba(106,76,255,0.35);
+    transition: transform 0.15s ease;
+  }
+  a.cta:hover { transform: translateY(-1px); }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="logo" aria-hidden="true"><span>t</span></div>
+    <h1>tylio è installato ma non configurato</h1>
+    <p>Completa il setup creando l'utente admin o importando un archivio di un sito esistente.</p>
+    <a class="cta" href="$installUrl">Avvia l'installazione</a>
+  </main>
+</body>
+</html>
+HTML;
     }
 
     /**
