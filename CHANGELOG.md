@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.22 — 2026-05-17
+
+### Fixed — Drag-into-group: `:group` esplicito object invece di string
+
+Continua il debug del bug. Log v0.3.20 confermano: drag-out emette correttamente `@add` su top-level + `@remove` su children-sortable. Drag-in invece emette `@remove` su top-level (con `evt.to = dash-group__children`) MA il children-sortable del group non emette `@add`. Cambiamenti precedenti (`:list` invece di `:model-value`) non hanno cambiato il sintomo.
+
+vuedraggable 4.1.0 (l'ultima release, abandoned da anni) ha un noto handling fragile dello shorthand string per `:group`. Cambio entrambi i draggable a `:group="{ name: 'dash', pull: true, put: true }"` esplicito.
+
+Se non basta, prossimo step: migrare a `vue-draggable-plus` (fork attivamente manutenuto) o usare SortableJS direttamente bypassando vuedraggable per il children-sortable.
+
+
 ## v0.3.21 — 2026-05-17
 
 ### Fixed — Drag-into-group: `:list` invece di `:model-value` per i children
