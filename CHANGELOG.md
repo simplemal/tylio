@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.20 — 2026-05-17
+
+### Changed — Dashboard drag: console.log su tutti gli eventi vuedraggable
+
+Build di diagnostica: il fix v0.3.19 (pre-alloca bucket children) non era sufficiente per `drag-into-group` su SaaS ladyglow. Maggior numero di event listener loggati in console (`@start/@end/@choose/@add/@update/@remove` per ogni `<draggable>`) + dump dei buckets ad ogni `syncBuckets`. Da rimuovere nel prossimo cut una volta capita la causa root.
+
+
 ## v0.3.19 — 2026-05-17
 
 ### Fixed — Drag-into-group non triggava `@add`, parent_id mai aggiornato
