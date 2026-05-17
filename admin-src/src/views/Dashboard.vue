@@ -509,7 +509,7 @@ function blockSummary(b: Block): string {
   <draggable
     v-else
     v-model="topLevel"
-    :group="'dash'"
+    :group="{ name: 'dash', pull: true, put: true }"
     item-key="id"
     handle=".grip"
     class="dash-grid"
@@ -581,7 +581,7 @@ function blockSummary(b: Block): string {
         </div>
         <draggable
           :list="childrenByParent[b.id]"
-          :group="'dash'"
+          :group="{ name: 'dash', pull: true, put: true }"
           item-key="id"
           handle=".grip"
           class="dash-group__children"
