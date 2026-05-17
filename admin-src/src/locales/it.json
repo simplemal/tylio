@@ -145,6 +145,13 @@
     "searchPlaceholder": "Cerca tipo (es. link, gallery, contatti)…",
     "close": "Chiudi"
   },
+  "moveExistingSheet": {
+    "title": "Sposta una tessera nel gruppo",
+    "empty": "Non ci sono tessere disponibili fuori dai gruppi.",
+    "noResults": "Nessuna tessera corrisponde alla ricerca.",
+    "searchPlaceholder": "Cerca per titolo o tipo…",
+    "close": "Chiudi"
+  },
   "editBlock": {
     "backToTiles": "Torna alle tessere",
     "back": "Indietro",

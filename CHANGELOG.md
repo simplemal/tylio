@@ -6,6 +6,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.25 — 2026-05-17
+
+### Added — Dashboard · "Sposta tessera esistente nel gruppo"
+
+Dentro la card di ogni gruppo, in fondo, due bottoni in linea sostituiscono il singolo "Aggiungi al gruppo":
+
+- **Aggiungi al gruppo** (ghost dashed, icona `folder-input`) — apre un picker delle tessere già esistenti fuori dai gruppi e le sposta dentro il gruppo selezionato (`PUT /api/blocks/{id}` con `parent_id`). Esclude gruppi e footer (regola server `group-in-group` / `footer-in-group`).
+- **+ Aggiungi tessera** (primary) — crea una NUOVA tessera dentro il gruppo (comportamento del precedente "Aggiungi al gruppo").
+
+Workaround funzionale al bug `drag-into-group` ancora sotto investigazione: l'utente non dipende più dal drag-and-drop per popolare un gruppo.
+
+### Added — Dashboard · log diagnostici per il drag
+
+`console.log` strategici sui handler vuedraggable (`@start`, `@end`, `@add`, `@update`, `@remove`, `@sort`, `:move`) sia top-level che per i sub-container dei gruppi. Prefisso `[dash]`. Servono a identificare la causa del bug per cui il drag di una tessera dentro un gruppo non emette `@add` sul sub-sortable in alcune condizioni. Saranno rimossi quando la radice del bug sarà tracciata.
+
+### Files
+
+- `admin-src/src/components/MoveExistingToGroupSheet.vue` — NEW (picker modal)
+- `admin-src/src/views/Dashboard.vue` — due bottoni in linea + handler `openMoveExistingToGroup` / `pickMoveExisting` + log
+- `admin-src/src/locales/{it,en}.json` — keys `moveExistingSheet.*`
+
+
 ## v0.3.24 — 2026-05-17
 
 ### Reverted — Dashboard drag-into-group: ripristino della versione che funzionava

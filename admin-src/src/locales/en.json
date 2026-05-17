@@ -145,6 +145,13 @@
     "searchPlaceholder": "Search type (e.g. link, gallery, contact)…",
     "close": "Close"
   },
+  "moveExistingSheet": {
+    "title": "Move a tile into this group",
+    "empty": "No tiles available outside groups.",
+    "noResults": "No tiles match your search.",
+    "searchPlaceholder": "Search by title or type…",
+    "close": "Close"
+  },
   "editBlock": {
     "backToTiles": "Back to tiles",
     "back": "Back",

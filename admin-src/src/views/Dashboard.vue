@@ -7,6 +7,7 @@ import draggable from 'vuedraggable'
 import { api } from '../api'
 import type { Block, BlockKind, BlockType } from '../types'
 import AddBlockSheet from '../components/AddBlockSheet.vue'
+import MoveExistingToGroupSheet from '../components/MoveExistingToGroupSheet.vue'
 import BlockPreview from '../components/BlockPreview.vue'
 import PreviewPanel from '../components/PreviewPanel.vue'
 import { useConfirm } from '../composables/useConfirm'
@@ -25,6 +26,8 @@ const dragging = ref(false)
 // When non-null, `Add tile` will create the new block inside this
 // group instead of at the top level. Set by the per-group `+` button.
 const addInsideGroup = ref<number | null>(null)
+const showMoveExisting = ref(false)
+const moveExistingTargetGroup = ref<number | null>(null)
 const showPreview = ref(false)
 // Persist the view mode in localStorage (default: rich preview).
 const viewMode = useStorage<'compact' | 'preview'>('tylio:dashboardView', 'preview')
@@ -46,6 +49,8 @@ function syncBuckets() {
     if (b.parent_id) (byParent[b.parent_id] ??= []).push(b)
   }
   childrenByParent.value = byParent
+  const groups = blocks.value.filter((b) => b.type === 'group').map((b) => b.id)
+  console.log('[dash] syncBuckets', { total: blocks.value.length, topLevel: topLevel.value.length, groups, childrenByParent: byParent })
 }
 
 // Compute the grid class for each block: 'full' (span 2) or 'half'
@@ -100,23 +105,35 @@ function idFromEvent(evt: DragEvt): number {
 
 async function onTopLevelAdd(evt: DragEvt) {
   const id = idFromEvent(evt)
-  if (!id) return
+  console.log('[dash] onTopLevelAdd fired', { id, oldIndex: evt.oldIndex, newIndex: evt.newIndex, item: evt.item?.outerHTML?.slice(0, 120) })
+  if (!id) {
+    console.warn('[dash] onTopLevelAdd: no id from event, aborting')
+    return
+  }
   try {
-    await api.updateBlock(id, { parent_id: null })
+    const r = await api.updateBlock(id, { parent_id: null })
+    console.log('[dash] onTopLevelAdd updateBlock OK', { id, r })
     const local = topLevel.value.find((b) => b.id === id)
     if (local) local.parent_id = null
-    await api.reorder(topLevel.value.map((b) => b.id))
+    const orderIds = topLevel.value.map((b) => b.id)
+    console.log('[dash] onTopLevelAdd reorder ->', orderIds)
+    await api.reorder(orderIds)
+    console.log('[dash] onTopLevelAdd reorder OK')
   } catch (e) {
-    console.error('[dashboard] detach failed:', e)
+    console.error('[dash] onTopLevelAdd FAILED', e)
     await refresh()
   }
 }
 
-async function onTopLevelUpdate() {
+async function onTopLevelUpdate(evt: DragEvt) {
+  console.log('[dash] onTopLevelUpdate fired', { oldIndex: evt?.oldIndex, newIndex: evt?.newIndex })
   try {
-    await api.reorder(topLevel.value.map((b) => b.id))
+    const orderIds = topLevel.value.map((b) => b.id)
+    console.log('[dash] onTopLevelUpdate reorder ->', orderIds)
+    await api.reorder(orderIds)
+    console.log('[dash] onTopLevelUpdate reorder OK')
   } catch (e) {
-    console.error('[dashboard] top reorder failed:', e)
+    console.error('[dash] onTopLevelUpdate FAILED', e)
     await refresh()
   }
 }
@@ -128,25 +145,37 @@ async function onTopLevelUpdate() {
  */
 async function onGroupAdd(groupId: number, evt: DragEvt) {
   const id = idFromEvent(evt)
-  if (!id) return
+  console.log('[dash] onGroupAdd fired', { groupId, id, oldIndex: evt.oldIndex, newIndex: evt.newIndex, item: evt.item?.outerHTML?.slice(0, 120) })
+  if (!id) {
+    console.warn('[dash] onGroupAdd: no id from event, aborting')
+    return
+  }
   try {
-    await api.updateBlock(id, { parent_id: groupId })
+    const r = await api.updateBlock(id, { parent_id: groupId })
+    console.log('[dash] onGroupAdd updateBlock OK', { id, groupId, r })
     const kids = childrenByParent.value[groupId] || []
     const local = kids.find((b) => b.id === id)
     if (local) local.parent_id = groupId
-    await api.reorder(kids.map((b) => b.id))
+    const orderIds = kids.map((b) => b.id)
+    console.log('[dash] onGroupAdd reorder ->', orderIds)
+    await api.reorder(orderIds)
+    console.log('[dash] onGroupAdd reorder OK')
   } catch (e) {
-    console.error('[dashboard] attach failed:', e)
+    console.error('[dash] onGroupAdd FAILED', e)
     await refresh()
   }
 }
 
-async function onGroupUpdate(groupId: number) {
+async function onGroupUpdate(groupId: number, evt: DragEvt) {
+  console.log('[dash] onGroupUpdate fired', { groupId, oldIndex: evt?.oldIndex, newIndex: evt?.newIndex })
   try {
     const kids = childrenByParent.value[groupId] || []
-    await api.reorder(kids.map((b) => b.id))
+    const orderIds = kids.map((b) => b.id)
+    console.log('[dash] onGroupUpdate reorder ->', orderIds)
+    await api.reorder(orderIds)
+    console.log('[dash] onGroupUpdate reorder OK')
   } catch (e) {
-    console.error('[dashboard] group reorder failed:', e)
+    console.error('[dash] onGroupUpdate FAILED', e)
     await refresh()
   }
 }
@@ -185,9 +214,12 @@ function onTopLevelMove(evt: {
   const dragged = evt.draggedContext.element
   const related = evt.relatedContext?.element
   if (related && related.type === 'group' && dragged.type !== 'group') {
+    console.log('[dash] onTopLevelMove VETO over group', { draggedId: dragged.id, relatedId: related.id })
     return false
   }
-  return canDropInto(null, evt)
+  const ok = canDropInto(null, evt)
+  console.log('[dash] onTopLevelMove', { draggedId: dragged.id, relatedId: related?.id, relatedType: related?.type, ok })
+  return ok
 }
 
 // Per-group factories: bound move-predicate and change-handler for one
@@ -195,13 +227,17 @@ function onTopLevelMove(evt: {
 // recreating the closures on render is fine — they're invoked only on
 // drag events, not on every render.
 function makeGroupMove(groupId: number) {
-  return (evt: { draggedContext: { element: Block } }) => canDropInto(groupId, evt)
+  return (evt: { draggedContext: { element: Block }; relatedContext?: { element?: Block } }) => {
+    const ok = canDropInto(groupId, evt)
+    console.log('[dash] groupMove', { groupId, draggedId: evt.draggedContext.element.id, draggedType: evt.draggedContext.element.type, ok })
+    return ok
+  }
 }
 function makeGroupAdd(groupId: number) {
   return (evt: DragEvt) => onGroupAdd(groupId, evt)
 }
 function makeGroupUpdate(groupId: number) {
-  return () => onGroupUpdate(groupId)
+  return (evt: DragEvt) => onGroupUpdate(groupId, evt)
 }
 
 /**
@@ -316,6 +352,33 @@ function openAddInsideGroup(groupId: number) {
 function openAddTopLevel() {
   addInsideGroup.value = null
   showAdd.value = true
+}
+
+const movableTopLevelTiles = computed<Block[]>(() =>
+  blocks.value.filter((b) => !b.parent_id && b.type !== 'group' && b.type !== 'footer'),
+)
+
+function openMoveExistingToGroup(groupId: number) {
+  moveExistingTargetGroup.value = groupId
+  showMoveExisting.value = true
+}
+
+function closeMoveExisting() {
+  showMoveExisting.value = false
+  moveExistingTargetGroup.value = null
+}
+
+async function pickMoveExisting(blockId: number) {
+  const groupId = moveExistingTargetGroup.value
+  closeMoveExisting()
+  if (!groupId) return
+  try {
+    await api.updateBlock(blockId, { parent_id: groupId })
+    await refresh()
+  } catch (e) {
+    console.error('[dash] move existing into group FAILED', e)
+    await refresh()
+  }
 }
 
 /**
@@ -480,10 +543,12 @@ function blockSummary(b: Block): string {
     ghost-class="dash-ghost"
     chosen-class="dash-chosen"
     :move="onTopLevelMove"
-    @start="dragging = true"
-    @end="dragging = false"
+    @start="(e: DragEvt) => { dragging = true; console.log('[dash] TOP @start', { id: idFromEvent(e), oldIndex: e?.oldIndex }) }"
+    @end="(e: DragEvt) => { dragging = false; console.log('[dash] TOP @end', { id: idFromEvent(e), oldIndex: e?.oldIndex, newIndex: e?.newIndex }) }"
     @add="onTopLevelAdd"
     @update="onTopLevelUpdate"
+    @remove="(e: DragEvt) => console.log('[dash] TOP @remove', { id: idFromEvent(e), oldIndex: e?.oldIndex })"
+    @sort="(e: DragEvt) => console.log('[dash] TOP @sort', { id: idFromEvent(e) })"
   >
     <template #item="{ element: b }">
       <!-- SINGLE-ROOT <article> for every top-level item. The branching
@@ -552,10 +617,12 @@ function blockSummary(b: Block): string {
           ghost-class="dash-ghost"
           chosen-class="dash-chosen"
           :move="makeGroupMove(b.id)"
-          @start="dragging = true"
-          @end="dragging = false"
+          @start="(e: DragEvt) => { dragging = true; console.log('[dash] GROUP @start', { groupId: b.id, id: idFromEvent(e) }) }"
+          @end="(e: DragEvt) => { dragging = false; console.log('[dash] GROUP @end', { groupId: b.id, id: idFromEvent(e), oldIndex: e?.oldIndex, newIndex: e?.newIndex }) }"
           @add="makeGroupAdd(b.id)"
           @update="makeGroupUpdate(b.id)"
+          @remove="(e: DragEvt) => console.log('[dash] GROUP @remove', { groupId: b.id, id: idFromEvent(e) })"
+          @sort="(e: DragEvt) => console.log('[dash] GROUP @sort', { groupId: b.id, id: idFromEvent(e) })"
         >
           <template #item="{ element: child }">
             <article
@@ -633,13 +700,22 @@ function blockSummary(b: Block): string {
             </article>
           </template>
         </draggable>
-        <button
-          class="dash-group__add btn btn-ghost w-full justify-center"
-          @click.stop="openAddInsideGroup(b.id)"
-        >
-          <iconify-icon icon="lucide:plus" width="16"></iconify-icon>
-          {{ t('dashboard.addToGroup') }}
-        </button>
+        <div class="dash-group__actions">
+          <button
+            class="dash-group__add btn btn-ghost flex-1 justify-center"
+            @click.stop="openMoveExistingToGroup(b.id)"
+          >
+            <iconify-icon icon="lucide:folder-input" width="16"></iconify-icon>
+            {{ t('dashboard.addToGroup') }}
+          </button>
+          <button
+            class="btn btn-primary flex-1 justify-center"
+            @click.stop="openAddInsideGroup(b.id)"
+          >
+            <iconify-icon icon="lucide:plus" width="16"></iconify-icon>
+            {{ t('dashboard.addTile') }}
+          </button>
+        </div>
         </template>
 
         <!-- ============ Regular tile (non-group) ============ -->
@@ -720,6 +796,13 @@ function blockSummary(b: Block): string {
   </draggable>
 
   <AddBlockSheet v-if="showAdd" :types="types" @close="showAdd = false; addInsideGroup = null" @pick="add" />
+  <MoveExistingToGroupSheet
+    v-if="showMoveExisting"
+    :tiles="movableTopLevelTiles"
+    :types="types"
+    @close="closeMoveExisting"
+    @pick="pickMoveExisting"
+  />
   <PreviewPanel v-if="showPreview" @close="showPreview = false" />
 </template>
 
@@ -818,6 +901,16 @@ function blockSummary(b: Block): string {
 .dash-group__add:hover {
   border-color: rgb(var(--ink-100-rgb) / 0.4);
   background: rgb(var(--ink-100-rgb) / 0.04);
+}
+.dash-group__actions {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+@media (max-width: 480px) {
+  .dash-group__actions {
+    flex-direction: column;
+  }
 }
 
 /* While ANY drag is in flight, every group's drop-zone visually
