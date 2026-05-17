@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.19 — 2026-05-17
+
+### Fixed — Drag-into-group non triggava `@add`, parent_id mai aggiornato
+
+Sintomo (Maurizio, tenant SaaS ladyglow): gruppo con 3 tile, ne tolgo uno via drag (esce — il PUT `/api/blocks/<id>` con `parent_id: null` parte correttamente), poi lo trascino di nuovo DENTRO il gruppo → nessuna chiamata XHR, il tile resta visivamente nel gruppo per un attimo poi rimbalza fuori al primo refresh. Verificato dalla Network del browser: zero PUT/POST sul drag-back-into.
+
+Causa: `Dashboard.vue` legava `<draggable>` dei children con `:model-value="childrenByParent[b.id] || []"`. Il fallback inline `|| []` produce un array NUOVO ad ogni render quando il bucket è undefined/vuoto. vuedraggable v4 sotto usa SortableJS, che identifica la lista destinazione tramite la reference dell'array di model. Con un array che cambia identity, l'event `onAdd` di SortableJS viene perso → `@add` di vuedraggable non emette → `makeGroupAdd` non viene chiamato → niente updateBlock con il nuovo `parent_id`.
+
+Fix in `syncBuckets()`: pre-allocazione di un array vuoto `[]` per ogni block di tipo `group`, indipendentemente dal fatto che abbia children. Plus, template `:model-value="childrenByParent[b.id]"` senza fallback — l'array è sempre presente con identity stabile. Reorder dentro al gruppo e drag-into-empty-group ora emettono gli eventi giusti.
+
+
 ## v0.3.18 — 2026-05-16
 
 ### Fixed — `attempt to write a readonly database` su shared-group setup
