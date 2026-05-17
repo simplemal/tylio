@@ -42,6 +42,14 @@ const childrenByParent = ref<Record<number, Block[]>>({})
 function syncBuckets() {
   topLevel.value = blocks.value.filter((b) => !b.parent_id)
   const byParent: Record<number, Block[]> = {}
+  // Pre-allocate an empty bucket for every group, even if it has no children
+  // yet. Otherwise the template falls back to a fresh `[] ` literal on every
+  // render (`childrenByParent[id] || []`), and vuedraggable can't track the
+  // list identity across renders → @add never fires when you drop a tile
+  // into a depleted group (the regression Maurizio hit on ladyglow).
+  for (const b of blocks.value) {
+    if (b.type === 'group') byParent[b.id] = []
+  }
   for (const b of blocks.value) {
     if (b.parent_id) (byParent[b.parent_id] ??= []).push(b)
   }
@@ -539,7 +547,7 @@ function blockSummary(b: Block): string {
           </button>
         </div>
         <draggable
-          :model-value="childrenByParent[b.id] || []"
+          :model-value="childrenByParent[b.id]"
           @update:model-value="(v: Block[]) => (childrenByParent[b.id] = v)"
           :group="'dash'"
           item-key="id"
