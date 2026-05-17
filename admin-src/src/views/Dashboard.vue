@@ -580,8 +580,7 @@ function blockSummary(b: Block): string {
           </button>
         </div>
         <draggable
-          :model-value="childrenByParent[b.id]"
-          @update:model-value="(v: Block[]) => (childrenByParent[b.id] = v)"
+          :list="childrenByParent[b.id]"
           :group="'dash'"
           item-key="id"
           handle=".grip"
