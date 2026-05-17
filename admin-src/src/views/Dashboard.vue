@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useStorage } from '@vueuse/core'
-import draggable from 'vuedraggable'
+import { VueDraggable as draggable } from 'vue-draggable-plus'
 import { api } from '../api'
 import type { Block, BlockKind, BlockType } from '../types'
 import AddBlockSheet from '../components/AddBlockSheet.vue'
@@ -510,7 +510,6 @@ function blockSummary(b: Block): string {
     v-else
     v-model="topLevel"
     :group="{ name: 'dash', pull: true, put: true }"
-    item-key="id"
     handle=".grip"
     class="dash-grid"
     :swap-threshold="0.6"
@@ -526,12 +525,9 @@ function blockSummary(b: Block): string {
     @remove="onTopLevelRemove"
     @update="onTopLevelUpdate"
   >
-    <template #item="{ element: b }">
-      <!-- SINGLE-ROOT <article> for every top-level item. The branching
-           between "group container" and "regular tile" happens INSIDE,
-           never via v-if at the root — vuedraggable needs a stable DOM
-           node per slot entry to attach drag-source metadata. -->
       <article
+        v-for="b in topLevel"
+        :key="b.id"
         class="tile group relative"
         :class="tileClassFor(b)"
         :data-block-id="b.id"
@@ -580,9 +576,8 @@ function blockSummary(b: Block): string {
           </button>
         </div>
         <draggable
-          :list="childrenByParent[b.id]"
+          v-model="childrenByParent[b.id]"
           :group="{ name: 'dash', pull: true, put: true }"
-          item-key="id"
           handle=".grip"
           class="dash-group__children"
           :swap-threshold="0.6"
@@ -599,8 +594,9 @@ function blockSummary(b: Block): string {
           @remove="makeGroupRemove(b.id)"
           @update="makeGroupUpdate(b.id)"
         >
-          <template #item="{ element: child }">
             <article
+              v-for="child in childrenByParent[b.id]"
+              :key="child.id"
               class="tile dash-group__child group/child relative cursor-pointer hover:border-ink-100/40 transition"
               :class="[{ 'opacity-60': !child.enabled }, { 'dash-tile--no-bg': isNoBg(child) }]"
               :data-block-id="child.id"
@@ -673,7 +669,6 @@ function blockSummary(b: Block): string {
                 </button>
               </div>
             </article>
-          </template>
         </draggable>
         <button
           class="dash-group__add btn btn-ghost w-full justify-center"
@@ -758,7 +753,6 @@ function blockSummary(b: Block): string {
         </div>
         </template>
       </article>
-    </template>
   </draggable>
 
   <AddBlockSheet v-if="showAdd" :types="types" @close="showAdd = false; addInsideGroup = null" @pick="add" />
