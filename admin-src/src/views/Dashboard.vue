@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useStorage } from '@vueuse/core'
-import { VueDraggable as draggable } from 'vue-draggable-plus'
+import draggable from 'vuedraggable'
 import { api } from '../api'
 import type { Block, BlockKind, BlockType } from '../types'
 import AddBlockSheet from '../components/AddBlockSheet.vue'
@@ -42,24 +42,10 @@ const childrenByParent = ref<Record<number, Block[]>>({})
 function syncBuckets() {
   topLevel.value = blocks.value.filter((b) => !b.parent_id)
   const byParent: Record<number, Block[]> = {}
-  // Pre-allocate an empty bucket for every group, even if it has no children
-  // yet. Otherwise the template falls back to a fresh `[] ` literal on every
-  // render (`childrenByParent[id] || []`), and vuedraggable can't track the
-  // list identity across renders → @add never fires when you drop a tile
-  // into a depleted group (the regression Maurizio hit on ladyglow).
-  for (const b of blocks.value) {
-    if (b.type === 'group') byParent[b.id] = []
-  }
   for (const b of blocks.value) {
     if (b.parent_id) (byParent[b.parent_id] ??= []).push(b)
   }
   childrenByParent.value = byParent
-  console.log('[dash:syncBuckets]', {
-    topLevel: topLevel.value.map((b) => ({ id: b.id, type: b.type })),
-    childrenByParent: Object.fromEntries(
-      Object.entries(byParent).map(([gid, kids]) => [gid, kids.map((b) => b.id)]),
-    ),
-  })
 }
 
 // Compute the grid class for each block: 'full' (span 2) or 'half'
@@ -113,7 +99,6 @@ function idFromEvent(evt: DragEvt): number {
 }
 
 async function onTopLevelAdd(evt: DragEvt) {
-  console.log('[dash:topLevel @add]', { id: idFromEvent(evt), evt, topLen: topLevel.value.length })
   const id = idFromEvent(evt)
   if (!id) return
   try {
@@ -127,13 +112,7 @@ async function onTopLevelAdd(evt: DragEvt) {
   }
 }
 
-function onTopLevelStart(evt: unknown) { console.log('[dash:topLevel @start]', evt) }
-function onTopLevelEnd(evt: unknown) { console.log('[dash:topLevel @end]', evt) }
-function onTopLevelRemove(evt: DragEvt) { console.log('[dash:topLevel @remove]', { id: idFromEvent(evt), evt }) }
-function onTopLevelChoose(evt: unknown) { console.log('[dash:topLevel @choose]', evt) }
-
-async function onTopLevelUpdate(evt?: DragEvt) {
-  console.log('[dash:topLevel @update]', { id: evt ? idFromEvent(evt) : '-', evt, ids: topLevel.value.map((b) => b.id) })
+async function onTopLevelUpdate() {
   try {
     await api.reorder(topLevel.value.map((b) => b.id))
   } catch (e) {
@@ -148,7 +127,6 @@ async function onTopLevelUpdate(evt?: DragEvt) {
  * (parent_id = groupId). `moved` reorders the group's children.
  */
 async function onGroupAdd(groupId: number, evt: DragEvt) {
-  console.log('[dash:group @add]', { groupId, id: idFromEvent(evt), evt, bucket: childrenByParent.value[groupId] })
   const id = idFromEvent(evt)
   if (!id) return
   try {
@@ -163,12 +141,7 @@ async function onGroupAdd(groupId: number, evt: DragEvt) {
   }
 }
 
-function onGroupRemove(groupId: number, evt: DragEvt) {
-  console.log('[dash:group @remove]', { groupId, id: idFromEvent(evt), bucket: childrenByParent.value[groupId] })
-}
-
 async function onGroupUpdate(groupId: number) {
-  console.log('[dash:group @update]', { groupId, bucket: childrenByParent.value[groupId]?.map((b) => b.id) })
   try {
     const kids = childrenByParent.value[groupId] || []
     await api.reorder(kids.map((b) => b.id))
@@ -229,18 +202,6 @@ function makeGroupAdd(groupId: number) {
 }
 function makeGroupUpdate(groupId: number) {
   return () => onGroupUpdate(groupId)
-}
-function makeGroupRemove(groupId: number) {
-  return (evt: DragEvt) => onGroupRemove(groupId, evt)
-}
-function makeGroupStart(groupId: number) {
-  return (evt: unknown) => console.log('[dash:group @start]', { groupId, evt })
-}
-function makeGroupEnd(groupId: number) {
-  return (evt: unknown) => console.log('[dash:group @end]', { groupId, evt })
-}
-function makeGroupChoose(groupId: number) {
-  return (evt: unknown) => console.log('[dash:group @choose]', { groupId, evt })
 }
 
 /**
@@ -509,7 +470,8 @@ function blockSummary(b: Block): string {
   <draggable
     v-else
     v-model="topLevel"
-    :group="{ name: 'dash', pull: true, put: true }"
+    :group="'dash'"
+    item-key="id"
     handle=".grip"
     class="dash-grid"
     :swap-threshold="0.6"
@@ -518,16 +480,17 @@ function blockSummary(b: Block): string {
     ghost-class="dash-ghost"
     chosen-class="dash-chosen"
     :move="onTopLevelMove"
-    @start="(e: unknown) => { dragging = true; onTopLevelStart(e) }"
-    @end="(e: unknown) => { dragging = false; onTopLevelEnd(e) }"
-    @choose="onTopLevelChoose"
+    @start="dragging = true"
+    @end="dragging = false"
     @add="onTopLevelAdd"
-    @remove="onTopLevelRemove"
     @update="onTopLevelUpdate"
   >
+    <template #item="{ element: b }">
+      <!-- SINGLE-ROOT <article> for every top-level item. The branching
+           between "group container" and "regular tile" happens INSIDE,
+           never via v-if at the root — vuedraggable needs a stable DOM
+           node per slot entry to attach drag-source metadata. -->
       <article
-        v-for="b in topLevel"
-        :key="b.id"
         class="tile group relative"
         :class="tileClassFor(b)"
         :data-block-id="b.id"
@@ -576,8 +539,10 @@ function blockSummary(b: Block): string {
           </button>
         </div>
         <draggable
-          v-model="childrenByParent[b.id]"
-          :group="{ name: 'dash', pull: true, put: true }"
+          :model-value="childrenByParent[b.id] || []"
+          @update:model-value="(v: Block[]) => (childrenByParent[b.id] = v)"
+          :group="'dash'"
+          item-key="id"
           handle=".grip"
           class="dash-group__children"
           :swap-threshold="0.6"
@@ -587,16 +552,13 @@ function blockSummary(b: Block): string {
           ghost-class="dash-ghost"
           chosen-class="dash-chosen"
           :move="makeGroupMove(b.id)"
-          @start="(e: unknown) => { dragging = true; makeGroupStart(b.id)(e) }"
-          @end="(e: unknown) => { dragging = false; makeGroupEnd(b.id)(e) }"
-          @choose="makeGroupChoose(b.id)"
+          @start="dragging = true"
+          @end="dragging = false"
           @add="makeGroupAdd(b.id)"
-          @remove="makeGroupRemove(b.id)"
           @update="makeGroupUpdate(b.id)"
         >
+          <template #item="{ element: child }">
             <article
-              v-for="child in childrenByParent[b.id]"
-              :key="child.id"
               class="tile dash-group__child group/child relative cursor-pointer hover:border-ink-100/40 transition"
               :class="[{ 'opacity-60': !child.enabled }, { 'dash-tile--no-bg': isNoBg(child) }]"
               :data-block-id="child.id"
@@ -669,6 +631,7 @@ function blockSummary(b: Block): string {
                 </button>
               </div>
             </article>
+          </template>
         </draggable>
         <button
           class="dash-group__add btn btn-ghost w-full justify-center"
@@ -753,6 +716,7 @@ function blockSummary(b: Block): string {
         </div>
         </template>
       </article>
+    </template>
   </draggable>
 
   <AddBlockSheet v-if="showAdd" :types="types" @close="showAdd = false; addInsideGroup = null" @pick="add" />
