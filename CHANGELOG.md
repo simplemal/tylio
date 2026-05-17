@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.23 — 2026-05-17
+
+### Fixed — Drag-into-group: migrazione da `vuedraggable` a `vue-draggable-plus`
+
+`vuedraggable` 4.1.0 (l'ultima release, abandoned da anni) emette `@remove` sul source con `to: dash-group__children` corretto, ma il sortable destinazione (children del group) non emette `@add`, perdendo il drop. Tentativi falliti: pre-alloc buckets stabili (v0.3.19), `:list` invece di `:model-value` (v0.3.21), `:group` esplicito object (v0.3.22). Causa confermata: bug interno di vuedraggable v4 con nested sortable in `#item` slot.
+
+Migrazione a [`vue-draggable-plus`](https://github.com/Alfred-Skyblue/vue-draggable-plus) 0.6.1 — drop-in modernizzato:
+- npm: `+ vue-draggable-plus`, `vuedraggable` resta come transitive ma non più importato.
+- Import in `Dashboard.vue`: `import { VueDraggable as draggable } from 'vue-draggable-plus'`.
+- Template: niente più `<template #item="{ element: X }">` con scoped slot — si usa `v-for` direct sui children del `<draggable>`. Più semplice + Vue tracking nativo dei key.
+- `:list` su children sostituito da `v-model` (vue-draggable-plus richiede modelValue), con reactivity preservata via proxy del `ref<Record>`.
+- Log diagnostici v0.3.20 lasciati ancora attivi per verificare in produzione.
+
+
 ## v0.3.22 — 2026-05-17
 
 ### Fixed — Drag-into-group: `:group` esplicito object invece di string
