@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.21 — 2026-05-17
+
+### Fixed — Drag-into-group: `:list` invece di `:model-value` per i children
+
+I log della v0.3.20 hanno confermato che durante un drag dal top-level dentro un gruppo, top-level emette `@remove` correttamente ma il `<draggable>` dei children del gruppo NON emette `@add`. SortableJS riconosce il drop (vedi `@end.to = dash-group__children`), ma vuedraggable v4 non collega l'evento al model quando la prop è `:model-value` + `@update:model-value` su una proprietà annidata di `ref<Record>` (`childrenByParent[b.id]`).
+
+Fix: switch a `:list="childrenByParent[b.id]"`. Con `:list` vuedraggable muta direttamente l'array in-place (no v-model dance) e SortableJS emette correttamente `onAdd` → `@add` → `makeGroupAdd` → `updateBlock(id, {parent_id})` ✓. La reactivity di Vue 3 traccia mutate su array ref-proxied senza problemi.
+
+Console log diagnostici lasciati in build per ora — li rimuoverò una volta confermato il fix in produzione.
+
+
 ## v0.3.20 — 2026-05-17
 
 ### Changed — Dashboard drag: console.log su tutti gli eventi vuedraggable
