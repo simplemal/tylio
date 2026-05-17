@@ -54,6 +54,12 @@ function syncBuckets() {
     if (b.parent_id) (byParent[b.parent_id] ??= []).push(b)
   }
   childrenByParent.value = byParent
+  console.log('[dash:syncBuckets]', {
+    topLevel: topLevel.value.map((b) => ({ id: b.id, type: b.type })),
+    childrenByParent: Object.fromEntries(
+      Object.entries(byParent).map(([gid, kids]) => [gid, kids.map((b) => b.id)]),
+    ),
+  })
 }
 
 // Compute the grid class for each block: 'full' (span 2) or 'half'
@@ -107,6 +113,7 @@ function idFromEvent(evt: DragEvt): number {
 }
 
 async function onTopLevelAdd(evt: DragEvt) {
+  console.log('[dash:topLevel @add]', { id: idFromEvent(evt), evt, topLen: topLevel.value.length })
   const id = idFromEvent(evt)
   if (!id) return
   try {
@@ -120,7 +127,13 @@ async function onTopLevelAdd(evt: DragEvt) {
   }
 }
 
-async function onTopLevelUpdate() {
+function onTopLevelStart(evt: unknown) { console.log('[dash:topLevel @start]', evt) }
+function onTopLevelEnd(evt: unknown) { console.log('[dash:topLevel @end]', evt) }
+function onTopLevelRemove(evt: DragEvt) { console.log('[dash:topLevel @remove]', { id: idFromEvent(evt), evt }) }
+function onTopLevelChoose(evt: unknown) { console.log('[dash:topLevel @choose]', evt) }
+
+async function onTopLevelUpdate(evt?: DragEvt) {
+  console.log('[dash:topLevel @update]', { id: evt ? idFromEvent(evt) : '-', evt, ids: topLevel.value.map((b) => b.id) })
   try {
     await api.reorder(topLevel.value.map((b) => b.id))
   } catch (e) {
@@ -135,6 +148,7 @@ async function onTopLevelUpdate() {
  * (parent_id = groupId). `moved` reorders the group's children.
  */
 async function onGroupAdd(groupId: number, evt: DragEvt) {
+  console.log('[dash:group @add]', { groupId, id: idFromEvent(evt), evt, bucket: childrenByParent.value[groupId] })
   const id = idFromEvent(evt)
   if (!id) return
   try {
@@ -149,7 +163,12 @@ async function onGroupAdd(groupId: number, evt: DragEvt) {
   }
 }
 
+function onGroupRemove(groupId: number, evt: DragEvt) {
+  console.log('[dash:group @remove]', { groupId, id: idFromEvent(evt), bucket: childrenByParent.value[groupId] })
+}
+
 async function onGroupUpdate(groupId: number) {
+  console.log('[dash:group @update]', { groupId, bucket: childrenByParent.value[groupId]?.map((b) => b.id) })
   try {
     const kids = childrenByParent.value[groupId] || []
     await api.reorder(kids.map((b) => b.id))
@@ -210,6 +229,18 @@ function makeGroupAdd(groupId: number) {
 }
 function makeGroupUpdate(groupId: number) {
   return () => onGroupUpdate(groupId)
+}
+function makeGroupRemove(groupId: number) {
+  return (evt: DragEvt) => onGroupRemove(groupId, evt)
+}
+function makeGroupStart(groupId: number) {
+  return (evt: unknown) => console.log('[dash:group @start]', { groupId, evt })
+}
+function makeGroupEnd(groupId: number) {
+  return (evt: unknown) => console.log('[dash:group @end]', { groupId, evt })
+}
+function makeGroupChoose(groupId: number) {
+  return (evt: unknown) => console.log('[dash:group @choose]', { groupId, evt })
 }
 
 /**
@@ -488,9 +519,11 @@ function blockSummary(b: Block): string {
     ghost-class="dash-ghost"
     chosen-class="dash-chosen"
     :move="onTopLevelMove"
-    @start="dragging = true"
-    @end="dragging = false"
+    @start="(e: unknown) => { dragging = true; onTopLevelStart(e) }"
+    @end="(e: unknown) => { dragging = false; onTopLevelEnd(e) }"
+    @choose="onTopLevelChoose"
     @add="onTopLevelAdd"
+    @remove="onTopLevelRemove"
     @update="onTopLevelUpdate"
   >
     <template #item="{ element: b }">
@@ -560,9 +593,11 @@ function blockSummary(b: Block): string {
           ghost-class="dash-ghost"
           chosen-class="dash-chosen"
           :move="makeGroupMove(b.id)"
-          @start="dragging = true"
-          @end="dragging = false"
+          @start="(e: unknown) => { dragging = true; makeGroupStart(b.id)(e) }"
+          @end="(e: unknown) => { dragging = false; makeGroupEnd(b.id)(e) }"
+          @choose="makeGroupChoose(b.id)"
           @add="makeGroupAdd(b.id)"
+          @remove="makeGroupRemove(b.id)"
           @update="makeGroupUpdate(b.id)"
         >
           <template #item="{ element: child }">
