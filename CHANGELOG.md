@@ -6,6 +6,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.3.24 — 2026-05-17
+
+### Reverted — Dashboard drag-into-group: ripristino della versione che funzionava
+
+`v0.3.19` → `v0.3.23` hanno provato a "fixare" un bug che non esisteva: il drag-into-group funzionava da `c74befb` (pre-`v0.3.7`). I miei tentativi (pre-alloc bucket → `:list` → `:group` object → migrazione a `vue-draggable-plus`) hanno rotto e regredito invece di aiutare.
+
+`Dashboard.vue` checkout-ato dal commit `c74befb` ("fix(dashboard/groups): bypass vuedraggable @change in cross-list (read id from data-block-id + use @add/@update)"), `vue-draggable-plus` rimosso dalle dipendenze. Stack tornato a `vuedraggable` 4.1.0 com'era.
+
+Se Maurizio vede ancora il drag-into-group rotto, è un bug LATO SERVER (SaaS o stato DB del tenant), non lato SPA. Quel codice ha funzionato per settimane.
+
+
 ## v0.3.23 — 2026-05-17
 
 ### Fixed — Drag-into-group: migrazione da `vuedraggable` a `vue-draggable-plus`
