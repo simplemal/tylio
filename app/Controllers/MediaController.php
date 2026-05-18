@@ -199,7 +199,7 @@ class MediaController
         }
 
         $jpgFilename = preg_replace('/\.[a-z0-9]{1,5}$/i', '', $filename) . '.jpg';
-        $newUrl = $current;
+        $effectiveFilename = $filename;
         if ($jpgFilename !== $filename) {
             $jpgPath = $destDir . '/' . $jpgFilename;
             if (@rename($path, $jpgPath)) {
@@ -207,18 +207,23 @@ class MediaController
                     "UPDATE media SET filename = ?, mime = ?, size = ?, width = ?, height = ? WHERE filename = ?",
                     [$jpgFilename, $opt['mime'], $opt['bytes'], $opt['width'], $opt['height'], $filename],
                 );
-                $newUrl = '/uploads/' . $jpgFilename;
-                $this->db->query(
-                    "UPDATE settings SET value = ? WHERE key = 'seo.og_image'",
-                    [$newUrl],
-                );
+                $effectiveFilename = $jpgFilename;
+                $path = $jpgPath;
             }
-        } else {
+        }
+        if ($effectiveFilename === $filename) {
             $this->db->query(
                 "UPDATE media SET mime = ?, size = ?, width = ?, height = ? WHERE filename = ?",
                 [$opt['mime'], $opt['bytes'], $opt['width'], $opt['height'], $filename],
             );
         }
+
+        $mtime = @filemtime($path) ?: time();
+        $newUrl = '/uploads/' . $effectiveFilename . '?v=' . $mtime;
+        $this->db->query(
+            "UPDATE settings SET value = ? WHERE key = 'seo.og_image'",
+            [$newUrl],
+        );
 
         return AuthController::json($response, [
             'url' => $newUrl,
