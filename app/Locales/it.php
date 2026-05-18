@@ -80,7 +80,7 @@ return [
     // -----------------------------------------------------------------
     // Public site — footer
     // -----------------------------------------------------------------
-    'public.footer.powered_by' => 'Powered by <a href="https://github.com/anthropics" rel="noopener">tylio</a>',
+    'public.footer.powered_by' => 'Powered by <a href="https://github.com/simplemal/tylio" rel="noopener">tylio</a>',
 
     // -----------------------------------------------------------------
     // Service shells: placeholder, 503, 404
