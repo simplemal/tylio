@@ -138,11 +138,32 @@ return static function (): \Slim\App {
     $app->addRoutingMiddleware();
     $app->addBodyParsingMiddleware();
 
-    $app->addErrorMiddleware(
+    $errorMiddleware = $app->addErrorMiddleware(
         $config->bool('APP_DEBUG', false),
         true,
         true,
         $container->has('logger') ? $container->get('logger') : null,
+    );
+
+    $errorMiddleware->setErrorHandler(
+        \Slim\Exception\HttpNotFoundException::class,
+        function (\Psr\Http\Message\ServerRequestInterface $request) use ($container) {
+            $path = $request->getUri()->getPath();
+            $acceptLang = (string)($request->getHeaderLine('Accept-Language') ?? '');
+            try {
+                $renderer = $container->get(\Tylio\Services\Renderer::class);
+                $body = $renderer->renderNotFound($path, $acceptLang);
+            } catch (\Throwable $e) {
+                $body = '<!doctype html><meta charset="utf-8"><title>404</title><h1>404 — Not found</h1><p><a href="/">Home</a></p>';
+            }
+            $response = new \Slim\Psr7\Response(404);
+            $response->getBody()->write($body);
+            return $response
+                ->withHeader('Content-Type', 'text/html; charset=utf-8')
+                ->withHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                ->withHeader('Pragma', 'no-cache')
+                ->withHeader('Expires', '0');
+        }
     );
 
     // Trust proxies in front (Cloudflare / pfSense / HAProxy / similar).

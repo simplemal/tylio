@@ -349,6 +349,25 @@ class Renderer
         return __DIR__ . '/../Templates/maintenance.php';
     }
 
+    public function renderNotFound(string $path, string $acceptLanguage = ''): string
+    {
+        $theme = $this->loadTheme();
+        $settings = $this->loadSettings();
+        $this->applySiteLocale($settings, $acceptLanguage);
+        $locale = $this->i18n->currentLocale();
+        $title = (string)$this->settingsValue($settings, 'site.title', 'tylio');
+
+        ob_start();
+        $renderer = $this;
+        require $this->notFoundTemplatePath();
+        return (string)ob_get_clean();
+    }
+
+    protected function notFoundTemplatePath(): string
+    {
+        return __DIR__ . '/../Templates/route_not_found.php';
+    }
+
     /**
      * No-op. Historically "orphan" half tiles (not paired with another half)
      * were stretched to 2 columns via a `m-tile--orphan` class so the grid
