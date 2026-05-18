@@ -6,6 +6,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.4.2 — 2026-05-18
+
+### Added — pagina 404 OSS che usa il tema dell'utente
+
+Prima l'OSS non aveva un handler dedicato per `HttpNotFoundException`: ogni rotta non matchata atterrava sul default Slim (HTML scarno, niente tema, niente CTA). Ora c'è una pagina 404 self-contained che:
+
+- legge palette + fonts dal tema corrente del sito (palette `bg/surface/text/accent/border`, font heading + body), così è coerente con il resto del sito
+- mostra il path richiesto in una pill quando è breve e leggibile, altrimenti fallback su messaggio generico
+- ha un bottone primario "Torna alla home" → `/`
+- nessuna dipendenza esterna oltre a Google Fonts (stesso pattern di `maintenance.php`)
+- i18n it/en con stringhe hardcoded nel template (no I18n service necessario, la pagina funziona anche se il service è giù)
+- header `Cache-Control: no-store` per non far cachare un 404 stale a CDN/browser quando l'utente crea la rotta dopo (es. nuovo blocco)
+
+### Files
+
+- `app/Templates/route_not_found.php` — NEW (self-contained, palette+font dal tema)
+- `app/Services/Renderer.php` — nuovi metodi `renderNotFound(path, acceptLang)` + hook protetto `notFoundTemplatePath()` (lo overridiabile in TenantRenderer SaaS)
+- `app/bootstrap.php` — wire `setErrorHandler(HttpNotFoundException, ...)` che richiama `renderer->renderNotFound()`
+
+
 ## v0.4.1 — 2026-05-18
 
 ### Fixed — footer pubblico "Powered by tylio" puntava all'org Anthropic
