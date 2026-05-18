@@ -159,8 +159,20 @@ sudo chown -R www-data:www-data data uploads favicons
 sudo chmod -R 770 data uploads favicons
 ```
 
-If you're on shared hosting with no shell, create those four directories via
-SFTP — the install wizard will create `db.sqlite` on the first hit.
+The in-app updater (`/admin → Manutenzione → Aggiornamenti tylio → Aggiorna ora`)
+needs to swap `public/` atomically during an upgrade. PHP must own that
+directory too, otherwise the upgrade aborts with `Il processo PHP non può
+scrivere su /var/www/.../public`:
+
+```bash
+sudo chown -R www-data:www-data public
+sudo chmod -R u+w public
+```
+
+If you're on shared hosting with no shell, create those four runtime
+directories via SFTP — the install wizard will create `db.sqlite` on the
+first hit. For `public/` ownership on shared hosting, ask the provider or
+use the panel's file manager to set the directory owner to the PHP user.
 
 ### 8. Configuration
 
@@ -203,6 +215,12 @@ Aggiorna ora**. The server downloads the latest source tarball from the
 GitHub release, swaps the install in place, runs pending migrations and
 resets opcache. Public visitors may see a 5xx for ~5–10s during the swap
 (recoverable on refresh); admin sessions stay logged in.
+
+If the card shows `Il processo PHP non può scrivere su .../public`, PHP
+doesn't own `public/` and can't perform the swap. Fix it once with the
+commands from [Step 7](#7-pre-create-runtime-directories-with-correct-ownership)
+above (`sudo chown -R www-data:www-data public && sudo chmod -R u+w public`),
+then reload the page — the error clears and **Aggiorna ora** is enabled.
 
 **Option B — from the CLI (for shell users, or to pin a non-latest version).**
 
