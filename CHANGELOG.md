@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.4.3 — 2026-05-18
+
+### Fixed — `og:image` e `twitter:image` ora sono URL assoluti
+
+Il template emetteva `<meta property="og:image" content="/uploads/...">` (path relativo). Open Graph richiede URL pieno con `https://...`: la maggior parte dei crawler social (WhatsApp, iMessage, Telegram preview-bot, …) ignora l'og:image se è relativo e fa fallback a un'altra immagine "rappresentativa" che trova nel body. Sul sito di un utente con un blocco `youtube` con `source_url` linkato, il fallback finiva spesso con l'OG del canale YouTube esterno — e la chat mostrava una preview completamente off-topic.
+
+Fix in entrambi i layout (OSS `layout.php` + SaaS `site_layout.php`): se `seo.og_image` non comincia con `http(s)://`, prependiamo il canonical (settings) o `APP_URL` come base, restituendo un URL assoluto sia per `og:image` sia per `twitter:image`. Pure cosmetico: cast esplicito di `$ogImage` a string per quelle install che restituiscono `null` da `settingsValue()`.
+
+### Files
+
+- `tylio/app/Templates/layout.php`
+- `tylio-platform/src/Templates/site_layout.php`
+
+
 ## v0.4.2 — 2026-05-18
 
 ### Added — pagina 404 OSS che usa il tema dell'utente
