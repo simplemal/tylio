@@ -19,7 +19,7 @@ $siteDescription = $renderer->settingsValue($settings, 'site.description', '');
 $locale = (string)$renderer->settingsValue($settings, 'site.locale', '');
 if ($locale === '') $locale = $renderer->i18n()->currentLocale();
 $author = $renderer->settingsValue($settings, 'site.author', '');
-$ogImage = $renderer->settingsValue($settings, 'seo.og_image', '');
+$ogImage = (string)$renderer->settingsValue($settings, 'seo.og_image', '');
 $faviconVersion = (string)$renderer->settingsValue($settings, 'seo.favicon', '');
 $faviconBase = '/favicons';
 $hasFavicon = $faviconVersion !== '' && file_exists(dirname(__DIR__, 2) . '/favicons/icon-32.png');
@@ -28,6 +28,10 @@ $hasFavicon = $faviconVersion !== '' && file_exists(dirname(__DIR__, 2) . '/favi
 $canonical = trim((string)$renderer->settingsValue($settings, 'seo.canonical_url', ''));
 if ($canonical === '') $canonical = $appUrl;
 $canonical = rtrim($canonical, '/');
+$ogImageAbs = $ogImage;
+if ($ogImageAbs !== '' && !preg_match('#^https?://#i', $ogImageAbs)) {
+    $ogImageAbs = $canonical . '/' . ltrim($ogImageAbs, '/');
+}
 $indexable = $renderer->settingsValue($settings, 'seo.robots_index', true);
 $twitterHandle = trim((string)$renderer->settingsValue($settings, 'seo.twitter_handle', ''));
 if ($twitterHandle && $twitterHandle[0] !== '@') $twitterHandle = '@' . ltrim($twitterHandle, '@');
@@ -75,8 +79,8 @@ if (!preg_match('/^#[0-9a-f]{3,8}$/i', (string)$_themeColor)) $_themeColor = '#0
 <meta property="og:locale" content="<?= $renderer->escape(str_replace('-', '_', $locale)) ?>_<?= strtoupper(substr($locale, 0, 2)) ?>">
 <?php if ($canonical): ?><meta property="og:url" content="<?= $renderer->escape($canonical) ?>/"><?php endif; ?>
 <?php if ($siteTitle): ?><meta property="og:site_name" content="<?= $renderer->escape($siteTitle) ?>"><?php endif; ?>
-<?php if ($ogImage): ?>
-<meta property="og:image" content="<?= $renderer->escape($ogImage) ?>">
+<?php if ($ogImageAbs): ?>
+<meta property="og:image" content="<?= $renderer->escape($ogImageAbs) ?>">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <?php endif; ?>
@@ -84,7 +88,7 @@ if (!preg_match('/^#[0-9a-f]{3,8}$/i', (string)$_themeColor)) $_themeColor = '#0
 <meta name="twitter:card" content="<?= $ogImage ? 'summary_large_image' : 'summary' ?>">
 <meta name="twitter:title" content="<?= $renderer->escape($siteTitle) ?>">
 <meta name="twitter:description" content="<?= $renderer->escape($siteDescription) ?>">
-<?php if ($ogImage): ?><meta name="twitter:image" content="<?= $renderer->escape($ogImage) ?>"><?php endif; ?>
+<?php if ($ogImageAbs): ?><meta name="twitter:image" content="<?= $renderer->escape($ogImageAbs) ?>"><?php endif; ?>
 <?php if ($twitterHandle): ?>
 <meta name="twitter:site" content="<?= $renderer->escape($twitterHandle) ?>">
 <meta name="twitter:creator" content="<?= $renderer->escape($twitterHandle) ?>">
