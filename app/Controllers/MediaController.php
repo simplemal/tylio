@@ -163,25 +163,34 @@ class MediaController
 
     public function optimizeOgImage(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
     {
-        $row = $this->db->one("SELECT value FROM settings WHERE key = 'seo.og_image'");
-        $current = is_array($row) ? (string)($row['value'] ?? '') : '';
+        $body = (array)$request->getParsedBody();
+        $current = (string)($body['current_url'] ?? '');
+        if ($current === '') {
+            $row = $this->db->one("SELECT value FROM settings WHERE key = 'seo.og_image'");
+            $current = is_array($row) ? (string)($row['value'] ?? '') : '';
+        }
+        $current = self::normalizeUrlValue($current);
         if ($current === '') {
             return AuthController::json($response, ['error' => 'no_og_image'], 404);
         }
 
-        $rel = parse_url($current, PHP_URL_PATH) ?: $current;
+        $rel = parse_url($current, PHP_URL_PATH);
+        $rel = is_string($rel) && $rel !== '' ? $rel : $current;
         $rel = ltrim((string)$rel, '/');
         if (!str_starts_with($rel, 'uploads/')) {
-            return AuthController::json($response, ['error' => 'not_in_uploads'], 400);
+            return AuthController::json($response, [
+                'error' => 'not_in_uploads',
+                'seen' => $current,
+            ], 400);
         }
         $filename = substr($rel, strlen('uploads/'));
         if (!preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
-            return AuthController::json($response, ['error' => 'bad_filename'], 400);
+            return AuthController::json($response, ['error' => 'bad_filename', 'seen' => $filename], 400);
         }
         $destDir = $this->config->path('uploads');
         $path = $destDir . '/' . $filename;
         if (!is_file($path)) {
-            return AuthController::json($response, ['error' => 'file_not_found'], 404);
+            return AuthController::json($response, ['error' => 'file_not_found', 'seen' => $path], 404);
         }
 
         $opt = ImageOptimizer::optimizeForOg($path);
@@ -229,6 +238,17 @@ class MediaController
             $this->db->query('DELETE FROM media WHERE id = ?', [$id]);
         }
         return AuthController::json($response, ['ok' => true]);
+    }
+
+    protected static function normalizeUrlValue(string $v): string
+    {
+        $v = trim($v);
+        $v = preg_replace('/^\xEF\xBB\xBF/', '', $v) ?? $v;
+        if (strlen($v) >= 2 && $v[0] === '"' && $v[strlen($v) - 1] === '"') {
+            $decoded = json_decode($v, true);
+            if (is_string($decoded)) $v = $decoded;
+        }
+        return trim($v);
     }
 
     protected static function extensionForMime(string $mime, string $original): string

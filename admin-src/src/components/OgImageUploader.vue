@@ -114,7 +114,7 @@ async function optimizeExisting() {
   optimizing.value = true
   error.value = ''
   try {
-    const r = await api.optimizeOgImage()
+    const r = await api.optimizeOgImage(props.modelValue)
     if (r.url !== props.modelValue) {
       emit('update:modelValue', r.url)
     } else {

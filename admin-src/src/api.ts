@@ -170,11 +170,14 @@ export const api = {
     if (optimizeFor) fd.append('optimize_for', optimizeFor)
     return request<{ media: MediaItem }>('/media', { method: 'POST', body: fd })
   },
-  optimizeOgImage: () =>
-    request<{ url: string; bytes: number; width: number; height: number; mime: string }>(
+  optimizeOgImage: (currentUrl?: string) => {
+    const fd = new FormData()
+    if (currentUrl) fd.append('current_url', currentUrl)
+    return request<{ url: string; bytes: number; width: number; height: number; mime: string }>(
       '/seo/og-image/optimize',
-      { method: 'POST' },
-    ),
+      { method: 'POST', body: fd },
+    )
+  },
   deleteMedia: (id: number) => request<{ ok: true }>(`/media/${id}`, { method: 'DELETE' }),
 
   // Favicon
