@@ -6,6 +6,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.5.0 — 2026-05-18
+
+### Added — auto-ottimizzazione delle OG image al caricamento + banner "Ottimizza esistente"
+
+Le anteprime social (WhatsApp, iMessage, Telegram) **scartano** le immagini sopra ~600 KB e fanno fallback su un'altra immagine "rappresentativa" nella pagina: tipicamente un embed YouTube o un'icona casuale. Risultato osservato in produzione: condividi `ladyglow.it` su WhatsApp e vedi l'avatar del canale YouTube "Good Music" invece del logo del sito. Bug: chi carica un'og:image grande (es. 7 MB) non lo sa e l'unica traccia è la preview sbagliata.
+
+Fix in due direzioni:
+
+1. **Auto-ottimizza al caricamento**: quando carichi un'immagine in `Settings → SEO → Immagine social (Open Graph)`, il backend la ridimensiona a max 1200×630 (mantenendo aspect ratio, niente crop) e la riconvertendo come JPG quality 82. Il file finale sta tipicamente fra 100-300 KB. Helper nuovo: `Tylio\Util\ImageOptimizer::optimizeForOg($path)` (basato su `ext-gd`, già required).
+2. **Banner per le og:image già caricate**: l'`OgImageUploader.vue` fa una `HEAD` request sull'URL corrente, legge `Content-Length`, e se l'immagine pesa > 600 KB mostra un banner ambra "Troppo grande per i social ({size}) — Ottimizza ora". Click → `POST /api/seo/og-image/optimize` → il backend prende il file referenced da `seo.og_image`, lo ricomprime e (se necessario) lo rinomina con estensione `.jpg`, aggiorna `media` table + `seo.og_image` con il nuovo URL.
+
+### Files
+
+- `tylio/app/Util/ImageOptimizer.php` — NEW (GD resize + JPG re-encode)
+- `tylio/app/Controllers/MediaController.php` — `upload()` accetta `optimize_for=og`, nuovo metodo `optimizeOgImage()`
+- `tylio/app/routes.php` — nuova route `POST /api/seo/og-image/optimize`
+- `tylio-platform/src/Controllers/TenantMediaController.php` — override simmetrico tenant-scoped (`optimize_for=og` su `upload()`, nuovo `optimizeOgImage()` con scope `tenant_id`)
+- `tylio-platform/src/routes.php` — wire della rotta tenant-scoped
+- `tylio/admin-src/src/components/OgImageUploader.vue` — auto-detect oversize via HEAD + banner "Ottimizza ora"
+- `tylio/admin-src/src/api.ts` — `uploadMedia(file, 'og')` + `optimizeOgImage()`
+- `tylio/admin-src/src/style.css` — stile `.img-uploader__oversized`
+- `tylio/admin-src/src/locales/{it,en}.json` — `media.ogOversized.*`
+
+### Note operativa
+
+Gli OG image già caricati > 600 KB **non vengono ricompressi automaticamente** al deploy v0.5.0: l'utente vedrà il banner ambra la prima volta che apre `Settings → SEO` e potrà cliccare **Ottimizza ora** per ricomprimere on-demand. Il file storico viene sovrascritto (stesso filename se già `.jpg`, oppure rinominato + setting aggiornato se era `.png/.webp/.gif`).
+
+
 ## v0.4.3 — 2026-05-18
 
 ### Fixed — `og:image` e `twitter:image` ora sono URL assoluti
