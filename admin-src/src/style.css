@@ -478,6 +478,40 @@
     gap: 8px;
     margin-top: 12px;
   }
+  .img-uploader__oversized {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background: rgb(251 191 36 / 0.08);
+    border: 1px solid rgb(251 191 36 / 0.35);
+    color: rgb(254 243 199);
+    font-size: 13px;
+  }
+  .img-uploader__oversized > iconify-icon {
+    flex-shrink: 0;
+    color: rgb(251 191 36);
+  }
+  .img-uploader__oversized-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+  .img-uploader__oversized-body strong {
+    font-weight: 600;
+    color: rgb(254 243 199);
+  }
+  .img-uploader__oversized-body span {
+    color: rgb(254 243 199 / 0.78);
+    font-size: 12.5px;
+  }
+  .img-uploader__oversized > .btn {
+    flex-shrink: 0;
+  }
 
   /* tylio logo (img). filter/box-shadow forced to none with !important: the
      logo must NEVER have shadows or filters, under any circumstance, on

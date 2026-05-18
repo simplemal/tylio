@@ -709,6 +709,12 @@
     "errors": {
       "notImage": "Carica un’immagine.",
       "uploadFailed": "Errore di caricamento."
+    },
+    "ogOversized": {
+      "title": "Troppo grande per i social ({size})",
+      "message": "WhatsApp e iMessage scartano immagini sopra ~600 KB e mostrano un’anteprima sbagliata. Ridimensioniamo a 1200×630 e ricomprimiamo come JPG.",
+      "optimize": "Ottimizza ora",
+      "optimizing": "Ottimizzo…"
     }
   },
   "preview": {

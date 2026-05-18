@@ -709,6 +709,12 @@
     "errors": {
       "notImage": "Please upload an image.",
       "uploadFailed": "Upload failed."
+    },
+    "ogOversized": {
+      "title": "Too large for social previews ({size})",
+      "message": "WhatsApp and iMessage drop images over ~600 KB and fall back to a wrong preview. We'll resize to 1200×630 and re-encode as JPG.",
+      "optimize": "Optimize now",
+      "optimizing": "Optimizing…"
     }
   },
   "preview": {

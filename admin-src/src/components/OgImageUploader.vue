@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { api } from '../api'
 import { ApiError } from '../types'
@@ -20,10 +20,42 @@ const emit = defineEmits<{ 'update:modelValue': [string] }>()
 const fileInput = ref<HTMLInputElement | null>(null)
 const dragOver = ref(false)
 const busy = ref(false)
+const optimizing = ref(false)
 const error = ref('')
 const showLibrary = ref(false)
+const sizeBytes = ref<number | null>(null)
+
+const SOCIAL_SIZE_LIMIT = 600 * 1024
 
 const hasImage = computed(() => !!props.modelValue && props.modelValue !== '')
+const isOgAspect = computed(() => (props.aspect ?? 'og') === 'og')
+const oversized = computed(() => sizeBytes.value !== null && sizeBytes.value > SOCIAL_SIZE_LIMIT)
+const sizeLabel = computed(() => {
+  if (sizeBytes.value === null) return ''
+  const kb = sizeBytes.value / 1024
+  if (kb < 1024) return `${kb.toFixed(0)} KB`
+  return `${(kb / 1024).toFixed(2)} MB`
+})
+
+async function refreshSize() {
+  if (!hasImage.value) {
+    sizeBytes.value = null
+    return
+  }
+  try {
+    const r = await fetch(props.modelValue, { method: 'HEAD', cache: 'no-store' })
+    const len = r.headers.get('Content-Length')
+    sizeBytes.value = len ? parseInt(len, 10) : null
+  } catch {
+    sizeBytes.value = null
+  }
+}
+
+watch(
+  () => props.modelValue,
+  () => refreshSize(),
+  { immediate: true },
+)
 
 async function uploadFile(file: File) {
   if (!file) return
@@ -34,7 +66,7 @@ async function uploadFile(file: File) {
   busy.value = true
   error.value = ''
   try {
-    const r = await api.uploadMedia(file)
+    const r = await api.uploadMedia(file, isOgAspect.value ? 'og' : undefined)
     emit('update:modelValue', r.media.url)
   } catch (e: unknown) {
     // Prefer data.message (human-readable from the server) over
@@ -76,6 +108,29 @@ function onDrop(e: DragEvent) {
   dragOver.value = false
   const f = e.dataTransfer?.files?.[0]
   if (f) uploadFile(f)
+}
+
+async function optimizeExisting() {
+  optimizing.value = true
+  error.value = ''
+  try {
+    const r = await api.optimizeOgImage()
+    if (r.url !== props.modelValue) {
+      emit('update:modelValue', r.url)
+    } else {
+      sizeBytes.value = r.bytes
+    }
+  } catch (e: unknown) {
+    if (e instanceof ApiError && typeof e.data.message === 'string') {
+      error.value = e.data.message
+    } else if (e instanceof Error) {
+      error.value = e.message
+    } else {
+      error.value = t('media.errors.uploadFailed')
+    }
+  } finally {
+    optimizing.value = false
+  }
 }
 </script>
 
@@ -131,7 +186,31 @@ function onDrop(e: DragEvent) {
     <p v-if="error" class="text-xs text-red-300 mt-2">{{ error }}</p>
     <p v-if="hasImage" class="text-xs text-ink-300 mt-2">
       URL: <code class="text-ink-100">{{ modelValue }}</code>
+      <span v-if="sizeLabel"> · {{ sizeLabel }}</span>
     </p>
+    <div
+      v-if="hasImage && isOgAspect && oversized"
+      class="img-uploader__oversized"
+    >
+      <iconify-icon icon="lucide:triangle-alert" width="16"></iconify-icon>
+      <div class="img-uploader__oversized-body">
+        <strong>{{ t('media.ogOversized.title', { size: sizeLabel }) }}</strong>
+        <span>{{ t('media.ogOversized.message') }}</span>
+      </div>
+      <button
+        type="button"
+        class="btn btn-primary"
+        :disabled="optimizing"
+        @click="optimizeExisting"
+      >
+        <iconify-icon
+          :icon="optimizing ? 'lucide:loader-circle' : 'lucide:wand-sparkles'"
+          width="16"
+          :class="optimizing ? 'animate-spin' : ''"
+        ></iconify-icon>
+        {{ optimizing ? t('media.ogOversized.optimizing') : t('media.ogOversized.optimize') }}
+      </button>
+    </div>
 
     <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onPick" />
 

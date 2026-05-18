@@ -6,6 +6,7 @@ namespace Tylio\Controllers;
 use Tylio\Config;
 use Tylio\Services\DB;
 use Tylio\Services\I18n;
+use Tylio\Util\ImageOptimizer;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UploadedFileInterface;
@@ -108,6 +109,27 @@ class MediaController
         }
         @chmod($destPath, 0664);
 
+        $body = (array)$request->getParsedBody();
+        $optimizeFor = (string)($body['optimize_for'] ?? '');
+        if (
+            $optimizeFor === 'og'
+            && str_starts_with($mime, 'image/')
+            && $mime !== 'image/svg+xml'
+        ) {
+            $opt = ImageOptimizer::optimizeForOg($destPath);
+            if ($opt !== null) {
+                $jpgFilename = preg_replace('/\.[a-z0-9]{1,5}$/i', '', $filename) . '.jpg';
+                if ($jpgFilename !== $filename) {
+                    $jpgPath = $destDir . '/' . $jpgFilename;
+                    if (@rename($destPath, $jpgPath)) {
+                        $filename = $jpgFilename;
+                        $destPath = $jpgPath;
+                    }
+                }
+                $mime = $opt['mime'];
+            }
+        }
+
         $w = $h = null;
         $bytes = @filesize($destPath) ?: 0;
         if (str_starts_with($mime, 'image/') && $mime !== 'image/svg+xml') {
@@ -137,6 +159,65 @@ class MediaController
                 'height' => $h,
             ],
         ], 201);
+    }
+
+    public function optimizeOgImage(ServerRequestInterface $request, ResponseInterface $response): ResponseInterface
+    {
+        $row = $this->db->one("SELECT value FROM settings WHERE key = 'seo.og_image'");
+        $current = is_array($row) ? (string)($row['value'] ?? '') : '';
+        if ($current === '') {
+            return AuthController::json($response, ['error' => 'no_og_image'], 404);
+        }
+
+        $rel = parse_url($current, PHP_URL_PATH) ?: $current;
+        $rel = ltrim((string)$rel, '/');
+        if (!str_starts_with($rel, 'uploads/')) {
+            return AuthController::json($response, ['error' => 'not_in_uploads'], 400);
+        }
+        $filename = substr($rel, strlen('uploads/'));
+        if (!preg_match('/^[a-zA-Z0-9._-]+$/', $filename)) {
+            return AuthController::json($response, ['error' => 'bad_filename'], 400);
+        }
+        $destDir = $this->config->path('uploads');
+        $path = $destDir . '/' . $filename;
+        if (!is_file($path)) {
+            return AuthController::json($response, ['error' => 'file_not_found'], 404);
+        }
+
+        $opt = ImageOptimizer::optimizeForOg($path);
+        if ($opt === null) {
+            return AuthController::json($response, ['error' => 'optimize_failed'], 500);
+        }
+
+        $jpgFilename = preg_replace('/\.[a-z0-9]{1,5}$/i', '', $filename) . '.jpg';
+        $newUrl = $current;
+        if ($jpgFilename !== $filename) {
+            $jpgPath = $destDir . '/' . $jpgFilename;
+            if (@rename($path, $jpgPath)) {
+                $this->db->query(
+                    "UPDATE media SET filename = ?, mime = ?, size = ?, width = ?, height = ? WHERE filename = ?",
+                    [$jpgFilename, $opt['mime'], $opt['bytes'], $opt['width'], $opt['height'], $filename],
+                );
+                $newUrl = '/uploads/' . $jpgFilename;
+                $this->db->query(
+                    "UPDATE settings SET value = ? WHERE key = 'seo.og_image'",
+                    [$newUrl],
+                );
+            }
+        } else {
+            $this->db->query(
+                "UPDATE media SET mime = ?, size = ?, width = ?, height = ? WHERE filename = ?",
+                [$opt['mime'], $opt['bytes'], $opt['width'], $opt['height'], $filename],
+            );
+        }
+
+        return AuthController::json($response, [
+            'url' => $newUrl,
+            'bytes' => $opt['bytes'],
+            'width' => $opt['width'],
+            'height' => $opt['height'],
+            'mime' => $opt['mime'],
+        ]);
     }
 
     public function destroy(ServerRequestInterface $request, ResponseInterface $response, array $args): ResponseInterface

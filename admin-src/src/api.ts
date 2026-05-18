@@ -164,11 +164,17 @@ export const api = {
 
   // Media
   listMedia: () => request<{ media: MediaItem[] }>('/media'),
-  uploadMedia: (file: File) => {
+  uploadMedia: (file: File, optimizeFor?: 'og') => {
     const fd = new FormData()
     fd.append('file', file)
+    if (optimizeFor) fd.append('optimize_for', optimizeFor)
     return request<{ media: MediaItem }>('/media', { method: 'POST', body: fd })
   },
+  optimizeOgImage: () =>
+    request<{ url: string; bytes: number; width: number; height: number; mime: string }>(
+      '/seo/og-image/optimize',
+      { method: 'POST' },
+    ),
   deleteMedia: (id: number) => request<{ ok: true }>(`/media/${id}`, { method: 'DELETE' }),
 
   // Favicon

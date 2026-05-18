@@ -97,6 +97,7 @@ return static function (App $app): void {
 
         $g->get('/media', [MediaController::class, 'index']);
         $g->post('/media', [MediaController::class, 'upload']);
+        $g->post('/seo/og-image/optimize', [MediaController::class, 'optimizeOgImage']);
         $g->delete('/media/{id:[0-9]+}', [MediaController::class, 'destroy']);
 
         $g->post('/favicon', [FaviconController::class, 'upload']);
