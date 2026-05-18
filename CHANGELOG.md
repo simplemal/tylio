@@ -6,6 +6,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.4.0 — 2026-05-18
+
+### Fixed — Dashboard drag-into-group / drag-out-of-group (finalmente)
+
+Migrazione del sub-container dei gruppi da `vuedraggable` (4.1.0, libreria abbandonata) a **`SortableJS` nativo**, montato via callback ref. Il top-level rimane su `vuedraggable` per il riordino.
+
+Bug risolto: `vuedraggable` 4.1.0 non propaga `@add` ai callback Vue per item che arrivano da un'altra istanza (`evt.item._underlying_vm_` undefined → early-return interno). Risultato: drag-in nel gruppo non salvava `parent_id`, drag-out lasciava la tessera "fantasma" nel top-level (DOM aggiornato, ma `topLevel.value` reactive desincronizzato → la tessera non era più trascinabile fino a F5). I tentativi `v0.3.19`→`v0.3.23` (pre-alloc bucket, `:list`, `:group` object, migrazione `vue-draggable-plus`) operavano tutti sopra lo stesso adapter rotto e non risolvevano.
+
+Architettura nuova:
+
+- `Sortable.create(containerEl, { group: 'dash', onAdd, onRemove, onUpdate, ... })` per ogni `.dash-group__children`, montato in `registerGroupEl` (callback ref), distrutto a unmount (anche su delete del gruppo)
+- `onAdd` (drag-in): legge `data-block-id` → `api.updateBlock(id, { parent_id: groupId })` → `reorder` letto dal DOM → `refresh()`
+- `onRemove` (drag-out): se `evt.to` è `.dash-grid` → `api.updateBlock(id, { parent_id: null })` + reorder top-level + refresh. Se è un altro `.dash-group__children` → no-op (il target gestisce il proprio `onAdd`, niente race)
+- `onUpdate` (riordino dentro un gruppo): reorder letto dal DOM + refresh
+- `syncBuckets()` prealloca `childrenByParent[groupId] = []` per ogni gruppo, anche vuoto (binding `v-for` stabile)
+
+### Added — dipendenza: `@types/sortablejs`
+
+DevDep per il tipo `SortableEvent` usato nei callback. Runtime `sortablejs` è già stato nel bundle perché transitive di `vuedraggable`.
+
+### Removed — codice morto post-refactor
+
+`onTopLevelAdd`, `idFromEvent`, `DragEvt` type, `onGroupAdd`, `onGroupUpdate`, `makeGroupMove/Add/Update`, e i `console.log [dash]` diagnostici sono stati rimossi. Restano solo `console.error` sui catch.
+
+### Files
+
+- `admin-src/src/views/Dashboard.vue` — refactor sub-container a Sortable diretto
+- `admin-src/package.json` + `package-lock.json` — `@types/sortablejs`
+
+
 ## v0.3.25 — 2026-05-17
 
 ### Added — Dashboard · "Sposta tessera esistente nel gruppo"
