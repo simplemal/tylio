@@ -6,6 +6,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.4.1 — 2026-05-18
+
+### Fixed — footer pubblico "Powered by tylio" puntava all'org Anthropic
+
+In `app/Locales/{it,en}.php` la key `public.footer.powered_by` aveva `href="https://github.com/anthropics"` invece di `https://github.com/simplemal/tylio`. Risultato: chiunque cliccava "Powered by tylio" nel footer di un sito tylio finiva sulla pagina GitHub di Anthropic. Errore introdotto in una mia traduzione e rimasto fino a oggi.
+
+
 ## v0.4.0 — 2026-05-18
 
 ### Fixed — Dashboard drag-into-group / drag-out-of-group (finalmente)
