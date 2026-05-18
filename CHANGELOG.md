@@ -6,6 +6,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.5.2 — 2026-05-18
+
+### Fixed — dopo "Ottimizza ora", il banner "Troppo grande" tornava al refresh
+
+L'ottimizzazione in v0.5.0 ricomprimeva il file in place mantenendo lo stesso URL. Su install dietro Cloudflare (e in generale dietro qualsiasi CDN che onora `cache-control: immutable, max-age=31536000` sui file upload), il vecchio file (es. 6.95 MB) restava cached con `cf-cache-status: HIT` → HEAD del frontend al refresh tornava ancora il Content-Length vecchio → banner riappariva nonostante il file su disk fosse già 46 KB.
+
+Fix: l'optimize endpoint adesso appende `?v=<filemtime>` all'URL e aggiorna `seo.og_image` con quel nuovo URL. Cloudflare considera la query string nella cache key → l'URL nuovo è cache-miss → fetch fresh dall'origine. Facebook/WhatsApp accettano `og:image` con query string. La verifica HEAD del banner ora vede il file ottimizzato e non mostra più l'avviso.
+
+### Files
+
+- `tylio/app/Controllers/MediaController.php`
+- `tylio-platform/src/Controllers/TenantMediaController.php`
+
+
 ## v0.5.1 — 2026-05-18
 
 ### Fixed — `Ottimizza ora` ritornava `not_in_uploads` su qualche install
