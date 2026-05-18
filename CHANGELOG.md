@@ -6,6 +6,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning: [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## v0.5.1 — 2026-05-18
+
+### Fixed — `Ottimizza ora` ritornava `not_in_uploads` su qualche install
+
+L'endpoint `POST /api/seo/og-image/optimize` (v0.5.0) leggeva `seo.og_image` da DB e applicava `parse_url + str_starts_with('uploads/')`. Su almeno un'install in produzione il check falliva con `not_in_uploads` anche se l'URL mostrato in UI era `/uploads/<filename>.jpg`. Plausibili cause concomitanti: virgolette JSON residue nel value DB (esiti di un round-trip serialize/deserialize), BOM UTF-8, whitespace leading/trailing dopo qualche migration o copia-incolla.
+
+Fix:
+
+- Il client (`OgImageUploader.vue`) ora passa `current_url` esplicitamente al backend (la fonte di verità è il `modelValue` visualizzato).
+- Il backend accetta `current_url` dal body POST e ricade sul DB solo se non passato.
+- Nuovo helper `MediaController::normalizeUrlValue($v)`: `trim` + strip BOM UTF-8 + strip outer JSON quotes (`"foo"` → `foo`) prima di `parse_url`. Gestisce silently i value "sporchi" venuti da migrations/round-trips.
+- Su qualunque error path l'endpoint ora ritorna anche `{ seen: "..." }` con il valore che ha visto, così la prossima volta che fallisce l'utente ci passa il payload e capiamo a botto.
+
+Stesso fix simmetrico sul SaaS (`TenantMediaController::optimizeOgImage`), eredita `normalizeUrlValue` dalla parent.
+
+### Files
+
+- `tylio/app/Controllers/MediaController.php` (normalizeUrlValue helper + accept current_url + error.seen)
+- `tylio-platform/src/Controllers/TenantMediaController.php` (mirror tenant-scoped)
+- `tylio/admin-src/src/api.ts` (`optimizeOgImage(currentUrl?)`)
+- `tylio/admin-src/src/components/OgImageUploader.vue` (passa `props.modelValue`)
+
+
 ## v0.5.0 — 2026-05-18
 
 ### Added — auto-ottimizzazione delle OG image al caricamento + banner "Ottimizza esistente"
