@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useStorage } from '@vueuse/core'
 import draggable from 'vuedraggable'
+import Sortable, { type SortableEvent } from 'sortablejs'
 import { api } from '../api'
 import type { Block, BlockKind, BlockType } from '../types'
 import AddBlockSheet from '../components/AddBlockSheet.vue'
@@ -48,9 +49,10 @@ function syncBuckets() {
   for (const b of blocks.value) {
     if (b.parent_id) (byParent[b.parent_id] ??= []).push(b)
   }
+  for (const b of blocks.value) {
+    if (b.type === 'group' && !byParent[b.id]) byParent[b.id] = []
+  }
   childrenByParent.value = byParent
-  const groups = blocks.value.filter((b) => b.type === 'group').map((b) => b.id)
-  console.log('[dash] syncBuckets', { total: blocks.value.length, topLevel: topLevel.value.length, groups, childrenByParent: byParent })
 }
 
 // Compute the grid class for each block: 'full' (span 2) or 'half'
@@ -88,106 +90,15 @@ async function refresh() {
   syncBuckets()
 }
 
-/**
- * vuedraggable's `@change { added }` doesn't fire reliably on the
- * destination of a cross-list drag: its internal `onDragAdd` reads
- * `evt.item._underlying_vm_` and early-returns when it's `undefined`,
- * which is what we observed every time. We bypass that abstraction
- * and listen to the raw SortableJS events (`@add`, `@update`) which
- * fire deterministically, then look up the block id from the dragged
- * DOM element's `data-block-id` attribute. Each `<article>` slot root
- * carries `:data-block-id="b.id"` for exactly this purpose.
- */
-type DragEvt = { item: HTMLElement; oldIndex?: number; newIndex?: number }
-function idFromEvent(evt: DragEvt): number {
-  return Number(evt.item.getAttribute('data-block-id') || 0)
-}
-
-async function onTopLevelAdd(evt: DragEvt) {
-  const id = idFromEvent(evt)
-  console.log('[dash] onTopLevelAdd fired', { id, oldIndex: evt.oldIndex, newIndex: evt.newIndex, item: evt.item?.outerHTML?.slice(0, 120) })
-  if (!id) {
-    console.warn('[dash] onTopLevelAdd: no id from event, aborting')
-    return
-  }
+async function onTopLevelUpdate() {
   try {
-    const r = await api.updateBlock(id, { parent_id: null })
-    console.log('[dash] onTopLevelAdd updateBlock OK', { id, r })
-    const local = topLevel.value.find((b) => b.id === id)
-    if (local) local.parent_id = null
-    const orderIds = topLevel.value.map((b) => b.id)
-    console.log('[dash] onTopLevelAdd reorder ->', orderIds)
-    await api.reorder(orderIds)
-    console.log('[dash] onTopLevelAdd reorder OK')
+    await api.reorder(topLevel.value.map((b) => b.id))
   } catch (e) {
-    console.error('[dash] onTopLevelAdd FAILED', e)
+    console.error('top reorder failed', e)
     await refresh()
   }
 }
 
-async function onTopLevelUpdate(evt: DragEvt) {
-  console.log('[dash] onTopLevelUpdate fired', { oldIndex: evt?.oldIndex, newIndex: evt?.newIndex })
-  try {
-    const orderIds = topLevel.value.map((b) => b.id)
-    console.log('[dash] onTopLevelUpdate reorder ->', orderIds)
-    await api.reorder(orderIds)
-    console.log('[dash] onTopLevelUpdate reorder OK')
-  } catch (e) {
-    console.error('[dash] onTopLevelUpdate FAILED', e)
-    await refresh()
-  }
-}
-
-/**
- * Same shape as `onTopLevelChange` but scoped to one group's children.
- * `added` here means the tile was dragged INTO this group → attach
- * (parent_id = groupId). `moved` reorders the group's children.
- */
-async function onGroupAdd(groupId: number, evt: DragEvt) {
-  const id = idFromEvent(evt)
-  console.log('[dash] onGroupAdd fired', { groupId, id, oldIndex: evt.oldIndex, newIndex: evt.newIndex, item: evt.item?.outerHTML?.slice(0, 120) })
-  if (!id) {
-    console.warn('[dash] onGroupAdd: no id from event, aborting')
-    return
-  }
-  try {
-    const r = await api.updateBlock(id, { parent_id: groupId })
-    console.log('[dash] onGroupAdd updateBlock OK', { id, groupId, r })
-    const kids = childrenByParent.value[groupId] || []
-    const local = kids.find((b) => b.id === id)
-    if (local) local.parent_id = groupId
-    const orderIds = kids.map((b) => b.id)
-    console.log('[dash] onGroupAdd reorder ->', orderIds)
-    await api.reorder(orderIds)
-    console.log('[dash] onGroupAdd reorder OK')
-  } catch (e) {
-    console.error('[dash] onGroupAdd FAILED', e)
-    await refresh()
-  }
-}
-
-async function onGroupUpdate(groupId: number, evt: DragEvt) {
-  console.log('[dash] onGroupUpdate fired', { groupId, oldIndex: evt?.oldIndex, newIndex: evt?.newIndex })
-  try {
-    const kids = childrenByParent.value[groupId] || []
-    const orderIds = kids.map((b) => b.id)
-    console.log('[dash] onGroupUpdate reorder ->', orderIds)
-    await api.reorder(orderIds)
-    console.log('[dash] onGroupUpdate reorder OK')
-  } catch (e) {
-    console.error('[dash] onGroupUpdate FAILED', e)
-    await refresh()
-  }
-}
-
-/**
- * vuedraggable `:move` predicate: returns false to forbid a drop.
- * Forbidden cases:
- *   - dropping a group inside another group (no nested groups — also
- *     enforced server-side; this is just for instant UI feedback).
- *   - dropping the footer inside a group (footer is a structural
- *     pin-to-bottom tile, doesn't belong to a column stack).
- */
 function canDropInto(parentId: number | null, evt: { draggedContext: { element: Block } }): boolean {
   const item = evt.draggedContext.element
   if (parentId !== null && (item.type === 'group' || item.type === 'footer')) {
@@ -196,17 +107,6 @@ function canDropInto(parentId: number | null, evt: { draggedContext: { element: 
   return true
 }
 
-/**
- * Top-level `:move` predicate. We *additionally* veto the swap when
- * the cursor passes OVER a group while dragging a regular tile —
- * "anti-folder-dodge": without this, the group card slides out of the
- * way as the user approaches it, and they never reach the inner drop
- * zone. Refusing the swap freezes the group in place so the cursor can
- * cross the outer chrome and reach the children sortable nested
- * inside (which has the same `group="dash"` and will adopt the item).
- * Groups can still be reordered AMONG themselves (the veto only fires
- * when the dragged item isn't a group itself).
- */
 function onTopLevelMove(evt: {
   draggedContext: { element: Block }
   relatedContext?: { element?: Block }
@@ -214,31 +114,89 @@ function onTopLevelMove(evt: {
   const dragged = evt.draggedContext.element
   const related = evt.relatedContext?.element
   if (related && related.type === 'group' && dragged.type !== 'group') {
-    console.log('[dash] onTopLevelMove VETO over group', { draggedId: dragged.id, relatedId: related.id })
     return false
   }
-  const ok = canDropInto(null, evt)
-  console.log('[dash] onTopLevelMove', { draggedId: dragged.id, relatedId: related?.id, relatedType: related?.type, ok })
-  return ok
+  return canDropInto(null, evt)
 }
 
-// Per-group factories: bound move-predicate and change-handler for one
-// group. Avoiding inline TS types in templates (which don't parse) and
-// recreating the closures on render is fine — they're invoked only on
-// drag events, not on every render.
-function makeGroupMove(groupId: number) {
-  return (evt: { draggedContext: { element: Block }; relatedContext?: { element?: Block } }) => {
-    const ok = canDropInto(groupId, evt)
-    console.log('[dash] groupMove', { groupId, draggedId: evt.draggedContext.element.id, draggedType: evt.draggedContext.element.type, ok })
-    return ok
+const groupSortables = new Map<number, Sortable>()
+
+function readOrderedIds(container: HTMLElement): number[] {
+  return Array.from(container.children)
+    .map((node) => Number((node as HTMLElement).getAttribute('data-block-id') || 0))
+    .filter((n) => n > 0)
+}
+
+function registerGroupEl(groupId: number, el: HTMLElement | null) {
+  const existing = groupSortables.get(groupId)
+  if (!el) {
+    if (existing) {
+      existing.destroy()
+      groupSortables.delete(groupId)
+    }
+    return
   }
+  if (existing) return
+  const s = Sortable.create(el, {
+    group: { name: 'dash', pull: true, put: true },
+    handle: '.grip',
+    animation: 150,
+    swapThreshold: 0.6,
+    invertSwap: true,
+    emptyInsertThreshold: 40,
+    ghostClass: 'dash-ghost',
+    chosenClass: 'dash-chosen',
+    onStart: () => { dragging.value = true },
+    onEnd: () => { dragging.value = false },
+    onAdd: async (evt: SortableEvent) => {
+      const id = Number(evt.item.getAttribute('data-block-id') || 0)
+      if (!id) return
+      try {
+        await api.updateBlock(id, { parent_id: groupId })
+        await api.reorder(readOrderedIds(el))
+        await refresh()
+      } catch (e) {
+        console.error('drag-in failed', e)
+        await refresh()
+      }
+    },
+    onRemove: async (evt: SortableEvent) => {
+      const id = Number(evt.item.getAttribute('data-block-id') || 0)
+      if (!id) return
+      const target = evt.to as HTMLElement | null
+      const goesToTopLevel = !!target && target.classList.contains('dash-grid')
+      const goesToOtherGroup = !!target && target.classList.contains('dash-group__children') && target !== el
+      if (!goesToTopLevel && !goesToOtherGroup) {
+        await refresh()
+        return
+      }
+      if (goesToOtherGroup) return
+      try {
+        await api.updateBlock(id, { parent_id: null })
+        await api.reorder(readOrderedIds(target as HTMLElement))
+        await refresh()
+      } catch (e) {
+        console.error('drag-out failed', e)
+        await refresh()
+      }
+    },
+    onUpdate: async () => {
+      try {
+        await api.reorder(readOrderedIds(el))
+        await refresh()
+      } catch (e) {
+        console.error('group reorder failed', e)
+        await refresh()
+      }
+    },
+  })
+  groupSortables.set(groupId, s)
 }
-function makeGroupAdd(groupId: number) {
-  return (evt: DragEvt) => onGroupAdd(groupId, evt)
-}
-function makeGroupUpdate(groupId: number) {
-  return (evt: DragEvt) => onGroupUpdate(groupId, evt)
-}
+
+onBeforeUnmount(() => {
+  for (const s of groupSortables.values()) s.destroy()
+  groupSortables.clear()
+})
 
 /**
  * Class object for the per-item <article>. We use a single root element
@@ -543,12 +501,9 @@ function blockSummary(b: Block): string {
     ghost-class="dash-ghost"
     chosen-class="dash-chosen"
     :move="onTopLevelMove"
-    @start="(e: DragEvt) => { dragging = true; console.log('[dash] TOP @start', { id: idFromEvent(e), oldIndex: e?.oldIndex }) }"
-    @end="(e: DragEvt) => { dragging = false; console.log('[dash] TOP @end', { id: idFromEvent(e), oldIndex: e?.oldIndex, newIndex: e?.newIndex }) }"
-    @add="onTopLevelAdd"
+    @start="dragging = true"
+    @end="dragging = false"
     @update="onTopLevelUpdate"
-    @remove="(e: DragEvt) => console.log('[dash] TOP @remove', { id: idFromEvent(e), oldIndex: e?.oldIndex })"
-    @sort="(e: DragEvt) => console.log('[dash] TOP @sort', { id: idFromEvent(e) })"
   >
     <template #item="{ element: b }">
       <!-- SINGLE-ROOT <article> for every top-level item. The branching
@@ -603,29 +558,13 @@ function blockSummary(b: Block): string {
             <iconify-icon icon="lucide:trash-2" width="16"></iconify-icon>
           </button>
         </div>
-        <draggable
-          :model-value="childrenByParent[b.id] || []"
-          @update:model-value="(v: Block[]) => (childrenByParent[b.id] = v)"
-          :group="'dash'"
-          item-key="id"
-          handle=".grip"
+        <div
+          :ref="(el) => registerGroupEl(b.id, el as HTMLElement | null)"
           class="dash-group__children"
-          :swap-threshold="0.6"
-          :invert-swap="true"
-          :animation="150"
-          :empty-insert-threshold="40"
-          ghost-class="dash-ghost"
-          chosen-class="dash-chosen"
-          :move="makeGroupMove(b.id)"
-          @start="(e: DragEvt) => { dragging = true; console.log('[dash] GROUP @start', { groupId: b.id, id: idFromEvent(e) }) }"
-          @end="(e: DragEvt) => { dragging = false; console.log('[dash] GROUP @end', { groupId: b.id, id: idFromEvent(e), oldIndex: e?.oldIndex, newIndex: e?.newIndex }) }"
-          @add="makeGroupAdd(b.id)"
-          @update="makeGroupUpdate(b.id)"
-          @remove="(e: DragEvt) => console.log('[dash] GROUP @remove', { groupId: b.id, id: idFromEvent(e) })"
-          @sort="(e: DragEvt) => console.log('[dash] GROUP @sort', { groupId: b.id, id: idFromEvent(e) })"
         >
-          <template #item="{ element: child }">
             <article
+              v-for="child in childrenByParent[b.id] || []"
+              :key="child.id"
               class="tile dash-group__child group/child relative cursor-pointer hover:border-ink-100/40 transition"
               :class="[{ 'opacity-60': !child.enabled }, { 'dash-tile--no-bg': isNoBg(child) }]"
               :data-block-id="child.id"
@@ -698,8 +637,7 @@ function blockSummary(b: Block): string {
                 </button>
               </div>
             </article>
-          </template>
-        </draggable>
+        </div>
         <div class="dash-group__actions">
           <button
             class="dash-group__add btn btn-ghost flex-1 justify-center"
